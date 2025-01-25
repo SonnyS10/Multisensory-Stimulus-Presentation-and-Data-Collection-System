@@ -17,10 +17,6 @@ class GUI(tk.Tk):
         self.resizable(0,0)
         self.title('Data Collection System')
         self.config(background=selectionbar_color)
-       
-        # Header
-        self.header = tk.Frame(self, bg=header_color)
-        self.header.place(relx=0.3, rely=0, relwidth=0.7, relheight=0.1)
 
         #SideBar
         self.sidebar = tk.Frame(self, bg=header_color)
@@ -52,31 +48,47 @@ class GUI(tk.Tk):
                                             sub_menu_heading='Experiment 1',
                                             sub_menu_options=["Unisensory Neutral Visual",
                                                             "Unisensory Alcohol Visual",
+                                                            "Multisensory Neutral Visual & Olfactory",
+                                                            "Multisensory Alcohol Visual & Olfactory",
+                                                            "Multisensory Neutral Visual, Tactile & Olfactory",
+                                                            "Multisensory Alcohol Visual, Tactile & Olfactory",
                                                             ]
                                             )
         submenu1.options["Unisensory Neutral Visual"].config(
             command=lambda: self.show_frame(Unisensory_Neutral_Visual)
         )
         submenu1.options["Unisensory Alcohol Visual"].config(
-            command=lambda: self.show_frame(Frame2)
+            command=lambda: self.show_frame(Unisensory_Alcohol_Visual)
+        )
+        submenu1.options["Multisensory Neutral Visual & Olfactory"].config(
+            command=lambda: self.show_frame(Multisensory_Neutral_Visual_and_Olfactory)
+        )
+        submenu1.options["Multisensory Alcohol Visual & Olfactory"].config(
+            command=lambda: self.show_frame(Multisensory_Alcohol_Visual_and_Olfactory)
+        )
+        submenu1.options["Multisensory Neutral Visual, Tactile & Olfactory"].config(
+            command=lambda: self.show_frame(Multisensory_Neutral_Visual_Tactile_Olfactory)
+        )
+        submenu1.options["Multisensory Alcohol Visual, Tactile & Olfactory"].config(
+            command=lambda: self.show_frame(Multisensory_Alcohol_Visual_Tactile_Olfactory)
         )
 
-        submenu1.place(relx=0, rely=0.025, relwidth=1, relheight=0.3)
+        submenu1.place(relx=0, rely=0.025, relwidth=1, relheight=0.65)
 
         #Main Frame 
         
         main_frame = tk.Frame(self)
-        main_frame.place(relx=0.3, rely=0.1, relwidth=0.7, relheight=0.9)
+        main_frame.place(relx=0.3, rely=0, relwidth=0.7, relheight=1)
 
         #Multi Page Settings
 
         main_frame = tk.Frame(self)
-        main_frame.place(relx=0.3, rely=0.1, relwidth=0.7, relheight=0.9)
+        main_frame.place(relx=0.3, rely=0, relwidth=0.7, relheight=1)
         
         #Adding Frames to the Main Frame 
         self.frames = {}
 
-        for F in (Unisensory_Neutral_Visual, Frame2): 
+        for F in (Unisensory_Neutral_Visual, Unisensory_Alcohol_Visual, Multisensory_Neutral_Visual_and_Olfactory, Multisensory_Alcohol_Visual_and_Olfactory, Multisensory_Neutral_Visual_Tactile_Olfactory, Multisensory_Alcohol_Visual_Tactile_Olfactory): 
             frame = F(main_frame, self)
             self.frames[F] = frame
             frame.place(relx=0, rely=0, relwidth=1, relheight=1)
@@ -93,15 +105,108 @@ class Unisensory_Neutral_Visual(tk.Frame):
     def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text='Unisensory Neutral Visual', font=('Helvetica', 17))
-        label.pack(fill=tk.BOTH)
-class Frame2(tk.Frame):
+        top_frame(self, title="Unisensory Neutral Visual")
+        middle_frame(self)
+        bottom_frame(self)
+class Unisensory_Alcohol_Visual(tk.Frame):
 
     def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Unisensory Alcohol Visual", font=("Helvetica", 17))
         label.pack(fill=tk.BOTH)
+        top_frame(self, title="Unisensory Alcohol Visual")
+        middle_frame(self)
+        bottom_frame(self)
+
+class Multisensory_Neutral_Visual_and_Olfactory(tk.Frame):
+     def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Multisensory Neutral Visual & Olfactory", font=("Helvetica", 17))
+        label.pack(fill=tk.BOTH)
+        top_frame(self, title="Multisensory Neutral Visual & Olfactory")
+        middle_frame(self)
+        bottom_frame(self)
+
+class Multisensory_Alcohol_Visual_and_Olfactory(tk.Frame):
+     def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Multisensory Alcohol Visual & Olfactory", font=("Helvetica", 17))
+        label.pack(fill=tk.BOTH)
+        top_frame(self, title="Multisensory Alcohol Visual & Olfactory")
+        middle_frame(self)
+        bottom_frame(self)
+
+class Multisensory_Neutral_Visual_Tactile_Olfactory(tk.Frame):
+     def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Multisensory Neutral Visual, Tactile & Olfactory", font=("Helvetica", 17))
+        label.pack(fill=tk.BOTH)
+        top_frame(self, title="Multisensory Neutral Visual, Tactile & Olfactory")
+        middle_frame(self)
+        bottom_frame(self)
+
+class Multisensory_Alcohol_Visual_Tactile_Olfactory(tk.Frame):
+     def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Multisensory Alcohol Visual, Tactile & Olfactory", font=("Helvetica", 17))
+        label.pack(fill=tk.BOTH)
+        top_frame(self, title="Multisensory Alcohol Visual, Tactile & Olfactory")
+        middle_frame(self)
+        bottom_frame(self)
+
+class top_frame(ttk.Frame):
+    def __init__(self, parent, title):
+        super().__init__(parent)
+        #top part of frame/ should include start, stop, pause, and other features to be added later 
+        self.place(in_=parent, relx=0, rely=0, relwidth=1, relheight=.20)
+        label = ttk.Label(self, background = 'purple')
+        label.place(in_=self, relx=0, rely=0, relwidth=1, relheight=1)
+        header = ttk.Label(self, background='purple', text=title, font=("Helvetica", 25, "bold"))
+        header.place(anchor="center", relx=.5, rely=.25)
+        start_button = ttk.Button(self, text="Start")
+        start_button.place(relx=.125,rely=.5)
+        stop_button = ttk.Button(self, text="Stop")
+        stop_button.place(relx=.05,rely=.75)
+        pause_button = ttk.Button(self, text="Pause")
+        pause_button.place(relx=.2,rely=.75)
+        vr_button = ttk.Checkbutton(self, text="VR")
+        vr_button.place(relx=.785,rely=.5)
+        display_button = ttk.Checkbutton(self, text="Display")        
+        display_button.place(relx=.70,rely=.75)
+        Viewing_Booth_Button = ttk.Checkbutton(self, text="Viewing Booth")
+        Viewing_Booth_Button.place(relx=.85,rely=.75)
+
+class middle_frame(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+         
+        self.place(in_=parent, relx=0, rely=.2, relwidth=1, relheight=.70)
+        label = ttk.Label(self, background = '#CBC3E3')
+        label.place(in_=self, relx=0, rely=0, relwidth=1, relheight=1)
+
+class bottom_frame(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+         
+        self.place(in_=parent, relx=0, rely=.9, relwidth=1, relheight=.10)
+        label = ttk.Label(self, background = '#bc85fa')
+        label.place(in_=self, relx=0, rely=0, relwidth=1, relheight=1)
+
+        Visual = ttk.Checkbutton(self, text='Visual')
+        Visual.place(relx=.1, rely=.25, relwidth=.1, relheight=.5)
+        Olfactory = ttk.Checkbutton(self, text='Olfactory')
+        Olfactory.place(relx=.25, rely=.25, relwidth=.1, relheight=.5)
+        Tactile = ttk.Checkbutton(self, text='Tactile')
+        Tactile.place(relx=.4, rely=.25, relwidth=.1, relheight=.5)
+        Input_Keyboard = ttk.Checkbutton(self, text='Input Keyboard')
+        Input_Keyboard.place(relx=.55, rely=.25, relwidth=.15, relheight=.5)
+        Eye_Tracker = ttk.Checkbutton(self, text='Eye Tracker')
+        Eye_Tracker.place(relx=.75, rely=.25, relwidth=.15, relheight=.5)
 
 class SidebarSubMenu(tk.Frame):
     """
