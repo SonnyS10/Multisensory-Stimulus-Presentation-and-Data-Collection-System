@@ -1,0 +1,18 @@
+import tkinter as tk
+from tkinter import ttk
+class GUI(tk.Tk):  
+    def open_new_window():
+        new_window = tk.Toplevel(root)
+        new_window.title("New Window")
+
+        # Add widgets to the new window here
+        tk.Label(new_window, text="This is a new window").pack()
+
+    root = tk.Tk()
+    root.title("Main Window")
+
+    button = tk.Button(root, text="Open New Window", command=open_new_window)
+    button.pack()
+
+root = GUI()
+root.mainloop()

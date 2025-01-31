@@ -1,5 +1,7 @@
 import tkinter as tk 
-from tkinter import ttk
+from tkinter import ttk, Toplevel
+from PIL import Image, ImageTk
+import os 
 
 #Global Variables 
 selectionbar_color = '#eff5f6'
@@ -168,7 +170,7 @@ class top_frame(ttk.Frame):
         label.place(in_=self, relx=0, rely=0, relwidth=1, relheight=1)
         header = ttk.Label(self, background='purple', text=title, font=("Helvetica", 25, "bold"))
         header.place(anchor="center", relx=.5, rely=.25)
-        start_button = ttk.Button(self, text="Start")
+        start_button = ttk.Button(self, text="Start", command=self.open_secondary_gui)
         start_button.place(relx=.125,rely=.5)
         stop_button = ttk.Button(self, text="Stop")
         stop_button.place(relx=.05,rely=.75)
@@ -179,7 +181,29 @@ class top_frame(ttk.Frame):
         display_button = ttk.Checkbutton(self, text="Display")        
         display_button.place(relx=.70,rely=.75)
         Viewing_Booth_Button = ttk.Checkbutton(self, text="Viewing Booth")
-        Viewing_Booth_Button.place(relx=.85,rely=.75)
+        Viewing_Booth_Button.place(relx=.85,rely=.75)    
+
+    def open_secondary_gui(self):
+        display = DisplayWindow(self)
+        display.grab_set()
+        
+class DisplayWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.geometry("700x700")
+        self.show_display()
+        self.title("Display App")
+    def show_display(self):
+        #Getting the Image path and finding the image
+        image_folder = os.path.join(os.path.dirname(__file__), 'Images')
+        image = 'Beer.jpg'
+        image_path = os.path.join(image_folder, image)
+        image = Image.open(image_path)
+        self.photo = ImageTk.PhotoImage(image)
+        self.image_label = ttk.Label(self, image=self.photo)
+        self.image_label.image = self.photo
+        self.image_label.pack(fill=tk.BOTH)
 
 class middle_frame(ttk.Frame):
     def __init__(self, parent):
