@@ -70,6 +70,23 @@ class GUI(QMainWindow):
         else:
             if hasattr(self, 'display_window'):
                 self.display_window.close()
+    
+    def get_current_test(self):
+        current_widget = self.stacked_widget.currentWidget()
+        if current_widget == self.unisensory_neutral_visual:
+            return 'Unisensory Neutral Visual'
+        elif current_widget == self.unisensory_alcohol_visual:
+            return 'Unisensory Alcohol Visual'
+        elif current_widget == self.multisensory_neutral_visual_olfactory:
+            return 'Multisensory Neutral Visual & Olfactory'
+        elif current_widget == self.multisensory_alcohol_visual_olfactory:
+            return 'Multisensory Alcohol Visual & Olfactory'
+        elif current_widget == self.multisensory_neutral_visual_tactile_olfactory:
+            return 'Multisensory Neutral Visual, Tactile & Olfactory'
+        elif current_widget == self.multisensory_alcohol_visual_tactile_olfactory:
+            return 'Multisensory Alcohol Visual, Tactile & Olfactory'
+        else:
+            return None
 
 class Sidebar(QFrame):
     def __init__(self, parent):
@@ -114,13 +131,13 @@ class Sidebar(QFrame):
         
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)
-        heading_label.setFont(QFont("Arial", 9))
+        heading_label.setFont(QFont("Arial", 7))
         heading_label.setStyleSheet(f"background-color: #F5E1FD; color: #333333;")
         self.submenu_layout.addWidget(heading_label)
         
         for option_text, option_func in options:
             button = QPushButton(option_text, self)
-            button.setFont(QFont("Arial", 8, QFont.Bold))
+            button.setFont(QFont("Arial", 6, QFont.Bold))
             button.setStyleSheet(f"background-color: #F5E1FD;")
             button.clicked.connect(option_func)
             self.submenu_layout.addWidget(button)
@@ -206,6 +223,8 @@ class DisplayWindow(QMainWindow):
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
         
+        self.parent = parent  # Store reference to parent GUI
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
@@ -237,22 +256,24 @@ class DisplayWindow(QMainWindow):
         self.image_label.setAlignment(Qt.AlignCenter)
         bottom_layout.addWidget(self.image_label)
         
-        # Load images for the test
-        self.images = Display.test_assets['Unisensory Neutral Visual']  # Change this to the desired test
-        self.current_image_index = 0
-        
-        # Connect the click event
-        #self.image_label.mousePressEvent = self.run_trial
-        
-    def run_trial(self, event):
-        self.display_images()
+    def run_trial(self, event=None):
+        current_test = self.parent.get_current_test()
+        print(f"Current test: {current_test}")
+        print(f"Available tests: {list(Display.test_assets.keys())}")
+        if current_test:
+            try:
+                self.images = Display.test_assets[current_test]
+                self.current_image_index = 0
+                self.display_images()
+            except KeyError as e:
+                print(f"KeyError: {e}")
         
     def display_images(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
             self.image_label.setPixmap(pixmap)
             self.current_image_index += 1
-            QTimer.singleShot(5000, self.display_images)  # Display each image for 5 second
+            QTimer.singleShot(5000, self.display_images)  # Display each image for 5 seconds
         else:
             self.current_image_index = 0  # Reset for the next trial
 

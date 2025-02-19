@@ -16,7 +16,7 @@ def load_images_from_folder(folder):
     return images
 
 # Load personalized images
-personalized_folder = os.path.join(os.path.dirname(__file__), 'PersonalizedImages')
+personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Personalized')
 personalized_images = load_images_from_folder(personalized_folder)
 
 # Mix personalized images with general images
@@ -30,8 +30,8 @@ class Display():
     test_assets = {
         'Unisensory Neutral Visual': get_mixed_images([Beer, Stella], personalized_images),
         'Unisensory Alcohol Visual': get_mixed_images([Beer, Stella], personalized_images),
-        'MultiSensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
-        'MultiSensory Neutral Visual & Olfactory': get_mixed_images([Beer], personalized_images),
-        'MultiSensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
-        'MultiSensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images)
+        'Multisensory Neutral Visual & Olfactory': get_mixed_images([Beer], personalized_images),
+        'Multisensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
+        'Multisensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
+        'Multisensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images)
     }
