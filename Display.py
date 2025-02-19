@@ -1,17 +1,37 @@
-from PIL import Image, ImageTk
-import os 
+from PIL import Image
+import os
+import random
 
-#Global Variables
+# Global Variables
 Beer = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Beer.jpg'))
+Stella = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Stella.jpg'))
+
+# Function to load images from a folder
+def load_images_from_folder(folder):
+    images = []
+    for filename in os.listdir(folder):
+        if filename.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            img = Image.open(os.path.join(folder, filename))
+            images.append(img)
+    return images
+
+# Load personalized images
+personalized_folder = os.path.join(os.path.dirname(__file__), 'PersonalizedImages')
+personalized_images = load_images_from_folder(personalized_folder)
+
+# Mix personalized images with general images
+def get_mixed_images(general_images, personalized_images):
+    mixed_images = general_images.copy()
+    mixed_images.extend(personalized_images)
+    random.shuffle(mixed_images)
+    return mixed_images
+
 class Display():
     test_assets = {
-        'Unisensory Neutral Visual': [Beer],
-        'Unisensory Alcohol Visual': [Beer],
-        'MultiSensory Alcohol Visual & Olfactory': [Beer],
-        'MultiSensory Neutral Visual & Olfactory': [Beer],
-        'MultiSensory Alcohol Visual, Tactile & Olfactory' : [Beer],
-        'MultiSensory Neutral Visual, Tactile & Olfactory' : [Beer] 
+        'Unisensory Neutral Visual': get_mixed_images([Beer, Stella], personalized_images),
+        'Unisensory Alcohol Visual': get_mixed_images([Beer, Stella], personalized_images),
+        'MultiSensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
+        'MultiSensory Neutral Visual & Olfactory': get_mixed_images([Beer], personalized_images),
+        'MultiSensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
+        'MultiSensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images)
     }
-
-    
-    

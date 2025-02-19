@@ -1,8 +1,10 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QFrame, QStackedWidget
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 import os
+import random
+from Display import Display  # Import the Display class from Display.py
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -218,6 +220,7 @@ class DisplayWindow(QMainWindow):
         top_layout = QHBoxLayout(top_frame)
         
         start_button = QPushButton("Start", self)
+        start_button.clicked.connect(self.run_trial)
         top_layout.addWidget(start_button)
         
         stop_button = QPushButton("Stop", self)
@@ -230,14 +233,28 @@ class DisplayWindow(QMainWindow):
         
         bottom_layout = QVBoxLayout(bottom_frame)
         
-        image_path = os.path.join(os.path.dirname(__file__), 'Images', 'Beer.jpg')
-        pixmap = QPixmap(image_path)
-        
         self.image_label = QLabel(self)
-        self.image_label.setPixmap(pixmap)
         self.image_label.setAlignment(Qt.AlignCenter)
-        
         bottom_layout.addWidget(self.image_label)
+        
+        # Load images for the test
+        self.images = Display.test_assets['Unisensory Neutral Visual']  # Change this to the desired test
+        self.current_image_index = 0
+        
+        # Connect the click event
+        #self.image_label.mousePressEvent = self.run_trial
+        
+    def run_trial(self, event):
+        self.display_images()
+        
+    def display_images(self):
+        if self.current_image_index < len(self.images):
+            pixmap = QPixmap(self.images[self.current_image_index].filename)
+            self.image_label.setPixmap(pixmap)
+            self.current_image_index += 1
+            QTimer.singleShot(5000, self.display_images)  # Display each image for 5 second
+        else:
+            self.current_image_index = 0  # Reset for the next trial
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
