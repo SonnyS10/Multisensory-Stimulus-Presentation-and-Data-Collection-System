@@ -30,8 +30,12 @@ class Display():
     test_assets = {
         'Unisensory Neutral Visual': get_mixed_images([Beer, Stella], personalized_images),
         'Unisensory Alcohol Visual': get_mixed_images([Beer, Stella], personalized_images),
-        'Multisensory Neutral Visual & Olfactory': get_mixed_images([Beer], personalized_images),
+        'Multisensory Neutral Visual & Olfactory': get_mixed_images([], personalized_images),
         'Multisensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
         'Multisensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
-        'Multisensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images)
+        'Multisensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
+        'Multisensory Alcohol (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
+        'Multisensory Alcohol (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
+        'Multisensory Neutral (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
+        'Multisensory Neutral (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
     }

@@ -33,6 +33,12 @@ class GUI(QMainWindow):
         self.multisensory_neutral_visual_tactile_olfactory = self.create_frame("Multisensory Neutral Visual, Tactile & Olfactory")
         self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory")
         
+        # New frames for Stroop Test
+        self.multisensory_alcohol_visual_tactile = self.create_frame("Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
+        self.multisensory_neutral_visual_tactile = self.create_frame("Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
+        self.multisensory_alcohol_visual_olfactory = self.create_frame("Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
+        self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
+        
         self.stacked_widget.addWidget(self.unisensory_neutral_visual)
         self.stacked_widget.addWidget(self.unisensory_alcohol_visual)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory)
@@ -40,10 +46,16 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile_olfactory)
         
+        # Add new frames to stacked_widget
+        self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile)
+        self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile)
+        self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory)
+        self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory)
+        
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
         
-    def create_frame(self, title):
-        return Frame(self, title)
+    def create_frame(self, title, is_stroop_test=False):
+        return Frame(self, title, is_stroop_test)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -62,6 +74,19 @@ class GUI(QMainWindow):
     
     def show_multisensory_alcohol_visual_tactile_olfactory(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile_olfactory)
+    
+    # New methods to show new frames
+    def show_multisensory_alcohol_visual_tactile(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile)
+    
+    def show_multisensory_neutral_visual_tactile(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_tactile)
+    
+    def show_multisensory_alcohol_visual_olfactory(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_olfactory)
+    
+    def show_multisensory_neutral_visual_olfactory(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory)
     
     def open_secondary_gui(self, state):
         if state == Qt.Checked:
@@ -85,6 +110,14 @@ class GUI(QMainWindow):
             return 'Multisensory Neutral Visual, Tactile & Olfactory'
         elif current_widget == self.multisensory_alcohol_visual_tactile_olfactory:
             return 'Multisensory Alcohol Visual, Tactile & Olfactory'
+        elif current_widget == self.multisensory_alcohol_visual_tactile:
+            return 'Multisensory Alcohol (Visual & Tactile)'
+        elif current_widget == self.multisensory_neutral_visual_tactile:
+            return 'Multisensory Neutral (Visual & Tactile)'
+        elif current_widget == self.multisensory_alcohol_visual_olfactory:
+            return 'Multisensory Alcohol (Visual & Olfactory)'
+        elif current_widget == self.multisensory_neutral_visual_olfactory:
+            return 'Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
 
@@ -129,6 +162,14 @@ class Sidebar(QFrame):
             ("Multisensory Alcohol Visual, Tactile & Olfactory", parent.show_multisensory_alcohol_visual_tactile_olfactory)
         ])
         
+        # Add new submenu for Stroop Test
+        self.add_submenu("Stroop Test", [
+            ("Multisensory Alcohol (Visual & Tactile)", parent.show_multisensory_alcohol_visual_tactile),
+            ("Multisensory Neutral (Visual & Tactile)", parent.show_multisensory_neutral_visual_tactile),
+            ("Multisensory Alcohol (Visual & Olfactory)", parent.show_multisensory_alcohol_visual_olfactory),
+            ("Multisensory Neutral (Visual & Olfactory)", parent.show_multisensory_neutral_visual_olfactory)
+        ])
+        
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)
         heading_label.setFont(QFont("Arial", 7))
@@ -151,7 +192,7 @@ class MainFrame(QFrame):
         self.layout.addWidget(self.stacked_widget)
 
 class Frame(QFrame):
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, is_stroop_test=False):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         
@@ -168,54 +209,82 @@ class Frame(QFrame):
         header.setStyleSheet(f"background-color: rgb(146, 63, 179);")
         top_layout.addWidget(header)
         
-        button_layout = QHBoxLayout()
-        top_layout.addLayout(button_layout)
-        
-        start_button = QPushButton("Start", self)
-        button_layout.addWidget(start_button)
-        
-        stop_button = QPushButton("Stop", self)
-        button_layout.addWidget(stop_button)
-        
-        pause_button = QPushButton("Pause", self)
-        button_layout.addWidget(pause_button)
-        
-        vr_button = QCheckBox("VR", self)
-        button_layout.addWidget(vr_button)
-        
-        display_button = QCheckBox("Display", self)
-        display_button.stateChanged.connect(parent.open_secondary_gui)
-        button_layout.addWidget(display_button)
-        
-        viewing_booth_button = QCheckBox("Viewing Booth", self)
-        button_layout.addWidget(viewing_booth_button)
-        
-        middle_frame = QFrame(self)
-        middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
-        middle_frame.setMinimumHeight(490)
-        self.layout.addWidget(middle_frame)
-        
-        bottom_frame = QFrame(self)
-        bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
-        bottom_frame.setMaximumHeight(70)
-        self.layout.addWidget(bottom_frame)
-        
-        bottom_layout = QHBoxLayout(bottom_frame)
-        
-        visual_checkbox = QCheckBox("Visual", self)
-        bottom_layout.addWidget(visual_checkbox)
-        
-        olfactory_checkbox = QCheckBox("Olfactory", self)
-        bottom_layout.addWidget(olfactory_checkbox)
-        
-        tactile_checkbox = QCheckBox("Tactile", self)
-        bottom_layout.addWidget(tactile_checkbox)
-        
-        input_keyboard_checkbox = QCheckBox("Input Keyboard", self)
-        bottom_layout.addWidget(input_keyboard_checkbox)
-        
-        eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
-        bottom_layout.addWidget(eye_tracker_checkbox)
+        if is_stroop_test:
+            button_layout = QHBoxLayout()
+            top_layout.addLayout(button_layout)
+
+            start_button = QPushButton("Start", self)
+            button_layout.addWidget(start_button)
+
+            stop_button = QPushButton("Stop", self)
+            button_layout.addWidget(stop_button)
+
+            pause_button = QPushButton("Pause", self)
+            button_layout.addWidget(pause_button)
+
+            display_button = QCheckBox("Display", self)
+            display_button.stateChanged.connect(parent.open_secondary_gui)
+            button_layout.addWidget(display_button)
+
+            middle_frame = QFrame(self)
+            middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
+            middle_frame.setMinimumHeight(490)
+            self.layout.addWidget(middle_frame)
+
+            bottom_frame = QFrame(self)
+            bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
+            bottom_frame.setMaximumHeight(70)
+            self.layout.addWidget(bottom_frame)
+
+        if not is_stroop_test:
+            button_layout = QHBoxLayout()
+            top_layout.addLayout(button_layout)
+
+            start_button = QPushButton("Start", self)
+            button_layout.addWidget(start_button)
+
+            stop_button = QPushButton("Stop", self)
+            button_layout.addWidget(stop_button)
+
+            pause_button = QPushButton("Pause", self)
+            button_layout.addWidget(pause_button)
+
+            vr_button = QCheckBox("VR", self)
+            button_layout.addWidget(vr_button)
+                
+            display_button = QCheckBox("Display", self)
+            display_button.stateChanged.connect(parent.open_secondary_gui)
+            button_layout.addWidget(display_button)
+                
+            viewing_booth_button = QCheckBox("Viewing Booth", self)
+            button_layout.addWidget(viewing_booth_button)
+
+            middle_frame = QFrame(self)
+            middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
+            middle_frame.setMinimumHeight(490)
+            self.layout.addWidget(middle_frame)
+
+            bottom_frame = QFrame(self)
+            bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
+            bottom_frame.setMaximumHeight(70)
+            self.layout.addWidget(bottom_frame)
+
+            bottom_layout = QHBoxLayout(bottom_frame)
+
+            visual_checkbox = QCheckBox("Visual", self)
+            bottom_layout.addWidget(visual_checkbox)
+
+            olfactory_checkbox = QCheckBox("Olfactory", self)
+            bottom_layout.addWidget(olfactory_checkbox)
+
+            tactile_checkbox = QCheckBox("Tactile", self)
+            bottom_layout.addWidget(tactile_checkbox)
+
+            input_keyboard_checkbox = QCheckBox("Input Keyboard", self)
+            bottom_layout.addWidget(input_keyboard_checkbox)
+
+            eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
+            bottom_layout.addWidget(eye_tracker_checkbox)
 
 class DisplayWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -264,16 +333,16 @@ class DisplayWindow(QMainWindow):
             try:
                 self.images = Display.test_assets[current_test]
                 self.current_image_index = 0
-                self.display_images()
+                self.display_images1()
             except KeyError as e:
                 print(f"KeyError: {e}")
         
-    def display_images(self):
+    def display_images1(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
             self.image_label.setPixmap(pixmap)
             self.current_image_index += 1
-            QTimer.singleShot(5000, self.display_images)  # Display each image for 5 seconds
+            QTimer.singleShot(5000, self.display_images1)  # Display each image for 5 seconds
         else:
             self.current_image_index = 0  # Reset for the next trial
 
