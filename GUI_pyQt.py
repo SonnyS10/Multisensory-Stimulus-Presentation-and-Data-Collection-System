@@ -1,7 +1,8 @@
 import sys
+from time import sleep
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QFrame, QStackedWidget
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QEvent
 import os
 import random
 from Display import Display  # Import the Display class from Display.py
@@ -26,18 +27,18 @@ class GUI(QMainWindow):
         
         self.stacked_widget = self.main_frame.stacked_widget
         
-        self.unisensory_neutral_visual = self.create_frame("Unisensory Neutral Visual")
-        self.unisensory_alcohol_visual = self.create_frame("Unisensory Alcohol Visual")
-        self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral Visual & Olfactory")
-        self.multisensory_alcohol_visual_olfactory = self.create_frame("Multisensory Alcohol Visual & Olfactory")
-        self.multisensory_neutral_visual_tactile_olfactory = self.create_frame("Multisensory Neutral Visual, Tactile & Olfactory")
-        self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory")
+        self.unisensory_neutral_visual = self.create_frame("Unisensory Neutral Visual", is_stroop_test=False)
+        self.unisensory_alcohol_visual = self.create_frame("Unisensory Alcohol Visual", is_stroop_test=False)
+        self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral Visual & Olfactory", is_stroop_test=False)
+        self.multisensory_alcohol_visual_olfactory = self.create_frame("Multisensory Alcohol Visual & Olfactory", is_stroop_test=False)
+        self.multisensory_neutral_visual_tactile_olfactory = self.create_frame("Multisensory Neutral Visual, Tactile & Olfactory", is_stroop_test=False)
+        self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory", is_stroop_test=False)
         
         # New frames for Stroop Test
         self.multisensory_alcohol_visual_tactile = self.create_frame("Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_neutral_visual_tactile = self.create_frame("Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
-        self.multisensory_alcohol_visual_olfactory = self.create_frame("Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
-        self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
+        self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
+        self.multisensory_neutral_visual_olfactory2 = self.create_frame("Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
         
         self.stacked_widget.addWidget(self.unisensory_neutral_visual)
         self.stacked_widget.addWidget(self.unisensory_alcohol_visual)
@@ -49,8 +50,8 @@ class GUI(QMainWindow):
         # Add new frames to stacked_widget
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile)
-        self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory)
-        self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory)
+        self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory2)
+        self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
         
@@ -82,11 +83,11 @@ class GUI(QMainWindow):
     def show_multisensory_neutral_visual_tactile(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_tactile)
     
-    def show_multisensory_alcohol_visual_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_olfactory)
+    def show_multisensory_alcohol_visual_olfactory2(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_olfactory2)
     
-    def show_multisensory_neutral_visual_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory)
+    def show_multisensory_neutral_visual_olfactory2(self):
+        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory2)
     
     def open_secondary_gui(self, state):
         if state == Qt.Checked:
@@ -114,9 +115,9 @@ class GUI(QMainWindow):
             return 'Multisensory Alcohol (Visual & Tactile)'
         elif current_widget == self.multisensory_neutral_visual_tactile:
             return 'Multisensory Neutral (Visual & Tactile)'
-        elif current_widget == self.multisensory_alcohol_visual_olfactory:
+        elif current_widget == self.multisensory_alcohol_visual_olfactory2:
             return 'Multisensory Alcohol (Visual & Olfactory)'
-        elif current_widget == self.multisensory_neutral_visual_olfactory:
+        elif current_widget == self.multisensory_neutral_visual_olfactory2:
             return 'Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
@@ -153,7 +154,7 @@ class Sidebar(QFrame):
         self.submenu_layout = QVBoxLayout(self.submenu_frame)
         self.submenu_layout.setAlignment(Qt.AlignTop)  # Align submenu to the top
         
-        self.add_submenu("Experiment 1", [
+        self.add_submenu("Passive Viewing", [
             ("Unisensory Neutral Visual", parent.show_unisensory_neutral_visual),
             ("Unisensory Alcohol Visual", parent.show_unisensory_alcohol_visual),
             ("Multisensory Neutral Visual & Olfactory", parent.show_multisensory_neutral_visual_olfactory),
@@ -166,8 +167,8 @@ class Sidebar(QFrame):
         self.add_submenu("Stroop Test", [
             ("Multisensory Alcohol (Visual & Tactile)", parent.show_multisensory_alcohol_visual_tactile),
             ("Multisensory Neutral (Visual & Tactile)", parent.show_multisensory_neutral_visual_tactile),
-            ("Multisensory Alcohol (Visual & Olfactory)", parent.show_multisensory_alcohol_visual_olfactory),
-            ("Multisensory Neutral (Visual & Olfactory)", parent.show_multisensory_neutral_visual_olfactory)
+            ("Multisensory Alcohol (Visual & Olfactory)", parent.show_multisensory_alcohol_visual_olfactory2),
+            ("Multisensory Neutral (Visual & Olfactory)", parent.show_multisensory_neutral_visual_olfactory2)
         ])
         
     def add_submenu(self, heading, options):
@@ -302,7 +303,7 @@ class DisplayWindow(QMainWindow):
         # Top frame with start and stop buttons
         top_frame = QFrame(self)
         top_frame.setMaximumHeight(50)
-        top_frame.setStyleSheet("background-color: #F0F0F0;")
+        top_frame.setStyleSheet("background-color:rgb(255, 255, 255);")
         self.layout.addWidget(top_frame)
         
         top_layout = QHBoxLayout(top_frame)
@@ -324,6 +325,17 @@ class DisplayWindow(QMainWindow):
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignCenter)
         bottom_layout.addWidget(self.image_label)
+
+        # Timer label
+        self.timer_label = QLabel("00:00:00", self)
+        self.timer_label.setFont(QFont("Arial", 20))
+        self.timer_label.setAlignment(Qt.AlignCenter)
+        self.timer_label.setMaximumHeight(50)
+        self.layout.addWidget(self.timer_label)
+        
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_timer)
+        self.elapsed_time = 0
         
     def run_trial(self, event=None):
         current_test = self.parent.get_current_test()
@@ -333,18 +345,59 @@ class DisplayWindow(QMainWindow):
             try:
                 self.images = Display.test_assets[current_test]
                 self.current_image_index = 0
-                self.display_images1()
+                self.elapsed_time = 0  # Reset the elapsed time
+                self.timer.start(1)  # Start the timer with 100 ms interval
+                if current_test in ['Multisensory Alcohol (Visual & Tactile)', 'Multisensory Neutral (Visual & Tactile)', 'Multisensory Alcohol (Visual & Olfactory)', 'Multisensory Neutral (Visual & Olfactory)']:
+                    self.display_images_stroop()
+                else:
+                    self.display_images_passive()
             except KeyError as e:
                 print(f"KeyError: {e}")
         
-    def display_images1(self):
+    def display_images_passive(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
             self.image_label.setPixmap(pixmap)
             self.current_image_index += 1
-            QTimer.singleShot(5000, self.display_images1)  # Display each image for 5 seconds
+            QTimer.singleShot(5000, self.display_images_passive)  # Display each image for 5 seconds
         else:
             self.current_image_index = 0  # Reset for the next trial
+
+    def display_images_stroop(self):
+        if self.current_image_index < len(self.images):
+            pixmap = QPixmap(self.images[self.current_image_index].filename)
+            self.image_label.setPixmap(pixmap)
+            QTimer.singleShot(2000, self.hide_image)  # Hide image after 2 seconds
+        else:
+            self.current_image_index = 0  # Reset for the next trial
+
+    def hide_image(self):
+        self.image_label.clear()  # Clear the image
+        self.image_label.setText("Press the 'Y' key if congruent.\nPress the 'N' key if incongruent.")  # Display text while waiting for input
+        self.wait_for_input()  # Wait for input before displaying the next image
+
+    def wait_for_input(self):
+        self.installEventFilter(self)
+
+
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
+                self.removeEventFilter(self)
+                self.display_next_image()
+                return True
+        return super().eventFilter(source, event)
+
+    def display_next_image(self):
+        self.current_image_index += 1
+        self.display_images_stroop()  # Display the next image
+
+    def update_timer(self):
+        self.elapsed_time += 1  # Increment by 100 milliseconds
+        minutes, remainder = divmod(self.elapsed_time, 60000)
+        seconds, milliseconds = divmod(remainder, 1000)
+        self.timer_label.setText(f"{minutes:02}:{seconds:02}:{milliseconds:03}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
