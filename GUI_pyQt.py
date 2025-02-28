@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt, QTimer, QEvent
 import os
 import random
 from Display import Display  # Import the Display class from Display.py
+import csv
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -292,7 +293,11 @@ class DisplayWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
-        
+
+        self.subject_id = os.getenv('SUBJECT_ID')
+        self.test_number = os.getenv('TEST_NUMBER')
+        self.base_dir = os.getenv('BASE_DIR')
+
         self.parent = parent  # Store reference to parent GUI
         
         central_widget = QWidget()
@@ -336,6 +341,12 @@ class DisplayWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
         self.elapsed_time = 0
+
+        
+        self.user_data = {
+            'user_inputs': [],
+            'elapsed_time': []
+        }  # List to store user inputs
         
     def run_trial(self, event=None):
         current_test = self.parent.get_current_test()
@@ -369,6 +380,8 @@ class DisplayWindow(QMainWindow):
             self.image_label.setPixmap(pixmap)
             QTimer.singleShot(2000, self.hide_image)  # Hide image after 2 seconds
         else:
+            self.timer.stop()
+            self.save_data(self.user_data['user_inputs'], self.user_data['elapsed_time'])
             self.current_image_index = 0  # Reset for the next trial
 
     def hide_image(self):
@@ -379,25 +392,47 @@ class DisplayWindow(QMainWindow):
     def wait_for_input(self):
         self.installEventFilter(self)
 
-
-
     def eventFilter(self, source, event):
-        if event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
-                self.removeEventFilter(self)
-                self.display_next_image()
-                return True
-        return super().eventFilter(source, event)
+            if event.type() == QEvent.KeyPress:
+                if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
+                    if event.key() == Qt.Key_Y:
+                        self.user_data['user_inputs'].append('Yes') # Store the user input
+                    else:
+                        self.user_data['user_inputs'].append('No')  # Store the user input
+                    self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
+                    self.removeEventFilter(self)
+                    self.display_next_image()
+                    return True
+            return super().eventFilter(source, event)
 
     def display_next_image(self):
         self.current_image_index += 1
         self.display_images_stroop()  # Display the next image
 
     def update_timer(self):
-        self.elapsed_time += 1  # Increment by 100 milliseconds
+        self.elapsed_time += 1  # Increment by 1 millisecond
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         self.timer_label.setText(f"{minutes:02}:{seconds:02}:{milliseconds:03}")
+
+    def save_data(self, user_inputs, elapsed_time):
+        current_test = self.parent.get_current_test()
+        test_dir = os.path.join(self.base_dir, current_test)
+        os.makedirs(test_dir, exist_ok=True)
+
+        # Save data to a file in the test directory
+        file_path = os.path.join(test_dir, 'data.csv')
+        file_exists = os.path.isfile(file_path)
+
+        with open(file_path, 'a', newline='') as file:  # Append to the file
+            writer = csv.writer(file)
+            if not file_exists:
+                # Write headers if the file does not exist
+                writer.writerow(['User Inputs', 'Elapsed Time'])
+            # Write the data
+            for input, time in zip(user_inputs, elapsed_time):
+                writer.writerow([input, time])
+        print("Data saved successfully!")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
