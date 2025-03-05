@@ -45,21 +45,30 @@ class MainWindow(QMainWindow):
             os.makedirs(base_dir, exist_ok=True)
 
             # List of tests
-            tests = [
+            passive_tests = [
                 'Unisensory Neutral Visual',
                 'Unisensory Alcohol Visual',
                 'Multisensory Neutral Visual & Olfactory',
                 'Multisensory Alcohol Visual & Olfactory',
                 'Multisensory Neutral Visual, Tactile & Olfactory',
-                'Multisensory Alcohol Visual, Tactile & Olfactory',
+                'Multisensory Alcohol Visual, Tactile & Olfactory'
+            ]
+
+            stroop_tests = [
                 'Multisensory Alcohol (Visual & Tactile)',
                 'Multisensory Neutral (Visual & Tactile)',
                 'Multisensory Alcohol (Visual & Olfactory)',
                 'Multisensory Neutral (Visual & Olfactory)'
             ]
 
-            # Create subdirectories for each test and clear the data.csv file if it exists
-            for test in tests:
+            # Select the appropriate tests based on the test number
+            if test_number == '1':
+                selected_tests = passive_tests
+            else:
+                selected_tests = stroop_tests
+
+            # Create subdirectories for each selected test and clear the data.csv file if it exists
+            for test in selected_tests:
                 test_dir = os.path.join(base_dir, test)
                 os.makedirs(test_dir, exist_ok=True)
                 file_path = os.path.join(test_dir, 'data.csv')
