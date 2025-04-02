@@ -1,13 +1,16 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 import os
 import subprocess
 import sys
+from LSL import LSL  # Import the LSL class from LSL.py
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Subject Information")
-        self.setGeometry(100, 100, 400, 200)
+        self.setGeometry(100, 100, 400, 300)
 
         # Create the central widget and set it as the central widget of the main window
         central_widget = QWidget()
@@ -15,6 +18,13 @@ class MainWindow(QMainWindow):
 
         # Create a vertical layout for the central widget
         layout = QVBoxLayout(central_widget)
+
+        # LSL Status
+        self.lsl_status_label = QLabel("LSL Status:", self)
+        layout.addWidget(self.lsl_status_label)
+        self.lsl_status_icon = QLabel(self)
+        self.update_lsl_status_icon(False)
+        layout.addWidget(self.lsl_status_icon)
 
         # Subject ID input
         self.subject_id_label = QLabel("Subject ID:", self)
@@ -31,9 +41,46 @@ class MainWindow(QMainWindow):
         # Start button
         self.start_button = QPushButton("Start", self)
         self.start_button.clicked.connect(self.start_experiment)
+        self.start_button.setEnabled(False)  # Disable until LSL is streaming
         layout.addWidget(self.start_button)
 
+        # Initialize LSL
+        self.init_lsl()
+
+    def init_lsl(self):
+        """
+        Initialize LSL and update the status icon.
+        """
+        try:
+            LSL.init_lsl_stream()  # Call the LSL initialization method
+            self.update_lsl_status_icon(True)
+            self.start_button.setEnabled(True)
+        except Exception as e:
+            self.show_error_message(f"Failed to initialize LSL: {str(e)}")
+            self.update_lsl_status_icon(False)
+
+    def update_lsl_status_icon(self, is_streaming):
+        """
+        Update the LSL status icon to show a red or green light.
+        """
+        pixmap = QPixmap(20, 20)
+        pixmap.fill(Qt.green if is_streaming else Qt.red)
+        self.lsl_status_icon.setPixmap(pixmap)
+
+    def show_error_message(self, message):
+        """
+        Show an error message in a popup dialog.
+        """
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Critical)
+        error_dialog.setWindowTitle("Error")
+        error_dialog.setText(message)
+        error_dialog.exec_()
+
     def start_experiment(self):
+        """
+        Start the experiment after ensuring LSL is streaming.
+        """
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
         test_number = self.test_number_input.text()
