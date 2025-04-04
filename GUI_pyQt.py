@@ -8,6 +8,7 @@ import random
 from Display import Display  # Import the Display class from Display.py
 import csv
 from save_data import Save_Data  # Import the Save_Data class
+from EEG_widget import EEGGraphWidget # Import the EEGGraphWidget from EEG_widget.py
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -212,6 +213,30 @@ class Frame(QFrame):
         header.setStyleSheet(f"background-color: rgb(146, 63, 179);")
         top_layout.addWidget(header)
         
+        # Middle frame with the EEG graph
+        self.middle_frame = QFrame(self)
+        self.middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
+        self.middle_frame.setMinimumHeight(490)
+        self.layout.addWidget(self.middle_frame)
+
+        middle_layout = QVBoxLayout(self.middle_frame)
+
+        # Add EEGGraphWidget to the middle frame
+        self.eeg_graph = EEGGraphWidget()
+        middle_layout.addWidget(self.eeg_graph)
+
+        # Add navigation buttons for EEG graph
+        nav_layout = QHBoxLayout()
+        middle_layout.addLayout(nav_layout)
+
+        prev_button = QPushButton("Previous Page", self)
+        prev_button.clicked.connect(self.eeg_graph.previous_page)
+        nav_layout.addWidget(prev_button)
+
+        next_button = QPushButton("Next Page", self)
+        next_button.clicked.connect(self.eeg_graph.next_page)
+        nav_layout.addWidget(next_button)
+        
         if is_stroop_test:
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
@@ -229,11 +254,6 @@ class Frame(QFrame):
             display_button = QCheckBox("Display", self)
             display_button.stateChanged.connect(parent.open_secondary_gui)
             button_layout.addWidget(display_button)
-
-            middle_frame = QFrame(self)
-            middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
-            middle_frame.setMinimumHeight(490)
-            self.layout.addWidget(middle_frame)
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
@@ -262,11 +282,6 @@ class Frame(QFrame):
                 
             viewing_booth_button = QCheckBox("Viewing Booth", self)
             button_layout.addWidget(viewing_booth_button)
-
-            middle_frame = QFrame(self)
-            middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
-            middle_frame.setMinimumHeight(490)
-            self.layout.addWidget(middle_frame)
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
