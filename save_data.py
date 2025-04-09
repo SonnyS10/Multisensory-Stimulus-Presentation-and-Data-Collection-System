@@ -24,3 +24,4 @@ class Save_Data():
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
         print("Data saved successfully!")
+        print("super cool")
