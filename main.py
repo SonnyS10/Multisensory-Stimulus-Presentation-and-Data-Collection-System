@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
             LSL.init_lsl_stream()  # Call the LSL initialization method
             self.update_lsl_status_icon(True)
             self.start_button.setEnabled(True)
+            LSL.start_collection()  # Start collecting data
         except Exception as e:
             self.show_error_message(f"Failed to initialize LSL: {str(e)}")
             self.update_lsl_status_icon(False)

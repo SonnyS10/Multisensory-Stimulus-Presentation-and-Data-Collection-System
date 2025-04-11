@@ -150,6 +150,8 @@ class LSL:
                         # Flatten the data row into a single list and append to collected data
                         flattened_data_row = [data_row['Timestamp']] + [data_row['Label']] + sample
                         LSL.collected_data[stream_type] += [flattened_data_row]
+                    else:
+                        print(f"No sample received from {stream_type} stream.")
 
     @staticmethod
     def _save_collected_data(path: str):

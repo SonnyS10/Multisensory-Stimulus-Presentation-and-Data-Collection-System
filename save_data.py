@@ -1,5 +1,6 @@
 import os
 import csv
+from LSL import LSL
 
 class Save_Data():
     def __init__(self, base_dir, test_number):
@@ -13,6 +14,7 @@ class Save_Data():
 
         # Save data to a file in the test directory
         file_path = os.path.join(test_dir, 'data.csv')
+        file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
         file_exists = os.path.isfile(file_path)
 
         with open(file_path, 'a', newline='') as file:  # Append to the file
@@ -24,4 +26,5 @@ class Save_Data():
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
         print("Data saved successfully!")
+        LSL.stop_collection(file_path_eeg)
         print("super cool")
