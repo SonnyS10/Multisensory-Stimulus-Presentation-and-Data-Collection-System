@@ -124,8 +124,9 @@ class LSL:
             LSL.streams[stream_type] = pylsl.StreamInlet(streams_info[0])
             LSL.streams[stream_type].time_correction()  # Initialize time correction to accurately convert to system
         else:
-            print(f"No {stream_type} stream found. Exiting Data Collector.")
-            exit(1)
+            print(f"No {stream_type} stream found. Skipping initialization for this stream.")
+            return
+        
 
     @staticmethod
     def _collect_data():
@@ -137,7 +138,7 @@ class LSL:
         for real-time data processing. Uses StreamInlet.time_correction() to convert LSL to system timestamps using a
         constantly updated offset. The precision of these estimates should be below 1 ms (empirically within +/-0.2 ms).
         """
-        while LSL.collecting:
+        while LSL.collecting == True:
             for stream_type, stream in LSL.streams.items():
                 data_row = {'Timestamp': None, 'Label': config.DEFAULT_LABEL if not LSL.collection_label else LSL.collection_label}
 
@@ -151,7 +152,8 @@ class LSL:
                         flattened_data_row = [data_row['Timestamp']] + [data_row['Label']] + sample
                         LSL.collected_data[stream_type] += [flattened_data_row]
                     else:
-                        print(f"No sample received from {stream_type} stream.")
+                        # Log a warning and continue instead of exiting
+                        print(f"Warning: No sample received from {stream_type} stream. Retrying...")
 
     @staticmethod
     def _save_collected_data(path: str):
