@@ -5,7 +5,7 @@ from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent
 import os
 import random
-from Display import Display  # Import the Display class from Display.py
+from eeg_stimulus_project.stimulus.Display import Display  # Import the Display class from Display.py
 import csv
 from save_data import Save_Data  # Import the Save_Data class
 from EEG_widget import EEGGraphWidget # Import the EEGGraphWidget from EEG_widget.py
