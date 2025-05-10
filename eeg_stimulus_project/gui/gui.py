@@ -232,3 +232,17 @@ class Frame(QFrame):
 
             eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
             bottom_layout.addWidget(eye_tracker_checkbox)
+
+if __name__ == "__main__":
+    import sys
+    from PyQt5.QtWidgets import QApplication
+
+    # Create the application instance
+    app = QApplication(sys.argv)
+
+    # Create an instance of the GUI
+    window = GUI()
+    window.show()
+
+    # Execute the application
+    sys.exit(app.exec_())
