@@ -4,8 +4,7 @@ from PyQt5.QtCore import Qt
 import os
 import subprocess
 import sys
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\lsl')
-from stream_manager import LSL  # Import the LSL class from LSL.py
+from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -45,21 +44,37 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(False)  # Disable until LSL is streaming
         layout.addWidget(self.start_button)
 
+        # Retry LSL button
+        self.retry_button = QPushButton("Retry LSL", self)
+        self.retry_button.clicked.connect(self.retry_lsl)
+        self.retry_button.setEnabled(False)
+        layout.addWidget(self.retry_button)
+
         # Initialize LSL
         self.init_lsl()
+
+        # Process for the GUI
+        self.gui_process = None
 
     def init_lsl(self):
         """
         Initialize LSL and update the status icon.
         """
         try:
-            LSL.init_lsl_stream()  # Call the LSL initialization method
-            self.update_lsl_status_icon(True)
-            self.start_button.setEnabled(True)
-            LSL.start_collection()  # Start collecting data
+            if LSL.init_lsl_stream() == True:  # Call the LSL initialization method
+                self.update_lsl_status_icon(True)
+                self.start_button.setEnabled(True)
+                self.retry_button.setEnabled(False)
+            else:
+                self.show_error_message("Failed to initialize LSL: No stream found.")
+                self.update_lsl_status_icon(False)
+                self.start_button.setEnabled(True)
+                self.retry_button.setEnabled(True)
         except Exception as e:
             self.show_error_message(f"Failed to initialize LSL: {str(e)}")
             self.update_lsl_status_icon(False)
+            self.start_button.setEnabled(False)
+            self.retry_button.setEnabled(True)
 
     def update_lsl_status_icon(self, is_streaming):
         """
@@ -80,9 +95,6 @@ class MainWindow(QMainWindow):
         error_dialog.exec_()
 
     def start_experiment(self):
-        """
-        Start the experiment after ensuring LSL is streaming.
-        """
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
         test_number = self.test_number_input.text()
@@ -132,12 +144,29 @@ class MainWindow(QMainWindow):
             env['BASE_DIR'] = base_dir
 
             # Construct the correct path to gui.py
-            gui_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'gui.py')
+            gui_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'main_gui.py')
 
             # Run the GUI script
-            subprocess.Popen([sys.executable, gui_path], env=env)
+            self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
+
+    def retry_lsl(self):
+        """
+        Retry LSL initialization and update the status icon.
+        """
+        self.update_lsl_status_icon(False)
+        self.start_button.setEnabled(False)
+        self.retry_button.setEnabled(False)
+        self.init_lsl()
+
+    def closeEvent(self, event):
+        if self.gui_process is not None:
+            self.gui_process.terminate()
+            self.gui_process.wait()
+        # Stop LSL collection when the main window is closed
+        LSL.stop_collection(os.path.join(os.environ['BASE_DIR'], 'eeg_data.csv'))
+        event.accept()
 
 if __name__ == "__main__":
     # Create the application and main window, then run the application

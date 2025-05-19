@@ -43,7 +43,11 @@ class LSL:
 
         # Initialize all required streams
         for stream_type in LSL.streams.keys():
-            LSL._find_and_initialize_stream(stream_type)
+            LSL._find_and_initialize_stream(stream_type, checked=False)
+        # Check if any streams were found
+        if not any(LSL.streams.values()):
+            print("No valid LSL streams found.")
+            return False # No streams found, return False
 
     @staticmethod
     def clear_stream_buffers():
@@ -65,6 +69,9 @@ class LSL:
         """
         Function to start data collection.
         """
+        if not hasattr(LSL, 'streams') or LSL.streams is None:
+            print("No streams to clear.")
+            return
         LSL.clear_stream_buffers()
         print("Started data collection.")
         LSL.collecting = True
@@ -109,7 +116,7 @@ class LSL:
     #
 
     @staticmethod
-    def _find_and_initialize_stream(stream_type: str):
+    def _find_and_initialize_stream(stream_type: str, checked = False):
         """
         Function to find and initialize a specific LSL stream
 
@@ -117,16 +124,16 @@ class LSL:
         """
         print(f"Looking for a {stream_type} stream...")
 
-        streams_info = pylsl.resolve_byprop('type', stream_type, 1, 10)  # Resolve streams by type with a timeout of 10 seconds
+        streams_info = pylsl.resolve_byprop('type', stream_type, 1, 2)  # Resolve streams by type with a timeout of 10 seconds
 
         if len(streams_info) > 0:
             print(f"{stream_type} stream found.")
             LSL.streams[stream_type] = pylsl.StreamInlet(streams_info[0])
-            LSL.streams[stream_type].time_correction()  # Initialize time correction to accurately convert to system
+            LSL.streams[stream_type].time_correction()
+            checked = True  # Initialize time correction to accurately convert to system
         else:
             print(f"No {stream_type} stream found. Skipping initialization for this stream.")
-            return
-        
+            return checked
 
     @staticmethod
     def _collect_data():

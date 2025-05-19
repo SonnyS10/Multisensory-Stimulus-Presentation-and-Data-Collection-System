@@ -1,8 +1,8 @@
 import os
 import csv
 import sys
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\lsl')
-from stream_manager import LSL
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+from eeg_stimulus_project.lsl.stream_manager import LSL
 
 class Save_Data():
     def __init__(self, base_dir, test_number):
@@ -27,6 +27,18 @@ class Save_Data():
             # Write the data
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
+        print("Data saved successfully!")
+        LSL.stop_collection(file_path_eeg)
+        print("super cool")
+
+    def save_data_normal(self, current_test):
+        # Check the test number and create the appropriate folder
+        test_dir = os.path.join(self.base_dir, current_test)
+        os.makedirs(test_dir, exist_ok=True)
+
+        # Save data to a file in the test directory
+        file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
+
         print("Data saved successfully!")
         LSL.stop_collection(file_path_eeg)
         print("super cool")

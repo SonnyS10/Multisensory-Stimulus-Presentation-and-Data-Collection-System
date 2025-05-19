@@ -1,12 +1,15 @@
 import sys
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\data')
+import os
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from sidebar import Sidebar
 from main_frame import MainFrame
 from display_window import DisplayWindow
-from eeg_graph_widget import EEGGraphWidget
+from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
+from eeg_stimulus_project.lsl.stream_manager import LSL
+from eeg_stimulus_project.data.data_saving import Save_Data
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -92,11 +95,17 @@ class GUI(QMainWindow):
     
     def open_secondary_gui(self, state):
         if state == Qt.Checked:
-            self.display_window = DisplayWindow(self)
-            self.display_window.show()
+            # Only open if not already open
+            if not hasattr(self, 'display_window') or self.display_window is None or not self.display_window.isVisible():
+                current_test = self.get_current_test()
+                self.display_window = DisplayWindow(self, current_test=current_test)
+                # When the window is closed, set self.display_window to None
+                self.display_window.destroyed.connect(lambda: setattr(self, 'display_window', None))
+                self.display_window.show()
         else:
-            if hasattr(self, 'display_window'):
+            if hasattr(self, 'display_window') and self.display_window is not None:
                 self.display_window.close()
+                self.display_window = None
     
     def get_current_test(self):
         current_widget = self.stacked_widget.currentWidget()
@@ -165,23 +174,37 @@ class Frame(QFrame):
         next_button.clicked.connect(self.eeg_graph.next_page)
         nav_layout.addWidget(next_button)
         
+        # Save parent reference for later use
+        self.parent = parent
+
+        # Read from environment variables
+        self.base_dir = os.environ.get('BASE_DIR', '')
+        self.test_number = os.environ.get('TEST_NUMBER', '')
+
         if is_stroop_test:
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
 
             start_button = QPushButton("Start", self)
-            #start_button.clicked.connect(parent.open_secondary_gui)
+            start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(start_button)
 
             stop_button = QPushButton("Stop", self)
+            stop_button.clicked.connect(self.stop_button_clicked_stroop)  # <-- update this line
             button_layout.addWidget(stop_button)
 
             pause_button = QPushButton("Pause", self)
+            pause_button.setEnabled(False)  # Disable pause button for non-stroop tests
+            pause_button.clicked.connect(DisplayWindow.pause_trial)
             button_layout.addWidget(pause_button)
 
-            display_button = QCheckBox("Display", self)
-            display_button.stateChanged.connect(parent.open_secondary_gui)
-            button_layout.addWidget(display_button)
+            resume_button = QPushButton("Resume", self)
+            resume_button.setEnabled(False)
+            resume_button.clicked.connect(DisplayWindow.resume_trial)
+            button_layout.addWidget(resume_button)
+
+            self.display_button = QCheckBox("Display", self)
+            button_layout.addWidget(self.display_button)
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
@@ -193,20 +216,28 @@ class Frame(QFrame):
             top_layout.addLayout(button_layout)
 
             start_button = QPushButton("Start", self)
+            start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(start_button)
 
             stop_button = QPushButton("Stop", self)
+            stop_button.clicked.connect(self.stop_button_clicked_normal)  # <-- update this line
             button_layout.addWidget(stop_button)
 
             pause_button = QPushButton("Pause", self)
+            pause_button.setEnabled(False)  # Disable pause button for non-stroop tests
+            pause_button.clicked.connect(DisplayWindow.pause_trial)
             button_layout.addWidget(pause_button)
+
+            resume_button = QPushButton("Resume", self)
+            resume_button.setEnabled(False)
+            resume_button.clicked.connect(DisplayWindow.resume_trial)
+            button_layout.addWidget(resume_button)
 
             vr_button = QCheckBox("VR", self)
             button_layout.addWidget(vr_button)
                 
-            display_button = QCheckBox("Display", self)
-            display_button.stateChanged.connect(parent.open_secondary_gui)
-            button_layout.addWidget(display_button)
+            self.display_button = QCheckBox("Display", self)
+            button_layout.addWidget(self.display_button)
                 
             viewing_booth_button = QCheckBox("Viewing Booth", self)
             button_layout.addWidget(viewing_booth_button)
@@ -232,6 +263,29 @@ class Frame(QFrame):
 
             eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
             bottom_layout.addWidget(eye_tracker_checkbox)
+
+    def start_button_clicked(self):
+        if self.display_button.isChecked():
+            self.parent.open_secondary_gui(Qt.Checked)
+            LSL.start_collection()
+        else:
+            self.parent.open_secondary_gui(Qt.Unchecked)
+
+    def stop_button_clicked_stroop(self):
+        save_data = Save_Data(self.base_dir, self.test_number)
+        try:
+            save_data.save_data_stroop(self.parent.get_current_test(), self.user_data['user_inputs'], self.user_data['elapsed_time'])
+        except Exception as e:
+            print(f"Error saving data: {e}")
+        self.parent.open_secondary_gui(Qt.Unchecked)
+
+    def stop_button_clicked_normal(self):
+        save_data = Save_Data(self.base_dir, self.test_number)
+        try:
+            save_data.save_data_normal(self.parent.get_current_test())
+        except Exception as e:
+            print(f"Error saving data: {e}")
+        self.parent.open_secondary_gui(Qt.Unchecked)
 
 if __name__ == "__main__":
     import sys

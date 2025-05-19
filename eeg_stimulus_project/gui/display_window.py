@@ -1,25 +1,19 @@
 import sys
-
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\stimulus')
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\data')
-
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel, QPushButton, QMainWindow, QApplication, QWidget
+import os
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent
-import os 
-from Display import Display
-from data_saving import Save_Data
+from eeg_stimulus_project.stimulus.Display import Display
+from eeg_stimulus_project.data.data_saving import Save_Data
 
 class DisplayWindow(QMainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
+        self.current_test=current_test
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
 
-        # Lazy import GUI when needed
-        from gui.gui import GUI
-        self.parent = parent  # Store reference to parent GUI
-        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
@@ -31,29 +25,18 @@ class DisplayWindow(QMainWindow):
         top_frame.setStyleSheet("background-color:rgb(255, 255, 255);")
         self.layout.addWidget(top_frame)
         
-        top_layout = QVBoxLayout(top_frame)
+        top_layout = QHBoxLayout(top_frame)
     
         start_button = QPushButton("Start", self)
         start_button.clicked.connect(self.run_trial)
         top_layout.addWidget(start_button)
-
-        pause_button = QPushButton("Pause", self)
-        pause_button.clicked.connect(self.pause_trial)
-        top_layout.addWidget(pause_button)
-        
-        resume_button = QPushButton("Resume", self)
-        resume_button.clicked.connect(self.resume_trial)
-        top_layout.addWidget(resume_button)
-        
-        stop_button = QPushButton("Stop", self)
-        top_layout.addWidget(stop_button)
         
         # Bottom frame with the image
         bottom_frame = QFrame(self)
         bottom_frame.setStyleSheet("background-color: #FFFFFF;")
         self.layout.addWidget(bottom_frame)
         
-        bottom_layout = QVBoxLayout(bottom_frame)
+        bottom_layout = QHBoxLayout(bottom_frame)
         
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -78,7 +61,7 @@ class DisplayWindow(QMainWindow):
         }  # List to store user inputs
 
     def run_trial(self, event=None):
-        current_test = self.parent.get_current_test()
+        current_test = self.current_test
         print(f"Current test: {current_test}")
         print(f"Available tests: {list(Display.test_assets.keys())}")
         if current_test:
@@ -113,6 +96,9 @@ class DisplayWindow(QMainWindow):
             self.current_image_index = 0  # Reset for the next trial
 
     def display_images_stroop(self):
+        self.base_dir = os.environ.get('BASE_DIR', '')
+        self.test_number = os.environ.get('TEST_NUMBER', '')
+        
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
             self.image_label.setPixmap(pixmap)
@@ -120,7 +106,7 @@ class DisplayWindow(QMainWindow):
         else:
             self.timer.stop()
             save_data = Save_Data(self.base_dir, self.test_number)
-            save_data.save_data_stroop(self.parent.get_current_test(), self.user_data['user_inputs'], self.user_data['elapsed_time'])
+            save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
             self.current_image_index = 0  # Reset for the next trial
 
     def hide_image(self):
@@ -155,8 +141,3 @@ class DisplayWindow(QMainWindow):
         seconds, milliseconds = divmod(remainder, 1000)
         self.timer_label.setText(f"{minutes:02}:{seconds:02}:{milliseconds:03}")
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    gui = GUI()
-    gui.show()
-    sys.exit(app.exec_())
