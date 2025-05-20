@@ -19,11 +19,15 @@ class Save_Data():
         file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
         file_exists = os.path.isfile(file_path)
 
+        # If the file exists, delete it
+        if file_exists:
+            print("File already exists. Deleting the old file.")
+            os.remove(file_path)
+        
         with open(file_path, 'a', newline='') as file:  # Append to the file
             writer = csv.writer(file)
-            if not file_exists:
-                # Write headers if the file does not exist
-                writer.writerow(['User Inputs', 'Elapsed Time'])
+            # Write headers
+            writer.writerow(['User Inputs', 'Elapsed Time'])
             # Write the data
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
@@ -31,7 +35,7 @@ class Save_Data():
         LSL.stop_collection(file_path_eeg)
         print("super cool")
 
-    def save_data_normal(self, current_test):
+    def save_data_passive(self, current_test):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(test_dir, exist_ok=True)

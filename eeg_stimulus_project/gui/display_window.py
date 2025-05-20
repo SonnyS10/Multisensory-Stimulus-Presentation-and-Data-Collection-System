@@ -1,64 +1,86 @@
 import sys
 import os
 sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout, QStackedLayout
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt, QTimer, QEvent
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 
 class DisplayWindow(QMainWindow):
+    experiment_started = pyqtSignal()
     def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
-        self.current_test=current_test
+        self.current_test = current_test
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
-        self.layout = QVBoxLayout(central_widget)
-        
-        # Top frame with start and stop buttons
-        top_frame = QFrame(self)
-        top_frame.setMaximumHeight(50)
-        top_frame.setStyleSheet("background-color:rgb(255, 255, 255);")
-        self.layout.addWidget(top_frame)
-        
-        top_layout = QHBoxLayout(top_frame)
-    
-        start_button = QPushButton("Start", self)
-        start_button.clicked.connect(self.run_trial)
-        top_layout.addWidget(start_button)
-        
+        self.stacked_layout = QStackedLayout(central_widget)
+
+        # --- Overlay widget for instructions and countdown ---
+        self.overlay_widget = QWidget()
+        self.overlay_layout = QVBoxLayout(self.overlay_widget)
+        self.overlay_widget.setStyleSheet("background-color: white;")
+        self.overlay_widget.setGeometry(0, 0, 700, 650)
+
+        self.instructions_label = QLabel(
+            "Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.",
+            self.overlay_widget
+        )
+        self.instructions_label.setFont(QFont("Arial", 18))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.overlay_layout.addWidget(self.instructions_label)
+
+        self.countdown_label = QLabel("", self.overlay_widget)
+        self.countdown_label.setFont(QFont("Arial", 36, QFont.Bold))
+        self.countdown_label.setAlignment(Qt.AlignCenter)
+        self.countdown_label.setVisible(False)
+        self.overlay_layout.addWidget(self.countdown_label)
+
+        # --- Main experiment widget (image, timer, buttons) ---
+        self.experiment_widget = QWidget()
+        self.experiment_layout = QVBoxLayout(self.experiment_widget)
+
         # Bottom frame with the image
-        bottom_frame = QFrame(self)
+        bottom_frame = QFrame(self.experiment_widget)
         bottom_frame.setStyleSheet("background-color: #FFFFFF;")
-        self.layout.addWidget(bottom_frame)
-        
         bottom_layout = QHBoxLayout(bottom_frame)
-        
-        self.image_label = QLabel(self)
+        self.image_label = QLabel(self.experiment_widget)
         self.image_label.setAlignment(Qt.AlignCenter)
         bottom_layout.addWidget(self.image_label)
+        self.experiment_layout.addWidget(bottom_frame)
 
         # Timer label
-        self.timer_label = QLabel("00:00:00", self)
+        self.timer_label = QLabel("00:00:00", self.experiment_widget)
         self.timer_label.setFont(QFont("Arial", 20))
         self.timer_label.setAlignment(Qt.AlignCenter)
         self.timer_label.setMaximumHeight(50)
-        self.layout.addWidget(self.timer_label)
-        
+        self.experiment_layout.addWidget(self.timer_label)
+
+        # Add both widgets to the stacked layout
+        self.stacked_layout.addWidget(self.overlay_widget)      # index 0
+        self.stacked_layout.addWidget(self.experiment_widget)   # index 1
+
+        # Show overlay first
+        self.stacked_layout.setCurrentIndex(0)
+
+        # Timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
         self.elapsed_time = 0
 
         self.Paused = False
 
+        # User data
         self.user_data = {
             'user_inputs': [],
             'elapsed_time': []
         }  # List to store user inputs
+
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.countdown_seconds = 3
 
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -140,4 +162,33 @@ class DisplayWindow(QMainWindow):
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         self.timer_label.setText(f"{minutes:02}:{seconds:02}:{milliseconds:03}")
+
+    def keyPressEvent(self, event):
+        if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space:
+            self.start_countdown()
+        else:
+            super().keyPressEvent(event)
+
+    def start_countdown(self):
+        self.instructions_label.setVisible(False)
+        self.countdown_label.setVisible(True)
+        self.countdown_seconds = 3
+        self.countdown_label.setText(str(self.countdown_seconds))
+        self.countdown_timer = QTimer(self)
+        self.countdown_timer.timeout.connect(self.update_countdown)
+        self.countdown_timer.start(1000)  # 1 second intervals
+
+    def update_countdown(self):
+        self.countdown_seconds -= 1
+        if self.countdown_seconds > 0:
+            self.countdown_label.setText(str(self.countdown_seconds))
+        else:
+            self.countdown_timer.stop()
+            self.countdown_label.setText("Go!")
+            QTimer.singleShot(1000, self.begin_experiment)
+
+    def begin_experiment(self):
+        self.stacked_layout.setCurrentIndex(1)
+        self.experiment_started.emit()  # Emit the signal to start the experiment
+        self.run_trial()
 

@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         # Check if the subject ID and test number are valid
         if subject_id and test_number in ['1', '2']:
             # Create base directory structure
-            base_dir = os.path.join('subject_data', f'subject_{subject_id}', f'test_{test_number}')
+            base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
             os.makedirs(base_dir, exist_ok=True)
 
             # List of tests

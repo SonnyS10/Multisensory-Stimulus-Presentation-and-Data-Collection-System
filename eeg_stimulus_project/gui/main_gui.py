@@ -193,15 +193,15 @@ class Frame(QFrame):
             stop_button.clicked.connect(self.stop_button_clicked_stroop)  # <-- update this line
             button_layout.addWidget(stop_button)
 
-            pause_button = QPushButton("Pause", self)
-            pause_button.setEnabled(False)  # Disable pause button for non-stroop tests
-            pause_button.clicked.connect(DisplayWindow.pause_trial)
-            button_layout.addWidget(pause_button)
+            self.pause_button = QPushButton("Pause", self)
+            self.pause_button.setEnabled(False)
+            self.pause_button.clicked.connect(self.pause_display_window)
+            button_layout.addWidget(self.pause_button)
 
-            resume_button = QPushButton("Resume", self)
-            resume_button.setEnabled(False)
-            resume_button.clicked.connect(DisplayWindow.resume_trial)
-            button_layout.addWidget(resume_button)
+            self.resume_button = QPushButton("Resume", self)
+            self.resume_button.setEnabled(False)
+            self.resume_button.clicked.connect(self.resume_display_window)
+            button_layout.addWidget(self.resume_button)
 
             self.display_button = QCheckBox("Display", self)
             button_layout.addWidget(self.display_button)
@@ -220,7 +220,7 @@ class Frame(QFrame):
             button_layout.addWidget(start_button)
 
             stop_button = QPushButton("Stop", self)
-            stop_button.clicked.connect(self.stop_button_clicked_normal)  # <-- update this line
+            stop_button.clicked.connect(self.stop_button_clicked_passive)  # <-- update this line
             button_layout.addWidget(stop_button)
 
             pause_button = QPushButton("Pause", self)
@@ -267,6 +267,7 @@ class Frame(QFrame):
     def start_button_clicked(self):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
+            self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
             LSL.start_collection()
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
@@ -279,13 +280,25 @@ class Frame(QFrame):
             print(f"Error saving data: {e}")
         self.parent.open_secondary_gui(Qt.Unchecked)
 
-    def stop_button_clicked_normal(self):
+    def stop_button_clicked_passive(self):
         save_data = Save_Data(self.base_dir, self.test_number)
         try:
-            save_data.save_data_normal(self.parent.get_current_test())
+            save_data.save_data_passive(self.parent.get_current_test())
         except Exception as e:
             print(f"Error saving data: {e}")
         self.parent.open_secondary_gui(Qt.Unchecked)
+    
+    def pause_display_window(self):
+        if hasattr(self.parent, 'display_window') and self.parent.display_window is not None:
+            self.parent.display_window.pause_trial()
+
+    def resume_display_window(self):
+        if hasattr(self.parent, 'display_window') and self.parent.display_window is not None:
+            self.parent.display_window.resume_trial()
+
+    def enable_pause_resume_buttons(self):
+        self.pause_button.setEnabled(True)
+        self.resume_button.setEnabled(True)
 
 if __name__ == "__main__":
     import sys
