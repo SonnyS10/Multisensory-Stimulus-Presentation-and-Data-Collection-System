@@ -10,6 +10,7 @@ from display_window import DisplayWindow
 from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -220,18 +221,18 @@ class Frame(QFrame):
             button_layout.addWidget(start_button)
 
             stop_button = QPushButton("Stop", self)
-            stop_button.clicked.connect(self.stop_button_clicked_passive)  # <-- update this line
+            stop_button.clicked.connect(self.stop_button_clicked_passive)
             button_layout.addWidget(stop_button)
 
-            pause_button = QPushButton("Pause", self)
-            pause_button.setEnabled(False)  # Disable pause button for non-stroop tests
-            pause_button.clicked.connect(DisplayWindow.pause_trial)
-            button_layout.addWidget(pause_button)
+            self.pause_button = QPushButton("Pause", self)  # <-- FIXED
+            self.pause_button.setEnabled(False)
+            self.pause_button.clicked.connect(self.pause_display_window)
+            button_layout.addWidget(self.pause_button)
 
-            resume_button = QPushButton("Resume", self)
-            resume_button.setEnabled(False)
-            resume_button.clicked.connect(DisplayWindow.resume_trial)
-            button_layout.addWidget(resume_button)
+            self.resume_button = QPushButton("Resume", self)  # <-- FIXED
+            self.resume_button.setEnabled(False)
+            self.resume_button.clicked.connect(self.resume_display_window)
+            button_layout.addWidget(self.resume_button)
 
             vr_button = QCheckBox("VR", self)
             button_layout.addWidget(vr_button)
@@ -268,7 +269,8 @@ class Frame(QFrame):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
             self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
-            LSL.start_collection()
+            #LSL.start_collection()
+            LabRecorder.Start_Recorder(self.parent.get_current_test())
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
 
