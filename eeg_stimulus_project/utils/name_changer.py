@@ -24,10 +24,10 @@ def replace_in_folder(folder, old, new, skip_filename):
 
 if __name__ == "__main__":
     # Set your folder path here
-    folder_path = r"C:\Users\srs1520\Documents\Paid Research\Software-for-Paid-Research-"
+    folder_path = r"C:\Users\cpl4168\Documents\Paid Research\Software-for-Paid-Research-"
     # Choose which way you want to replace:
-    old_string = "cpl4168"
-    new_string = "srs1520"
+    old_string = "srs1520"
+    new_string = "cpl4168"
     # To do the reverse, swap the above two lines
 
     skip_file = os.path.basename(__file__)
