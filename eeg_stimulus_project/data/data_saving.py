@@ -48,5 +48,6 @@ class Save_Data():
 
         print("Data saved successfully!")
         #LSL.stop_collection(file_path_eeg)
-        LabRecorder.Stop_Recorder()
+        recorder = LabRecorder(self.base_dir)
+        recorder.Stop_Recorder()
         print("super cool")
