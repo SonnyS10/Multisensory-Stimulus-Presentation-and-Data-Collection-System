@@ -10,7 +10,7 @@ class Save_Data():
         self.base_dir = base_dir
         self.test_number = test_number
 
-    def save_data_stroop(self, current_test, user_inputs, elapsed_time):
+    def save_data_stroop(self, current_test, user_inputs, elapsed_time, labrecorder=None, labrecorder_connected=False):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(test_dir, exist_ok=True)
@@ -33,16 +33,13 @@ class Save_Data():
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
         print("Data saved successfully!")
-        #LSL.stop_collection(file_path_eeg)
-        recorder_active = LabRecorder(self.base_dir).create_connection()
-        if recorder_active == True:
-            recorder = LabRecorder(self.base_dir)
-            recorder.Stop_Recorder()
+        # Stop LabRecorder if connected and provided
+        if labrecorder_connected and labrecorder and labrecorder.s:
+            labrecorder.Stop_Recorder()
         else:
             print("LabRecorder is not active. Cannot stop recording.")
-        print("super cool")
 
-    def save_data_passive(self, current_test):
+    def save_data_passive(self, current_test, labrecorder=None, labrecorder_connected=False):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(test_dir, exist_ok=True)
@@ -51,7 +48,5 @@ class Save_Data():
         file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
 
         print("Data saved successfully!")
-        #LSL.stop_collection(file_path_eeg)
-        recorder = LabRecorder(self.base_dir)
-        recorder.Stop_Recorder()
-        print("super cool")
+        if labrecorder_connected and labrecorder and labrecorder.s:
+            labrecorder.Stop_Recorder()

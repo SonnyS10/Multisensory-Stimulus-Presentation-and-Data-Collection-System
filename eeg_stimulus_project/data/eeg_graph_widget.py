@@ -38,7 +38,7 @@ class EEGGraphWidget(QWidget):
         self.update_axes_labels()
 
         # Set up the animation
-        self.animation = FuncAnimation(self.figure, self.update, interval=1000 / self.SAMPLE_RATE * self.SAMPLE_RATE, blit=True)
+        self.animation = FuncAnimation(self.figure, self.update, interval=1000 / self.SAMPLE_RATE * self.SAMPLE_RATE, blit=True, cache_frame_data=False)
 
     def set_channel_names(self, names):
         """

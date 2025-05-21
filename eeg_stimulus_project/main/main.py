@@ -1,11 +1,13 @@
+import sys
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 import os
 import subprocess
-import sys
 import psutil  # Add this import at the top of your file
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
+from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -157,6 +159,17 @@ class MainWindow(QMainWindow):
         error_dialog.setText(message)
         error_dialog.exec_()
 
+    def connect_labrecorder(self, base_dir):
+        """
+        Connect to the LabRecorder.
+        """
+        self.labrecorder = LabRecorder(base_dir)
+        self.labrecorder_connected = self.labrecorder.s is not None
+        if self.labrecorder_connected:
+            print("LabRecorder connected.")
+        else:
+            print("LabRecorder connection failed.")
+
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
@@ -211,6 +224,7 @@ class MainWindow(QMainWindow):
 
             # Run the GUI script
             self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
+            self.connect_labrecorder(base_dir)  # Connect once and set boolean
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 

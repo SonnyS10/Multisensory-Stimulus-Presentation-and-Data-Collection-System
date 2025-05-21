@@ -60,6 +60,9 @@ class GUI(QMainWindow):
         
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
         
+        self.labrecorder = None
+        self.labrecorder_connected = False
+        
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, is_stroop_test)
     
@@ -270,11 +273,9 @@ class Frame(QFrame):
             self.parent.open_secondary_gui(Qt.Checked)
             self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
             #LSL.start_collection()
-            recorder_active = LabRecorder(self.base_dir).create_connection()
-            if recorder_active == True:
-                print("LabRecorder connection established.")
-                recorder = LabRecorder(self.base_dir)  # base_dir should be defined appropriately
-                recorder.Start_Recorder(self.parent.get_current_test())
+                # When you want to start recording:
+            if self.parent.labrecorder_connected:
+                self.parent.labrecorder.Start_Recorder(self.parent.get_current_test())
             else:
                 print("LabRecorder connection failed, continuing in test mode.")
         else:
@@ -286,6 +287,9 @@ class Frame(QFrame):
             save_data.save_data_stroop(self.parent.get_current_test(), self.user_data['user_inputs'], self.user_data['elapsed_time'])
         except Exception as e:
             print(f"Error saving data: {e}")
+        # When you want to stop recording:
+        if self.parent.labrecorder_connected:
+            self.parent.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
     def stop_button_clicked_passive(self):
@@ -294,6 +298,9 @@ class Frame(QFrame):
             save_data.save_data_passive(self.parent.get_current_test())
         except Exception as e:
             print(f"Error saving data: {e}")
+        # When you want to stop recording:
+        if self.parent.labrecorder_connected:
+            self.parent.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
     
     def pause_display_window(self):
