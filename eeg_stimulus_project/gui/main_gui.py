@@ -18,6 +18,8 @@ class GUI(QMainWindow):
         self.setWindowTitle("Data Collection App")
         self.setGeometry(100, 100, 1100, 700)
         self.setMinimumSize(800, 600)  # Set a minimum size if needed
+
+        self.base_dir = os.environ.get('BASE_DIR', '')
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -61,8 +63,17 @@ class GUI(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
         
         self.labrecorder = None
-        self.labrecorder_connected = False
-        
+        self.lab_recorder_connected = False
+
+        # Try to connect to LabRecorder on startup
+        try:
+            self.labrecorder = LabRecorder(self.base_dir)
+            self.lab_recorder_connected = True
+            print("Connected to LabRecorder.")
+        except Exception as e:
+            self.lab_recorder_connected = False
+            print(f"Failed to connect to LabRecorder: {e}")
+      
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, is_stroop_test)
     
@@ -272,12 +283,11 @@ class Frame(QFrame):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
             self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
-            #LSL.start_collection()
-                # When you want to start recording:
-            if self.parent.labrecorder_connected:
+            # Start LabRecorder if connected
+            if self.parent.lab_recorder_connected:
                 self.parent.labrecorder.Start_Recorder(self.parent.get_current_test())
             else:
-                print("LabRecorder connection failed, continuing in test mode.")
+                print("LabRecorder not connected")
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
 
@@ -287,8 +297,8 @@ class Frame(QFrame):
             save_data.save_data_stroop(self.parent.get_current_test(), self.user_data['user_inputs'], self.user_data['elapsed_time'])
         except Exception as e:
             print(f"Error saving data: {e}")
-        # When you want to stop recording:
-        if self.parent.labrecorder_connected:
+        # Stop LabRecorder if connected
+        if self.parent.lab_recorder_connected:
             self.parent.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
@@ -298,9 +308,9 @@ class Frame(QFrame):
             save_data.save_data_passive(self.parent.get_current_test())
         except Exception as e:
             print(f"Error saving data: {e}")
-        # When you want to stop recording:
-        if self.parent.labrecorder_connected:
-            self.parent.labrecorder.Stop_Recorder()
+        # Stop LabRecorder if connected
+        if self.parent.lab_recorder_connected:
+             self.parent.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
     
     def pause_display_window(self):

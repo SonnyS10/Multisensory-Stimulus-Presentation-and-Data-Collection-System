@@ -10,7 +10,6 @@ from pywinauto import Application
 from pywinauto import Desktop
 import time 
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
-from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -26,11 +25,11 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central_widget)
 
         # LSL Status
-        self.lsl_status_label = QLabel("LSL Status:", self)
-        layout.addWidget(self.lsl_status_label)
-        self.lsl_status_icon = QLabel(self)
-        self.update_lsl_status_icon(False)
-        layout.addWidget(self.lsl_status_icon)
+        #self.lsl_status_label = QLabel("LSL Status:", self)
+        #layout.addWidget(self.lsl_status_label)
+        #self.lsl_status_icon = QLabel(self)
+        #self.update_lsl_status_icon(False)
+        #layout.addWidget(self.lsl_status_icon)
 
         # Subject ID input
         self.subject_id_label = QLabel("Subject ID:", self)
@@ -47,7 +46,7 @@ class MainWindow(QMainWindow):
         # Start button
         self.start_button = QPushButton("Start", self)
         self.start_button.clicked.connect(self.start_experiment)
-        self.start_button.setEnabled(False)  # Disable until LSL is streaming
+        #self.start_button.setEnabled(False)  # Disable until LSL is streaming
         layout.addWidget(self.start_button)
 
         # Retry LSL button
@@ -79,6 +78,8 @@ class MainWindow(QMainWindow):
 
         layout.addLayout(actichamp_row)
 
+        
+        '''
         # LabRecorder status row (button + icons + labels)
         labrecorder_row = QHBoxLayout()
         self.labrecorder_button = QPushButton("LabRecorder", self)
@@ -98,25 +99,26 @@ class MainWindow(QMainWindow):
         labrecorder_row.addWidget(self.labrecorder_connected_icon)
         
         layout.addLayout(labrecorder_row)
+        '''
 
         # Initialize LSL
-        self.init_lsl()
+        #self.init_lsl()
 
         # Process for the GUI
         self.actichamp_process = None
-        self.labrecorder_process = None
+        #self.labrecorder_process = None
         self.gui_process = None
 
         self.actichamp_timer = QTimer(self)
         self.actichamp_timer.timeout.connect(self.check_actichamp_status)
         self.actichamp_timer.start(5000)
         
-        self.labrecorder_timer = QTimer(self)
-        self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
-        self.labrecorder_timer.start(5000)
+        #self.labrecorder_timer = QTimer(self)
+        #self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
+        #self.labrecorder_timer.start(5000)
 
         self.actichamp_linked = False
-        self.labrecorder_connected = False
+        #self.labrecorder_connected = False
 
     def start_actichamp(self):
         """
@@ -148,6 +150,7 @@ class MainWindow(QMainWindow):
             self.actichamp_linked = False
             self.update_app_status_icon(self.actichamp_linked_icon, False)
         
+    '''
     def start_labrecorder(self):
         """
         Start the LabRecorder application.
@@ -158,7 +161,8 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Failed to start LabRecorder: {e}")
         QTimer.singleShot(1000, self.check_labrecorder_status)
-
+    '''
+    
     def init_lsl(self):
         """
         Initialize LSL and update the status icon.
@@ -205,23 +209,37 @@ class MainWindow(QMainWindow):
         error_dialog.setText(message)
         error_dialog.exec_()
 
+    
+    '''
     def connect_labrecorder(self, base_dir):
         """
-        Connect to the LabRecorder.
+        Connect to the LabRecorder by reading the status file written by main_gui.py.
         """
-        self.labrecorder = LabRecorder(base_dir)
-        self.labrecorder_connected = self.labrecorder.s is not None
-        if self.labrecorder_connected:
-            print("LabRecorder connected.")
-            # When LabRecorder connects successfully:
-            self.labrecorder_connected = True
-            self.update_app_status_icon(self.labrecorder_connected_icon, True)
-        else:
-            print("LabRecorder connection failed.")
-            # When LabRecorder disconnects or fails:
-            self.labrecorder_connected = False
-            self.update_app_status_icon(self.labrecorder_connected_icon, False)
+        # Path to the status file in the main folder (where main.py is)
+        main_folder = os.path.dirname(os.path.abspath(sys.argv[0]))
+        status_file = os.path.join(main_folder, "labrecorder_status.txt")
+        self.labrecorder_connected = False
 
+        if os.path.exists(status_file):
+            try:
+                with open(status_file, "r") as f:
+                    status = f.read().strip().lower()
+                    self.labrecorder_connected = status == "true"
+            except Exception as e:
+                print(f"Error reading LabRecorder status file: {e}")
+                self.labrecorder_connected = False
+        else:
+            print("LabRecorder status file not found.")
+            self.labrecorder_connected = False
+
+        # Update the icon based on the status
+        self.update_app_status_icon(self.labrecorder_connected_icon, self.labrecorder_connected)
+        if self.labrecorder_connected:
+            print("LabRecorder connected (from file).")
+        else:
+            print("LabRecorder not connected (from file).")
+    '''
+    
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
@@ -276,7 +294,13 @@ class MainWindow(QMainWindow):
 
             # Run the GUI script
             self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
-            self.connect_labrecorder(base_dir)  # Connect once and set boolean
+            #status_file = os.path.join(base_dir, "labrecorder_status.txt")
+            #labrecorder_connected = False
+            #if os.path.exists(status_file):
+            #    with open(status_file, "r") as f:
+            #        labrecorder_connected = f.read().strip().lower() == "true"
+            #print("LabRecorder connected (from file):", labrecorder_connected)
+            # Now you can use labrecorder_connected in main.py as needed        
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 
@@ -295,13 +319,13 @@ class MainWindow(QMainWindow):
             self.gui_process.terminate()
             self.gui_process.wait()
         # Terminate Actichamp process
-        if self.actichamp_process is not None:
-            self.actichamp_process.terminate()
-            self.actichamp_process.wait()
+        #if self.actichamp_process is not None:
+        #    self.actichamp_process.terminate()
+        #    self.actichamp_process.wait()
         # Terminate LabRecorder process
-        if self.labrecorder_process is not None:
-            self.labrecorder_process.terminate()
-            self.labrecorder_process.wait()
+        #if self.labrecorder_process is not None:
+        #    self.labrecorder_process.terminate()
+        #    self.labrecorder_process.wait()
         event.accept()
 
     def is_process_running(self, process_name):
