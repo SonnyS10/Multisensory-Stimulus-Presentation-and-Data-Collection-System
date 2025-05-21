@@ -15,7 +15,6 @@ def replace_in_file(filepath, old, new):
 def replace_in_folder(folder, old, new, skip_filename):
     for root, dirs, files in os.walk(folder):
         for file in files:
-            # Only process text/code files and skip the name changer file
             if file == skip_filename:
                 continue
             if file.endswith(('.py', '.txt', '.md', '.csv', '.json', '.yml', '.yaml', '.ini')):
@@ -23,12 +22,24 @@ def replace_in_folder(folder, old, new, skip_filename):
                 replace_in_file(filepath, old, new)
 
 if __name__ == "__main__":
-    # Set your folder path here
-    folder_path = r"C:\Users\cpl4168\Documents\Paid Research\Software-for-Paid-Research-"
-    # Choose which way you want to replace:
-    old_string = "srs1520"
-    new_string = "cpl4168"
-    # To do the reverse, swap the above two lines
+    # Try both folder paths
+    base_path = r"C:\Users"
+    folder1 = os.path.join(base_path, "srs1520", "Documents", "Paid Research", "Software-for-Paid-Research-")
+    folder2 = os.path.join(base_path, "cpl4168", "Documents", "Paid Research", "Software-for-Paid-Research-")
+
+    if os.path.exists(folder1):
+        folder_path = folder1
+        old_string = "cpl4168"
+        new_string = "srs1520"
+    elif os.path.exists(folder2):
+        folder_path = folder2
+        new_string = "srs1520"
+        old_string = "cpl4168"
+    else:
+        print("Neither folder path exists.")
+        exit(1)
+
+    print(f"Swapping '{old_string}' with '{new_string}' in {folder_path}")
 
     skip_file = os.path.basename(__file__)
     replace_in_folder(folder_path, old_string, new_string, skip_file)

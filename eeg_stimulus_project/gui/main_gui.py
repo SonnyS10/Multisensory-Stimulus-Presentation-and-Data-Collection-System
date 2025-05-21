@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
@@ -270,8 +270,13 @@ class Frame(QFrame):
             self.parent.open_secondary_gui(Qt.Checked)
             self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
             #LSL.start_collection()
-            recorder = LabRecorder(self.base_dir)  # base_dir should be defined appropriately
-            recorder.Start_Recorder(self.parent.get_current_test())
+            recorder_active = LabRecorder(self.base_dir).create_connection()
+            if recorder_active == True:
+                print("LabRecorder connection established.")
+                recorder = LabRecorder(self.base_dir)  # base_dir should be defined appropriately
+                recorder.Start_Recorder(self.parent.get_current_test())
+            else:
+                print("LabRecorder connection failed, continuing in test mode.")
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
 

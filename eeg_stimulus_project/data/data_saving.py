@@ -1,7 +1,7 @@
 import os
 import csv
 import sys
-sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
@@ -34,8 +34,12 @@ class Save_Data():
                 writer.writerow([input, time])
         print("Data saved successfully!")
         #LSL.stop_collection(file_path_eeg)
-        recorder = LabRecorder(self.base_dir)
-        recorder.Stop_Recorder()
+        recorder_active = LabRecorder(self.base_dir).create_connection()
+        if recorder_active == True:
+            recorder = LabRecorder(self.base_dir)
+            recorder.Stop_Recorder()
+        else:
+            print("LabRecorder is not active. Cannot stop recording.")
         print("super cool")
 
     def save_data_passive(self, current_test):

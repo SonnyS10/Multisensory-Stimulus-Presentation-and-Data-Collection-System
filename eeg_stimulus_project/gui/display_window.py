@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout, QStackedLayout
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
