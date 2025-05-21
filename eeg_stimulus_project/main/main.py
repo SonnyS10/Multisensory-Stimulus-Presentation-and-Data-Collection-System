@@ -1,10 +1,12 @@
+import sys
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 import os
 import subprocess
-import sys
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
+from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -50,11 +52,45 @@ class MainWindow(QMainWindow):
         self.retry_button.setEnabled(False)
         layout.addWidget(self.retry_button)
 
+        # Actichamp Opener button
+        self.actichamp_button = QPushButton("Actichamp", self)
+        self.actichamp_button.clicked.connect(self.start_actichamp)
+        layout.addWidget(self.actichamp_button)
+
+        # LabRecorder Opener button
+        self.labrecorder_button = QPushButton("LabRecorder", self)
+        self.labrecorder_button.clicked.connect(self.start_labrecorder)
+        layout.addWidget(self.labrecorder_button)
+
         # Initialize LSL
         self.init_lsl()
 
         # Process for the GUI
         self.gui_process = None
+
+        # LabRecorder connection
+        self.labrecorder = None
+        self.labrecorder_connected = False
+
+    def start_actichamp(self):
+        """
+        Start the Actichamp application.
+        """
+        try:
+            subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
+            print("Actichamp started.")
+        except Exception as e:
+            print(f"Failed to start Actichamp: {e}")
+
+    def start_labrecorder(self):
+        """
+        Start the LabRecorder application.
+        """
+        try:
+            subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
+            print("LabRecorder started.")
+        except Exception as e:
+            print(f"Failed to start LabRecorder: {e}")
 
     def init_lsl(self):
         """
@@ -93,6 +129,17 @@ class MainWindow(QMainWindow):
         error_dialog.setWindowTitle("Error")
         error_dialog.setText(message)
         error_dialog.exec_()
+
+    def connect_labrecorder(self, base_dir):
+        """
+        Connect to the LabRecorder.
+        """
+        self.labrecorder = LabRecorder(base_dir)
+        self.labrecorder_connected = self.labrecorder.s is not None
+        if self.labrecorder_connected:
+            print("LabRecorder connected.")
+        else:
+            print("LabRecorder connection failed.")
 
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
@@ -148,6 +195,7 @@ class MainWindow(QMainWindow):
 
             # Run the GUI script
             self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
+            self.connect_labrecorder(base_dir)  # Connect once and set boolean
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 
