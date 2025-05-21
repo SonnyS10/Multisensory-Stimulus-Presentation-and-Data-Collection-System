@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 import os
 import subprocess
 import sys
+import psutil  # Add this import at the top of your file
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
 
 class MainWindow(QMainWindow):
@@ -50,11 +51,65 @@ class MainWindow(QMainWindow):
         self.retry_button.setEnabled(False)
         layout.addWidget(self.retry_button)
 
+        self.connection_label = QLabel("Click Either Button To Start Its Corresponding Application:", self)
+        layout.addWidget(self.connection_label)
+
+        # Actichamp Opener button
+        self.actichamp_button = QPushButton("Actichamp", self)
+        self.actichamp_button.clicked.connect(self.start_actichamp)
+        layout.addWidget(self.actichamp_button)
+
+        # Actichamp status icon
+        self.actichamp_status_icon = QLabel(self)
+        self.update_app_status_icon(self.actichamp_status_icon, False)
+        layout.addWidget(self.actichamp_status_icon)
+
+        # LabRecorder Opener button
+        self.labrecorder_button = QPushButton("LabRecorder", self)
+        self.labrecorder_button.clicked.connect(self.start_labrecorder)
+        layout.addWidget(self.labrecorder_button)
+
+        # LabRecorder status icon
+        self.labrecorder_status_icon = QLabel(self)
+        self.update_app_status_icon(self.labrecorder_status_icon, False)
+        layout.addWidget(self.labrecorder_status_icon)
+
         # Initialize LSL
         self.init_lsl()
 
         # Process for the GUI
         self.gui_process = None
+
+        self.actichamp_timer = QTimer(self)
+        self.actichamp_timer.timeout.connect(self.check_actichamp_status)
+        self.actichamp_timer.start(5000)  # 5 seconds
+        
+        self.labrecorder_timer = QTimer(self)
+        self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
+        self.labrecorder_timer.start(5000)  # 5 seconds
+
+    def start_actichamp(self):
+        """
+        Start the Actichamp application.
+        """
+        try:
+            subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
+            print("Actichamp started.")
+        except Exception as e:
+            print(f"Failed to start Actichamp: {e}")
+        # Update icon after a short delay to allow process to start
+        QTimer.singleShot(1000, self.check_actichamp_status)
+
+    def start_labrecorder(self):
+        """
+        Start the LabRecorder application.
+        """
+        try:
+            subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
+            print("LabRecorder started.")
+        except Exception as e:
+            print(f"Failed to start LabRecorder: {e}")
+        QTimer.singleShot(1000, self.check_labrecorder_status)
 
     def init_lsl(self):
         """
@@ -83,6 +138,14 @@ class MainWindow(QMainWindow):
         pixmap = QPixmap(20, 20)
         pixmap.fill(Qt.green if is_streaming else Qt.red)
         self.lsl_status_icon.setPixmap(pixmap)
+
+    def update_app_status_icon(self, icon_label, is_running):
+        """
+        Update the application status icon to show a red or green light.
+        """
+        pixmap = QPixmap(20, 20)
+        pixmap.fill(Qt.green if is_running else Qt.red)
+        icon_label.setPixmap(pixmap)
 
     def show_error_message(self, message):
         """
@@ -165,8 +228,25 @@ class MainWindow(QMainWindow):
             self.gui_process.terminate()
             self.gui_process.wait()
         # Stop LSL collection when the main window is closed
-        LSL.stop_collection(os.path.join(os.environ['BASE_DIR'], 'eeg_data.csv'))
+        #LSL.stop_collection(os.path.join(os.environ['BASE_DIR'], 'eeg_data.csv'))
         event.accept()
+
+    def is_process_running(self, process_name):
+        for proc in psutil.process_iter(['name', 'exe', 'cmdline']):
+            try:
+                if process_name.lower() in proc.info['name'].lower():
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return False
+
+    def check_actichamp_status(self):
+        running = self.is_process_running("actiCHamp.exe")
+        self.update_app_status_icon(self.actichamp_status_icon, running)
+
+    def check_labrecorder_status(self):
+        running = self.is_process_running("LabRecorder.exe")
+        self.update_app_status_icon(self.labrecorder_status_icon, running)
 
 if __name__ == "__main__":
     # Create the application and main window, then run the application

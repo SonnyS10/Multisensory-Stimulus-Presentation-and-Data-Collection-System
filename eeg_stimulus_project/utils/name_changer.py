@@ -33,8 +33,8 @@ if __name__ == "__main__":
         new_string = "srs1520"
     elif os.path.exists(folder2):
         folder_path = folder2
-        new_string = "srs1520"
-        old_string = "cpl4168"
+        old_string = "srs1520"
+        new_string = "cpl4168"
     else:
         print("Neither folder path exists.")
         exit(1)
