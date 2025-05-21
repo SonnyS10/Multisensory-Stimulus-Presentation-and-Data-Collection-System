@@ -1,5 +1,6 @@
 import socket
 import os
+import time
 
 
 class LabRecorder:
@@ -18,6 +19,8 @@ class LabRecorder:
         save_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(save_dir, exist_ok=True)
         xdf_path = os.path.join('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-', save_dir)
+        self.s.sendall(b"update\n")
+        time.sleep(3)
         self.s.sendall(b"select all\n")
         self.s.sendall(f'filename {{root:{xdf_path}\\}} {{template:eeg_data.xdf}}\n'.encode('utf-8'))
         self.s.sendall(b"start\n")

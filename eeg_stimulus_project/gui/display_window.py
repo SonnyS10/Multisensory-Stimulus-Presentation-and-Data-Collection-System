@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout, QStackedLayout
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
@@ -49,6 +49,7 @@ class DisplayWindow(QMainWindow):
         bottom_layout = QHBoxLayout(bottom_frame)
         self.image_label = QLabel(self.experiment_widget)
         self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         bottom_layout.addWidget(self.image_label)
         self.experiment_layout.addWidget(bottom_frame)
 
@@ -82,6 +83,8 @@ class DisplayWindow(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
         self.countdown_seconds = 3
 
+        self.current_pixmap = None
+
     def run_trial(self, event=None):
         current_test = self.current_test
         print(f"Current test: {current_test}")
@@ -111,7 +114,8 @@ class DisplayWindow(QMainWindow):
     def display_images_passive(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
-            self.image_label.setPixmap(pixmap)
+            self.current_pixmap = pixmap
+            self.update_image_label()
             self.current_image_index += 1
             QTimer.singleShot(5000, self.display_images_passive)  # Display each image for 5 seconds
         else:
@@ -123,7 +127,8 @@ class DisplayWindow(QMainWindow):
         
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
-            self.image_label.setPixmap(pixmap)
+            self.current_pixmap = pixmap
+            self.update_image_label()
             QTimer.singleShot(2000, self.hide_image)  # Hide image after 2 seconds
         else:
             self.timer.stop()
@@ -131,9 +136,34 @@ class DisplayWindow(QMainWindow):
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
             self.current_image_index = 0  # Reset for the next trial
 
+    def update_image_label(self):
+        if self.current_pixmap:
+            scaled_pixmap = self.current_pixmap.scaled(
+                self.image_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.image_label.setPixmap(scaled_pixmap)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.image_label.text():  # If instructions are showing
+            self.set_instruction_text()
+        else:
+            self.update_image_label()
+
+    def set_instruction_text(self):
+        self.image_label.setText("Press the 'Y' key if congruent.\nPress the 'N' key if incongruent.")
+        self.image_label.setAlignment(Qt.AlignCenter)
+        # Dynamically set font size based on label height
+        label_height = self.image_label.height()
+        font_size = max(8, int(label_height * 0.04))  # Adjust 0.08 as needed for your preference
+        font = QFont("Arial", font_size, QFont.Bold)
+        self.image_label.setFont(font)
+
     def hide_image(self):
         self.image_label.clear()  # Clear the image
-        self.image_label.setText("Press the 'Y' key if congruent.\nPress the 'N' key if incongruent.")  # Display text while waiting for input
+        self.set_instruction_text()
         self.wait_for_input()  # Wait for input before displaying the next image
 
     def wait_for_input(self):
@@ -191,4 +221,3 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentIndex(1)
         self.experiment_started.emit()  # Emit the signal to start the experiment
         self.run_trial()
-

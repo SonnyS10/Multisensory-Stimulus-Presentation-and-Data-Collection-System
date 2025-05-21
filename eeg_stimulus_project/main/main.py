@@ -1,11 +1,14 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 import os
 import subprocess
-import psutil  # Add this import at the top of your file
+import psutil
+from pywinauto import Application
+from pywinauto import Desktop
+import time 
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 
@@ -56,58 +59,101 @@ class MainWindow(QMainWindow):
         self.connection_label = QLabel("Click Either Button To Start Its Corresponding Application:", self)
         layout.addWidget(self.connection_label)
 
-        # Actichamp Opener button
+        # Actichamp status row (button + icons + labels)
+        actichamp_row = QHBoxLayout()
         self.actichamp_button = QPushButton("Actichamp", self)
         self.actichamp_button.clicked.connect(self.start_actichamp)
-        layout.addWidget(self.actichamp_button)
+        actichamp_row.addWidget(self.actichamp_button)
 
-        # Actichamp status icon
+        self.actichamp_status_text = QLabel("Running", self)
+        actichamp_row.addWidget(self.actichamp_status_text)
         self.actichamp_status_icon = QLabel(self)
         self.update_app_status_icon(self.actichamp_status_icon, False)
-        layout.addWidget(self.actichamp_status_icon)
+        actichamp_row.addWidget(self.actichamp_status_icon)
+        
+        self.actichamp_linked_text = QLabel("Linked", self)
+        actichamp_row.addWidget(self.actichamp_linked_text)
+        self.actichamp_linked_icon = QLabel(self)
+        self.update_app_status_icon(self.actichamp_linked_icon, False)
+        actichamp_row.addWidget(self.actichamp_linked_icon)
 
-        # LabRecorder Opener button
+        layout.addLayout(actichamp_row)
+
+        # LabRecorder status row (button + icons + labels)
+        labrecorder_row = QHBoxLayout()
         self.labrecorder_button = QPushButton("LabRecorder", self)
         self.labrecorder_button.clicked.connect(self.start_labrecorder)
-        layout.addWidget(self.labrecorder_button)
+        labrecorder_row.addWidget(self.labrecorder_button)
 
-        # LabRecorder status icon
+        self.labrecorder_status_text = QLabel("Running", self)
+        labrecorder_row.addWidget(self.labrecorder_status_text)
         self.labrecorder_status_icon = QLabel(self)
         self.update_app_status_icon(self.labrecorder_status_icon, False)
-        layout.addWidget(self.labrecorder_status_icon)
+        labrecorder_row.addWidget(self.labrecorder_status_icon)
+        
+        self.labrecorder_connected_text = QLabel("Connected", self)
+        labrecorder_row.addWidget(self.labrecorder_connected_text)
+        self.labrecorder_connected_icon = QLabel(self)
+        self.update_app_status_icon(self.labrecorder_connected_icon, False)
+        labrecorder_row.addWidget(self.labrecorder_connected_icon)
+        
+        layout.addLayout(labrecorder_row)
 
         # Initialize LSL
         self.init_lsl()
 
         # Process for the GUI
+        self.actichamp_process = None
+        self.labrecorder_process = None
         self.gui_process = None
 
         self.actichamp_timer = QTimer(self)
         self.actichamp_timer.timeout.connect(self.check_actichamp_status)
-        self.actichamp_timer.start(5000)  # 5 seconds
+        self.actichamp_timer.start(5000)
         
         self.labrecorder_timer = QTimer(self)
         self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
-        self.labrecorder_timer.start(5000)  # 5 seconds
+        self.labrecorder_timer.start(5000)
+
+        self.actichamp_linked = False
+        self.labrecorder_connected = False
 
     def start_actichamp(self):
         """
         Start the Actichamp application.
         """
         try:
-            subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
+            self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
             print("Actichamp started.")
+            print("Attempting Link with the Actichamp Device")
+            time.sleep(2)  # Wait for the application to start
+            self.link_actichamp()  # Link to the Actichamp device
         except Exception as e:
             print(f"Failed to start Actichamp: {e}")
         # Update icon after a short delay to allow process to start
         QTimer.singleShot(1000, self.check_actichamp_status)
 
+    def link_actichamp(self):
+        try:
+            app = Application(backend="uia").connect(title_re="actiCHamp Connector")
+            window_spec = app.window(title_re="actiCHamp Connector")
+            link_button = window_spec.child_window(title="Link", control_type="Button")
+            link_button.wait('enabled', timeout=5)
+            link_button.click_input()
+            print('Actichamp Linked Successfully')
+            self.actichamp_linked = True
+            self.update_app_status_icon(self.actichamp_linked_icon, True)
+        except Exception as e:
+            print(f"Failed to link Actichamp: {e}")
+            self.actichamp_linked = False
+            self.update_app_status_icon(self.actichamp_linked_icon, False)
+        
     def start_labrecorder(self):
         """
         Start the LabRecorder application.
         """
         try:
-            subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
+            self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
             print("LabRecorder started.")
         except Exception as e:
             print(f"Failed to start LabRecorder: {e}")
@@ -128,7 +174,7 @@ class MainWindow(QMainWindow):
                 self.start_button.setEnabled(True)
                 self.retry_button.setEnabled(True)
         except Exception as e:
-            self.show_error_message(f"Failed to initialize LSL: {str(e)}")
+            self.show_error_message(f"Failed to initialize LSL because of an Error: {str(e)}")
             self.update_lsl_status_icon(False)
             self.start_button.setEnabled(False)
             self.retry_button.setEnabled(True)
@@ -141,12 +187,12 @@ class MainWindow(QMainWindow):
         pixmap.fill(Qt.green if is_streaming else Qt.red)
         self.lsl_status_icon.setPixmap(pixmap)
 
-    def update_app_status_icon(self, icon_label, is_running):
+    def update_app_status_icon(self, icon_label, is_green):
         """
         Update the application status icon to show a red or green light.
         """
         pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.green if is_running else Qt.red)
+        pixmap.fill(Qt.green if is_green else Qt.red)
         icon_label.setPixmap(pixmap)
 
     def show_error_message(self, message):
@@ -167,8 +213,14 @@ class MainWindow(QMainWindow):
         self.labrecorder_connected = self.labrecorder.s is not None
         if self.labrecorder_connected:
             print("LabRecorder connected.")
+            # When LabRecorder connects successfully:
+            self.labrecorder_connected = True
+            self.update_app_status_icon(self.labrecorder_connected_icon, True)
         else:
             print("LabRecorder connection failed.")
+            # When LabRecorder disconnects or fails:
+            self.labrecorder_connected = False
+            self.update_app_status_icon(self.labrecorder_connected_icon, False)
 
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
@@ -238,11 +290,18 @@ class MainWindow(QMainWindow):
         self.init_lsl()
 
     def closeEvent(self, event):
+        # Terminate GUI process
         if self.gui_process is not None:
             self.gui_process.terminate()
             self.gui_process.wait()
-        # Stop LSL collection when the main window is closed
-        #LSL.stop_collection(os.path.join(os.environ['BASE_DIR'], 'eeg_data.csv'))
+        # Terminate Actichamp process
+        if self.actichamp_process is not None:
+            self.actichamp_process.terminate()
+            self.actichamp_process.wait()
+        # Terminate LabRecorder process
+        if self.labrecorder_process is not None:
+            self.labrecorder_process.terminate()
+            self.labrecorder_process.wait()
         event.accept()
 
     def is_process_running(self, process_name):
