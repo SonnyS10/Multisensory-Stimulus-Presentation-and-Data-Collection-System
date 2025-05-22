@@ -1,14 +1,118 @@
 import sys
 import os
-sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 
+class MirroredDisplayWindow(QWidget):
+    def __init__(self, parent=None, current_test=None):
+        super().__init__(parent)
+        self.current_test = current_test
+        self.setFixedSize(700, 700)
+
+        self.stacked_layout = QStackedLayout(self)
+
+        # Overlay widget
+        self.overlay_widget = QWidget()
+        self.overlay_layout = QVBoxLayout(self.overlay_widget)
+        self.overlay_widget.setStyleSheet("background-color: white;")
+        self.overlay_widget.setGeometry(0, 0, 700, 650)
+
+        self.instructions_label = QLabel(
+            "Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.",
+            self.overlay_widget
+        )
+        self.instructions_label.setFont(QFont("Arial", 18))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.overlay_layout.addWidget(self.instructions_label)
+
+        self.countdown_label = QLabel("", self.overlay_widget)
+        self.countdown_label.setFont(QFont("Arial", 36, QFont.Bold))
+        self.countdown_label.setAlignment(Qt.AlignCenter)
+        self.countdown_label.setVisible(False)
+        self.overlay_layout.addWidget(self.countdown_label)
+
+        # Main experiment widget
+        self.experiment_widget = QWidget()
+        self.experiment_layout = QVBoxLayout(self.experiment_widget)
+
+        bottom_frame = QFrame(self.experiment_widget)
+        bottom_frame.setStyleSheet("background-color: #FFFFFF;")
+        bottom_layout = QHBoxLayout(bottom_frame)
+        self.image_label = QLabel(self.experiment_widget)
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        bottom_layout.addWidget(self.image_label)
+        self.experiment_layout.addWidget(bottom_frame)
+
+        self.timer_label = QLabel("00:00:00", self.experiment_widget)
+        self.timer_label.setFont(QFont("Arial", 20))
+        self.timer_label.setAlignment(Qt.AlignCenter)
+        self.timer_label.setMaximumHeight(50)
+        self.experiment_layout.addWidget(self.timer_label)
+
+        self.stacked_layout.addWidget(self.overlay_widget)      # index 0
+        self.stacked_layout.addWidget(self.experiment_widget)   # index 1
+
+        self.stacked_layout.setCurrentIndex(0)
+
+    # Methods to update the mirror
+    def set_pixmap(self, pixmap):
+        if pixmap:
+            scaled_pixmap = pixmap.scaled(
+                self.image_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.image_label.setPixmap(scaled_pixmap)
+        else:
+            self.image_label.clear()
+
+    def set_instruction_text(self, text, font=None):
+        self.image_label.clear()
+        self.instructions_label.setText(text)
+        if font:
+            self.instructions_label.setFont(font)
+
+    def set_timer(self, text):
+        self.timer_label.setText(text)
+
+    def set_overlay_visible(self, visible):
+        self.stacked_layout.setCurrentIndex(0 if visible else 1)
+
+    def set_countdown(self, text, visible=True):
+        self.countdown_label.setText(text)
+        self.countdown_label.setVisible(visible)
+
+    def start_countdown(self):
+        self.instructions_label.setVisible(False)
+        self.countdown_label.setVisible(True)
+        self.countdown_seconds = 3
+        self.countdown_label.setText(str(self.countdown_seconds))
+        self.countdown_timer = QTimer(self)
+        self.countdown_timer.timeout.connect(self.update_countdown)
+        self.countdown_timer.start(1000)
+
+    def update_countdown(self):
+        self.countdown_seconds -= 1
+        if self.countdown_seconds > 0:
+            self.countdown_label.setText(str(self.countdown_seconds))
+        else:
+            self.countdown_timer.stop()
+            self.countdown_label.setText("Go!")
+            QTimer.singleShot(1000, self.begin_experiment)
+
+    def begin_experiment(self):
+        self.stacked_layout.setCurrentIndex(1)
+        
+# --- In DisplayWindow ---
+
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
+
     def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
         self.current_test = current_test
@@ -144,6 +248,13 @@ class DisplayWindow(QMainWindow):
                 Qt.SmoothTransformation
             )
             self.image_label.setPixmap(scaled_pixmap)
+            # Update the mirror
+            if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+                self.mirror_widget.set_pixmap(self.current_pixmap)
+        else:
+            self.image_label.clear()
+            if hasattr(self, 'mirror_widget'):
+                self.mirror_widget.set_pixmap(None)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -153,13 +264,16 @@ class DisplayWindow(QMainWindow):
             self.update_image_label()
 
     def set_instruction_text(self):
-        self.image_label.setText("Press the 'Y' key if congruent.\nPress the 'N' key if incongruent.")
+        text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
+        self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
-        # Dynamically set font size based on label height
         label_height = self.image_label.height()
-        font_size = max(8, int(label_height * 0.04))  # Adjust 0.08 as needed for your preference
+        font_size = max(8, int(label_height * 0.04))
         font = QFont("Arial", font_size, QFont.Bold)
         self.image_label.setFont(font)
+        # Update the mirror
+        if hasattr(self, 'mirror_widget'):
+            self.mirror_widget.set_instruction_text(text, font)
 
     def hide_image(self):
         self.image_label.clear()  # Clear the image
@@ -191,8 +305,11 @@ class DisplayWindow(QMainWindow):
         self.elapsed_time += 1  # Increment by 1 millisecond
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
-        self.timer_label.setText(f"{minutes:02}:{seconds:02}:{milliseconds:03}")
-
+        timer_text = f"{minutes:02}:{seconds:02}:{milliseconds:03}"
+        self.timer_label.setText(timer_text)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.set_timer(self.timer_label.text())
+        
     def keyPressEvent(self, event):
         if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space:
             self.start_countdown()
@@ -206,7 +323,10 @@ class DisplayWindow(QMainWindow):
         self.countdown_label.setText(str(self.countdown_seconds))
         self.countdown_timer = QTimer(self)
         self.countdown_timer.timeout.connect(self.update_countdown)
-        self.countdown_timer.start(1000)  # 1 second intervals
+        self.countdown_timer.start(1000)
+        # Start the mirror's countdown as well
+        if hasattr(self, 'mirror_widget'):
+            self.mirror_widget.start_countdown()
 
     def update_countdown(self):
         self.countdown_seconds -= 1
@@ -219,5 +339,21 @@ class DisplayWindow(QMainWindow):
 
     def begin_experiment(self):
         self.stacked_layout.setCurrentIndex(1)
+        if hasattr(self, 'mirror_widget'):
+            self.mirror_widget.begin_experiment()
         self.experiment_started.emit()  # Emit the signal to start the experiment
         self.run_trial()
+
+    def set_mirror(self, mirror_widget):
+        self.mirror_widget = mirror_widget
+
+    def closeEvent(self, event):
+        # Stop the timer to prevent update_timer from running after close
+        if hasattr(self, 'timer') and self.timer.isActive():
+            self.timer.stop()
+        # Close or remove the mirror widget if it exists
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.setParent(None)  # Remove from layout
+            self.mirror_widget.deleteLater()    # Schedule for deletion
+            self.mirror_widget = None
+        super().closeEvent(event)

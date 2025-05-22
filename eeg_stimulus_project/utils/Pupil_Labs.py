@@ -1,7 +1,7 @@
 from pupil_labs.realtime_api.simple import discover_one_device
 
 #print("Looking for the next best device...")
-#device = discover_one_device(max_search_duration_seconds=60)
+#device = discover_one_device(max_search_duration_seconds=10)
 #if device is None:
 #    print("No device found.")
 #    raise SystemExit(-1)

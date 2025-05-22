@@ -1,16 +1,18 @@
 import sys
 import os
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from sidebar import Sidebar
 from main_frame import MainFrame
-from display_window import DisplayWindow
-from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
+from display_window import DisplayWindow, MirroredDisplayWindow
+#from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
-from eeg_stimulus_project.utils.labrecorder import LabRecorder
+#from eeg_stimulus_project.utils.labrecorder import LabRecorder
+from eeg_stimulus_project.utils.device_manager import DeviceManager
+
 
 class GUI(QMainWindow):
     def __init__(self):
@@ -61,18 +63,6 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
-        
-        self.labrecorder = None
-        self.lab_recorder_connected = False
-
-        # Try to connect to LabRecorder on startup
-        try:
-            self.labrecorder = LabRecorder(self.base_dir)
-            self.lab_recorder_connected = True
-            print("Connected to LabRecorder.")
-        except Exception as e:
-            self.lab_recorder_connected = False
-            print(f"Failed to connect to LabRecorder: {e}")
       
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, is_stroop_test)
@@ -109,18 +99,27 @@ class GUI(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory2)
     
     def open_secondary_gui(self, state):
+        current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
         if state == Qt.Checked:
-            # Only open if not already open
-            if not hasattr(self, 'display_window') or self.display_window is None or not self.display_window.isVisible():
+            if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
-                self.display_window = DisplayWindow(self, current_test=current_test)
-                # When the window is closed, set self.display_window to None
-                self.display_window.destroyed.connect(lambda: setattr(self, 'display_window', None))
-                self.display_window.show()
+                # Create both widgets
+                current_frame.display_widget = DisplayWindow(current_frame, current_test=current_test)
+                current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
+                current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
+                # Add both to the middle_frame layout
+                middle_layout = current_frame.middle_frame.layout()  # Or however you access the layout
+                middle_layout.addWidget(current_frame.mirror_display_widget)
+                # Show the main display as a window
+                current_frame.display_widget.show()
         else:
-            if hasattr(self, 'display_window') and self.display_window is not None:
-                self.display_window.close()
-                self.display_window = None
+            # Optionally remove/hide the widgets
+            if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
+                current_frame.display_widget.setParent(None)
+                current_frame.display_widget = None
+            if hasattr(current_frame, 'mirror_display_widget') and current_frame.mirror_display_widget is not None:
+                current_frame.mirror_display_widget.setParent(None)
+                current_frame.mirror_display_widget = None
     
     def get_current_test(self):
         current_widget = self.stacked_widget.currentWidget()
@@ -165,30 +164,14 @@ class Frame(QFrame):
         header.setStyleSheet(f"background-color: rgb(146, 63, 179);")
         top_layout.addWidget(header)
         
-        # Middle frame with the EEG graph
+        # Middle frame with the EEG graph or display windows
         self.middle_frame = QFrame(self)
         self.middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
         self.middle_frame.setMinimumHeight(490)
         self.layout.addWidget(self.middle_frame)
 
-        middle_layout = QVBoxLayout(self.middle_frame)
+        middle_layout = QHBoxLayout(self.middle_frame)
 
-        # Add EEGGraphWidget to the middle frame
-        self.eeg_graph = EEGGraphWidget()
-        middle_layout.addWidget(self.eeg_graph)
-
-        # Add navigation buttons for EEG graph
-        nav_layout = QHBoxLayout()
-        middle_layout.addLayout(nav_layout)
-
-        prev_button = QPushButton("Previous Page", self)
-        prev_button.clicked.connect(self.eeg_graph.previous_page)
-        nav_layout.addWidget(prev_button)
-
-        next_button = QPushButton("Next Page", self)
-        next_button.clicked.connect(self.eeg_graph.next_page)
-        nav_layout.addWidget(next_button)
-        
         # Save parent reference for later use
         self.parent = parent
 
@@ -282,10 +265,9 @@ class Frame(QFrame):
     def start_button_clicked(self):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
-            self.parent.display_window.experiment_started.connect(self.enable_pause_resume_buttons)
             # Start LabRecorder if connected
-            if self.parent.lab_recorder_connected:
-                self.parent.labrecorder.Start_Recorder(self.parent.get_current_test())
+            if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
+                DeviceManager.labrecorder.Start_Recorder(self.parent.get_current_test())
             else:
                 print("LabRecorder not connected")
         else:
@@ -314,12 +296,12 @@ class Frame(QFrame):
         self.parent.open_secondary_gui(Qt.Unchecked)
     
     def pause_display_window(self):
-        if hasattr(self.parent, 'display_window') and self.parent.display_window is not None:
-            self.parent.display_window.pause_trial()
+        self.display_widget.pause_trial()
+        self.mirror_display_widget.pause_trial()
 
     def resume_display_window(self):
-        if hasattr(self.parent, 'display_window') and self.parent.display_window is not None:
-            self.parent.display_window.resume_trial()
+        self.display_widget.resume_trial()
+        self.mirror_display_widget.resume_trial()
 
     def enable_pause_resume_buttons(self):
         self.pause_button.setEnabled(True)
