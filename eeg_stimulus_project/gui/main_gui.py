@@ -1,7 +1,7 @@
 import sys
 import os
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from eeg_stimulus_project.gui.sidebar import Sidebar
@@ -14,12 +14,35 @@ from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 
+class Tee(object):
+    def __init__(self, *streams):
+        # streams can be sys.stdout, ControlWindow, or log_queue
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            if hasattr(s, 'put'):
+                # It's a Queue
+                s.put(data)
+            elif hasattr(s, 'write'):
+                s.write(data)
+                s.flush()
+
+    def flush(self):
+        for s in self.streams:
+            if hasattr(s, 'flush'):
+                s.flush()
+
 class GUI(QMainWindow):
     def __init__(self, shared_status):
         super().__init__()
         self.shared_status = shared_status
+
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+
         self.setWindowTitle("Data Collection App")
-        self.setGeometry(100, 100, 1100, 700)
+        self.setGeometry(0, 0, screen_geometry.width() // 2, screen_geometry.height())
         self.setMinimumSize(800, 600)  # Set a minimum size if needed
 
         self.base_dir = os.environ.get('BASE_DIR', '')

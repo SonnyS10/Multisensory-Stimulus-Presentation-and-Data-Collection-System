@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QStackedWidget, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QStackedWidget, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout, QTextEdit
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 import os
@@ -7,22 +7,50 @@ import subprocess
 import psutil
 from pywinauto import Application
 import time 
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+import threading
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.device_manager import DeviceManager
 
+class Tee(object):
+    def __init__(self, *streams):
+        # streams can be sys.stdout, ControlWindow, or log_queue
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            if hasattr(s, 'put'):
+                # It's a Queue
+                s.put(data)
+            elif hasattr(s, 'write'):
+                s.write(data)
+                s.flush()
+
+    def flush(self):
+        for s in self.streams:
+            if hasattr(s, 'flush'):
+                s.flush()
+
 class ControlWindow(QMainWindow):
-    def __init__(self, shared_status):
+    def __init__(self, shared_status=None, log_queue=None):
         super().__init__()
         self.shared_status = shared_status
+
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+        
         self.setWindowTitle("Control Window")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(screen_geometry.width() // 2, 0, screen_geometry.width() // 2, screen_geometry.height())
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
 
-        self.control_layout = QVBoxLayout(self.central_widget)
-        self.control_layout.setAlignment(Qt.AlignTop)
+        # --- DEVICE FRAME ---
+        self.device_frame = QFrame(self.central_widget)
+        self.device_frame.setMinimumWidth(800)  # Set minimum width to 800
+        self.device_frame_layout = QVBoxLayout(self.device_frame)
+        self.device_frame_layout.setAlignment(Qt.AlignTop)
+        self.device_frame_layout.setContentsMargins(10, 10, 10, 10)
 
         # Actichamp status row (button + icons + labels)
         actichamp_row = QHBoxLayout()
@@ -36,7 +64,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.actichamp_linked_icon, False)
         actichamp_row.addWidget(self.actichamp_linked_icon)
 
-        self.control_layout.addLayout(actichamp_row)
+        self.device_frame_layout.addLayout(actichamp_row)
         
         # LabRecorder status row (button + icons + labels)
         labrecorder_row = QHBoxLayout()
@@ -50,7 +78,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.labrecorder_connected_icon, False)
         labrecorder_row.addWidget(self.labrecorder_connected_icon)
         
-        self.control_layout.addLayout(labrecorder_row)
+        self.device_frame_layout.addLayout(labrecorder_row)
 
         # Eye Tracker status row (button + icons + labels)
         eyetracker_row = QHBoxLayout()
@@ -64,7 +92,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.eyetracker_connected_icon, False)
         eyetracker_row.addWidget(self.eyetracker_connected_icon)
         
-        self.control_layout.addLayout(eyetracker_row)
+        self.device_frame_layout.addLayout(eyetracker_row)
 
         # Touch Box status row (button + icons + labels)
         touchbox_row = QHBoxLayout()
@@ -78,7 +106,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.touchbox_connected_icon, False)
         touchbox_row.addWidget(self.touchbox_connected_icon)
         
-        self.control_layout.addLayout(touchbox_row)
+        self.device_frame_layout.addLayout(touchbox_row)
 
         # VR status row (button + icons + labels)
         vr_row = QHBoxLayout()
@@ -92,7 +120,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.vr_connected_icon, False)
         vr_row.addWidget(self.vr_connected_icon)
         
-        self.control_layout.addLayout(vr_row)
+        self.device_frame_layout.addLayout(vr_row)
 
         # Turntable status row (button + icons + labels)
         turntable_row = QHBoxLayout()
@@ -106,7 +134,7 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.turntable_connected_icon, False)
         turntable_row.addWidget(self.turntable_connected_icon)
         
-        self.control_layout.addLayout(turntable_row)
+        self.device_frame_layout.addLayout(turntable_row)
 
         # Olfactory Sysytem status row (button + icons + labels)
         olfactory_row = QHBoxLayout()
@@ -120,8 +148,20 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.olfactory_connected_icon, False)
         olfactory_row.addWidget(self.olfactory_connected_icon)
         
-        self.control_layout.addLayout(olfactory_row)
+        self.device_frame_layout.addLayout(olfactory_row)
         
+        # --- MAIN LAYOUT ---
+        self.control_layout = QVBoxLayout(self.central_widget)
+        self.control_layout.setAlignment(Qt.AlignTop)
+        self.control_layout.addWidget(self.device_frame)
+
+        # --- LOG TEXT EDITOR ---
+        self.log_text_edit = QTextEdit(self)
+        self.log_text_edit.setReadOnly(True)
+        self.log_text_edit.setMinimumHeight(150)
+        self.control_layout.addWidget(QLabel("Log Output:", self))
+        self.control_layout.addWidget(self.log_text_edit)
+
         # Process for the applications
         self.actichamp_process = None
         self.labrecorder_process = None
@@ -146,6 +186,41 @@ class ControlWindow(QMainWindow):
 
         self.labrecorder = None
         self.lab_recorder_connected = False
+
+        self.log_queue = log_queue
+
+        # Start a thread to listen to the log queue and print messages in the QTextEdit
+        if self.log_queue is not None:
+            self.log_thread = threading.Thread(target=self.listen_to_log_queue, daemon=True)
+            self.log_thread.start()
+
+        self.original_stdout = sys.stdout
+        sys.stdout = Tee(sys.stdout, self, self.log_queue)
+
+    def listen_to_log_queue(self):
+        while True:
+            try:
+                msg = self.log_queue.get()
+                if msg == "STOP":
+                    break
+                self.write(msg)
+            except Exception as e:
+                self.write(f"Log queue error: {e}\n")
+
+    def write(self, msg):
+        # Append message to QTextEdit in a thread-safe way
+        def append():
+            self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
+            self.log_text_edit.insertPlainText(msg)
+            self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
+        if self.log_text_edit.thread() == QApplication.instance().thread():
+            append()
+        else:
+            QApplication.instance().postEvent(
+                self.log_text_edit,
+                type(QEvent)(),
+                lambda: append()
+            )
 
     def start_actichamp(self):
         """
@@ -208,6 +283,10 @@ class ControlWindow(QMainWindow):
         pixmap = QPixmap(20, 20)
         pixmap.fill(Qt.green if is_green else Qt.red)
         icon_label.setPixmap(pixmap)
+
+    def flush(self):
+        # Needed for compatibility with sys.stdout redirection
+        pass
 
     '''
     def is_process_running(self, process_name):
