@@ -113,9 +113,11 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, parent=None, current_test=None):
+    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None):
         super().__init__(parent)
         self.current_test = current_test
+        self.base_dir = base_dir
+        self.test_number = test_number
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
 
@@ -226,8 +228,6 @@ class DisplayWindow(QMainWindow):
             self.current_image_index = 0  # Reset for the next trial
 
     def display_images_stroop(self):
-        self.base_dir = os.environ.get('BASE_DIR', '')
-        self.test_number = os.environ.get('TEST_NUMBER', '')
         
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)

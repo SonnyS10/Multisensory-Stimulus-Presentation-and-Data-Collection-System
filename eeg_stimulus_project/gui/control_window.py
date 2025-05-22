@@ -12,9 +12,11 @@ from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 class ControlWindow(QMainWindow):
-    def __init__(self, shared_status):
+    def __init__(self, shared_status, base_dir, test_number):
         super().__init__()
         self.shared_status = shared_status
+        self.base_dir = base_dir
+        self.test_number = test_number
         self.setWindowTitle("Control Window")
         self.setGeometry(100, 100, 800, 600)
 
@@ -138,14 +140,6 @@ class ControlWindow(QMainWindow):
         #self.labrecorder_timer = QTimer(self)
         #self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
         #self.labrecorder_timer.start(5000)
-
-        #self.actichamp_linked = False
-        #self.labrecorder_connected = False
-        
-        self.base_dir = os.environ.get('BASE_DIR', '')
-
-        self.labrecorder = None
-        self.lab_recorder_connected = False
 
     def start_actichamp(self):
         """

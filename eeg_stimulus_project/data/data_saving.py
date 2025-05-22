@@ -17,7 +17,6 @@ class Save_Data():
 
         # Save data to a file in the test directory
         file_path = os.path.join(test_dir, 'data.csv')
-        file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
         file_exists = os.path.isfile(file_path)
 
         # If the file exists, delete it
@@ -33,24 +32,10 @@ class Save_Data():
             for input, time in zip(user_inputs, elapsed_time):
                 writer.writerow([input, time])
         print("Data saved successfully!")
-        # Stop LabRecorder if provided and connected
-        #if labrecorder and getattr(labrecorder, 's', None):
-        #    labrecorder.Stop_Recorder()
-        #    print("LabRecorder stopped.")
-        #else:
-        #    print("LabRecorder is not active. Cannot stop recording.")
 
     def save_data_passive(self, current_test, labrecorder=None):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(test_dir, exist_ok=True)
 
-        # Save data to a file in the test directory
-        file_path_eeg = os.path.join(test_dir, 'eeg_data.csv')
-
         print("Data saved successfully!")
-        #if labrecorder and getattr(labrecorder, 's', None):
-        #    labrecorder.Stop_Recorder()
-        #    print("LabRecorder stopped.")
-        #else:
-        #    print("LabRecorder is not active. Cannot stop recording.")

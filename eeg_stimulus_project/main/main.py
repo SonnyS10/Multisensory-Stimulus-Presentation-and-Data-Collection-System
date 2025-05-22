@@ -50,10 +50,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.start_button)
 
         # Retry LSL button
-        self.retry_button = QPushButton("Retry LSL", self)
-        self.retry_button.clicked.connect(self.retry_lsl)
-        self.retry_button.setEnabled(False)
-        layout.addWidget(self.retry_button)
+        #self.retry_button = QPushButton("Retry LSL", self)
+        #self.retry_button.clicked.connect(self.retry_lsl)
+        #self.retry_button.setEnabled(False)
+        #layout.addWidget(self.retry_button)
 
         # Initialize LSL
         #self.init_lsl()
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self.manager = None
         self.shared_status = None
     
+    '''
     def init_lsl(self):
         """
         Initialize LSL and update the status icon.
@@ -101,6 +102,7 @@ class MainWindow(QMainWindow):
         error_dialog.setWindowTitle("Error")
         error_dialog.setText(message)
         error_dialog.exec_()
+    '''
     
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
@@ -145,51 +147,28 @@ class MainWindow(QMainWindow):
                     with open(file_path, 'w') as file:
                         file.truncate(0)
 
-            # Pass the subject ID, test number, and base directory as environment variables
-            env = os.environ.copy()
-            env['SUBJECT_ID'] = subject_id
-            env['TEST_NUMBER'] = test_number
-            env['BASE_DIR'] = base_dir
-
             # Create the Manager and shared_status dict
             self.manager = Manager()
             self.shared_status = self.manager.dict()
             self.shared_status['lab_recorder_connected'] = False
 
             # Start the processes
-            self.control_process = Process(target=run_control_window, args=(self.shared_status,))
-            self.gui_process = Process(target=run_main_gui, args=(self.shared_status,))
+            self.control_process = Process(target=run_control_window, args=(self.shared_status, base_dir, test_number))
+            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, base_dir, test_number))
             self.control_process.start()
             self.gui_process.start()
 
-            ## Construct the correct path to gui.py
-            #gui_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'main_gui.py')
-            #control_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'control_window.py')
-
-            ## Run the GUI script
-            #self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
-            #self.control_process = subprocess.Popen([sys.executable, control_path], env=env)    
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 
-    def retry_lsl(self):
-        """
-        Retry LSL initialization and update the status icon.
-        """
-        self.update_lsl_status_icon(False)
-        self.start_button.setEnabled(False)
-        self.retry_button.setEnabled(False)
-        self.init_lsl()
-
-    #def closeEvent(self, event):
-    #    # Terminate GUI process
-    #    if self.gui_process is not None:
-    #        self.gui_process.terminate()
-    #        self.gui_process.wait()
-    #    if self.control_process is not None:
-    #        self.control_process.terminate()
-    #        self.control_process.wait()
-    #    event.accept()
+    #def retry_lsl(self):
+    #    """
+    #    Retry LSL initialization and update the status icon.
+    #    """
+    #    self.update_lsl_status_icon(False)
+    #    self.start_button.setEnabled(False)
+    #    self.retry_button.setEnabled(False)
+    #    self.init_lsl()
 
     def closeEvent(self, event):
         if self.gui_process is not None:
@@ -200,17 +179,17 @@ class MainWindow(QMainWindow):
             self.control_process.join()
         event.accept()
 
-def run_control_window(shared_status):
+def run_control_window(shared_status, base_dir, test_number):
     from eeg_stimulus_project.gui.control_window import ControlWindow
     app = QApplication(sys.argv)
-    window = ControlWindow(shared_status)
+    window = ControlWindow(shared_status, base_dir, test_number)
     window.show()
     sys.exit(app.exec_())
 
-def run_main_gui(shared_status):
+def run_main_gui(shared_status, base_dir, test_number):
     from eeg_stimulus_project.gui.main_gui import GUI
     app = QApplication(sys.argv)
-    window = GUI(shared_status)
+    window = GUI(shared_status, base_dir, test_number)
     window.show()
     sys.exit(app.exec_())
 

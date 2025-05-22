@@ -10,19 +10,19 @@ from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDispl
 #from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
-#from eeg_stimulus_project.utils.labrecorder import LabRecorder
+from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 
 class GUI(QMainWindow):
-    def __init__(self, shared_status):
+    def __init__(self, shared_status, base_dir, test_number):
         super().__init__()
         self.shared_status = shared_status
+        self.base_dir = base_dir
+        self.test_number = test_number
         self.setWindowTitle("Data Collection App")
         self.setGeometry(100, 100, 1100, 700)
         self.setMinimumSize(800, 600)  # Set a minimum size if needed
-
-        self.base_dir = os.environ.get('BASE_DIR', '')
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -66,7 +66,7 @@ class GUI(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
       
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, is_stroop_test, self.shared_status)
+        return Frame(self, title, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -105,7 +105,7 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(current_frame, current_test=current_test)
+                current_frame.display_widget = DisplayWindow(current_frame, current_test, self.base_dir, self.test_number)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
                 # Add both to the middle_frame layout
@@ -148,9 +148,11 @@ class GUI(QMainWindow):
             return None
         
 class Frame(QFrame):
-    def __init__(self, parent, title, is_stroop_test=False, shared_status=None):
+    def __init__(self, parent, title, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None):
         super().__init__(parent)
         self.shared_status = shared_status
+        self.base_dir = base_dir
+        self.test_number = test_number
         self.layout = QVBoxLayout(self)
         
         top_frame = QFrame(self)
@@ -176,10 +178,6 @@ class Frame(QFrame):
 
         # Save parent reference for later use
         self.parent = parent
-
-        # Read from environment variables
-        self.base_dir = os.environ.get('BASE_DIR', '')
-        self.test_number = os.environ.get('TEST_NUMBER', '')
 
         if is_stroop_test:
             button_layout = QHBoxLayout()
@@ -267,9 +265,14 @@ class Frame(QFrame):
     def start_button_clicked(self):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
-            # Start LabRecorder if connected
-            #if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
-            if self.shared_status['lab_recorder_connected']:
+            if DeviceManager.labrecorder is None or DeviceManager.labrecorder.s is None:
+                DeviceManager.labrecorder = LabRecorder(self.base_dir)
+                if DeviceManager.labrecorder.s is not None:
+                    DeviceManager.lab_recorder_connected = True
+                else:
+                    DeviceManager.lab_recorder_connected = False
+
+            if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
                 DeviceManager.labrecorder.Start_Recorder(self.parent.get_current_test())
             else:
                 print("LabRecorder not connected")
@@ -279,7 +282,14 @@ class Frame(QFrame):
     def stop_button_clicked_stroop(self):
         save_data = Save_Data(self.base_dir, self.test_number)
         try:
-            save_data.save_data_stroop(self.parent.get_current_test(), self.user_data['user_inputs'], self.user_data['elapsed_time'])
+            if hasattr(self, 'display_widget') and self.display_widget is not None:
+                save_data.save_data_stroop(
+                    self.parent.get_current_test(),
+                    self.display_widget.user_data['user_inputs'],
+                    self.display_widget.user_data['elapsed_time']
+                )
+            else:
+                print("No display_widget found for saving data.")        
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
