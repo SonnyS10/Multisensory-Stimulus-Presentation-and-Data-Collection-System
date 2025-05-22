@@ -1,5 +1,5 @@
 import sys
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
@@ -9,7 +9,26 @@ import psutil
 #from pywinauto import Application
 import time 
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
-from multiprocessing import Manager, Process
+from multiprocessing import Manager, Process, Queue
+
+class Tee(object):
+    def __init__(self, *streams):
+        # streams can be sys.stdout, ControlWindow, or log_queue
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            if hasattr(s, 'put'):
+                # It's a Queue
+                s.put(data)
+            elif hasattr(s, 'write'):
+                s.write(data)
+                s.flush()
+
+    def flush(self):
+        for s in self.streams:
+            if hasattr(s, 'flush'):
+                s.flush()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -148,13 +167,16 @@ class MainWindow(QMainWindow):
                         file.truncate(0)
 
             # Create the Manager and shared_status dict
+            from multiprocessing import Queue
+            log_queue = Queue()
+
             self.manager = Manager()
             self.shared_status = self.manager.dict()
             self.shared_status['lab_recorder_connected'] = False
 
             # Start the processes
-            self.control_process = Process(target=run_control_window, args=(self.shared_status, base_dir, test_number))
-            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, base_dir, test_number))
+            self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue base_dir, test_number))
+            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue base_dir, test_number))
             self.control_process.start()
             self.gui_process.start()
 
@@ -179,17 +201,18 @@ class MainWindow(QMainWindow):
             self.control_process.join()
         event.accept()
 
-def run_control_window(shared_status, base_dir, test_number):
+def run_control_window(shared_status, log_queue, base_dir, test_number):
     from eeg_stimulus_project.gui.control_window import ControlWindow
     app = QApplication(sys.argv)
-    window = ControlWindow(shared_status, base_dir, test_number)
+    window = ControlWindow(shared_status, log_queue=log_queue, base_dir, test_number)
     window.show()
     sys.exit(app.exec_())
 
-def run_main_gui(shared_status, base_dir, test_number):
+def run_main_gui(shared_status, log_queue, base_dir, test_number):
     from eeg_stimulus_project.gui.main_gui import GUI
+    sys.stdout = Tee(sys.stdout, log_queue)
     app = QApplication(sys.argv)
-    window = GUI(shared_status, base_dir, test_number)
+    window = GUI(shared_status, base_dir, test_number)  # If you want to use log_queue in GUI, add it to the constructor
     window.show()
     sys.exit(app.exec_())
 
