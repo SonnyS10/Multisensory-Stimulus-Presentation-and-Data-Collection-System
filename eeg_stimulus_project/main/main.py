@@ -1,5 +1,5 @@
 import sys
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
@@ -9,6 +9,7 @@ import psutil
 #from pywinauto import Application
 import time 
 from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
+from multiprocessing import Manager, Process
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -60,6 +61,8 @@ class MainWindow(QMainWindow):
         # Process for the GUI
         self.gui_process = None
         self.control_process = None
+        self.manager = None
+        self.shared_status = None
     
     def init_lsl(self):
         """
@@ -148,13 +151,24 @@ class MainWindow(QMainWindow):
             env['TEST_NUMBER'] = test_number
             env['BASE_DIR'] = base_dir
 
-            # Construct the correct path to gui.py
-            gui_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'main_gui.py')
-            control_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'control_window.py')
+            # Create the Manager and shared_status dict
+            self.manager = Manager()
+            self.shared_status = self.manager.dict()
+            self.shared_status['lab_recorder_connected'] = False
 
-            # Run the GUI script
-            self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
-            self.control_process = subprocess.Popen([sys.executable, control_path], env=env)    
+            # Start the processes
+            self.control_process = Process(target=run_control_window, args=(self.shared_status,))
+            self.gui_process = Process(target=run_main_gui, args=(self.shared_status,))
+            self.control_process.start()
+            self.gui_process.start()
+
+            ## Construct the correct path to gui.py
+            #gui_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'main_gui.py')
+            #control_path = os.path.join(os.path.dirname(__file__), '..', 'gui', 'control_window.py')
+
+            ## Run the GUI script
+            #self.gui_process = subprocess.Popen([sys.executable, gui_path], env=env)
+            #self.control_process = subprocess.Popen([sys.executable, control_path], env=env)    
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 
@@ -167,15 +181,38 @@ class MainWindow(QMainWindow):
         self.retry_button.setEnabled(False)
         self.init_lsl()
 
+    #def closeEvent(self, event):
+    #    # Terminate GUI process
+    #    if self.gui_process is not None:
+    #        self.gui_process.terminate()
+    #        self.gui_process.wait()
+    #    if self.control_process is not None:
+    #        self.control_process.terminate()
+    #        self.control_process.wait()
+    #    event.accept()
+
     def closeEvent(self, event):
-        # Terminate GUI process
         if self.gui_process is not None:
             self.gui_process.terminate()
-            self.gui_process.wait()
+            self.gui_process.join()
         if self.control_process is not None:
             self.control_process.terminate()
-            self.control_process.wait()
+            self.control_process.join()
         event.accept()
+
+def run_control_window(shared_status):
+    from eeg_stimulus_project.gui.control_window import ControlWindow
+    app = QApplication(sys.argv)
+    window = ControlWindow(shared_status)
+    window.show()
+    sys.exit(app.exec_())
+
+def run_main_gui(shared_status):
+    from eeg_stimulus_project.gui.main_gui import GUI
+    app = QApplication(sys.argv)
+    window = GUI(shared_status)
+    window.show()
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     # Create the application and main window, then run the application
@@ -183,3 +220,5 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
+

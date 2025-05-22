@@ -7,13 +7,14 @@ import subprocess
 import psutil
 from pywinauto import Application
 import time 
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 class ControlWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, shared_status):
         super().__init__()
+        self.shared_status = shared_status
         self.setWindowTitle("Control Window")
         self.setGeometry(100, 100, 800, 600)
 
@@ -182,7 +183,7 @@ class ControlWindow(QMainWindow):
         try:
             self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
             print("LabRecorder opened.")
-            self.connect_labrecorder()
+            QTimer.singleShot(5000, self.connect_labrecorder)  # Wait 5 seconds before connecting
         except Exception as e:
             print(f"Failed to open LabRecorder: {e}")
         #QTimer.singleShot(1000, self.check_labrecorder_status)
@@ -192,11 +193,14 @@ class ControlWindow(QMainWindow):
         try:
             DeviceManager.labrecorder = LabRecorder(self.base_dir)
             if DeviceManager.labrecorder.s is None:
-                raise Exception()
+                print("LabRecorder socket is None after init.")
+                raise Exception("Socket not connected")
             DeviceManager.lab_recorder_connected = True
+            self.shared_status['lab_recorder_connected'] = True
             print("Connected to LabRecorder.")
         except Exception as e:
             DeviceManager.lab_recorder_connected = False
+            print(f"Failed to connect to LabRecorder: {e}")
         self.update_app_status_icon(self.labrecorder_connected_icon, DeviceManager.lab_recorder_connected)
         
     #Update the application status icon to show a red or green light.

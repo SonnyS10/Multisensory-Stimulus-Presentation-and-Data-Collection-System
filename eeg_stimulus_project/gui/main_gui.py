@@ -1,12 +1,12 @@
 import sys
 import os
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
-from sidebar import Sidebar
-from main_frame import MainFrame
-from display_window import DisplayWindow, MirroredDisplayWindow
+from eeg_stimulus_project.gui.sidebar import Sidebar
+from eeg_stimulus_project.gui.main_frame import MainFrame
+from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 #from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
@@ -15,8 +15,9 @@ from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 
 class GUI(QMainWindow):
-    def __init__(self):
+    def __init__(self, shared_status):
         super().__init__()
+        self.shared_status = shared_status
         self.setWindowTitle("Data Collection App")
         self.setGeometry(100, 100, 1100, 700)
         self.setMinimumSize(800, 600)  # Set a minimum size if needed
@@ -65,7 +66,7 @@ class GUI(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
       
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, is_stroop_test)
+        return Frame(self, title, is_stroop_test, self.shared_status)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -147,8 +148,9 @@ class GUI(QMainWindow):
             return None
         
 class Frame(QFrame):
-    def __init__(self, parent, title, is_stroop_test=False):
+    def __init__(self, parent, title, is_stroop_test=False, shared_status=None):
         super().__init__(parent)
+        self.shared_status = shared_status
         self.layout = QVBoxLayout(self)
         
         top_frame = QFrame(self)
@@ -266,7 +268,8 @@ class Frame(QFrame):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
             # Start LabRecorder if connected
-            if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
+            #if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
+            if self.shared_status['lab_recorder_connected']:
                 DeviceManager.labrecorder.Start_Recorder(self.parent.get_current_test())
             else:
                 print("LabRecorder not connected")
@@ -280,8 +283,8 @@ class Frame(QFrame):
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
-        if self.parent.lab_recorder_connected:
-            self.parent.labrecorder.Stop_Recorder()
+        if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
+            DeviceManager.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
     def stop_button_clicked_passive(self):
@@ -291,8 +294,8 @@ class Frame(QFrame):
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
-        if self.parent.lab_recorder_connected:
-             self.parent.labrecorder.Stop_Recorder()
+        if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
+            DeviceManager.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
     
     def pause_display_window(self):
