@@ -175,8 +175,8 @@ class MainWindow(QMainWindow):
             self.shared_status['lab_recorder_connected'] = False
 
             # Start the processes
-            self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue base_dir, test_number))
-            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue base_dir, test_number))
+            self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
+            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
             self.control_process.start()
             self.gui_process.start()
 
@@ -204,7 +204,7 @@ class MainWindow(QMainWindow):
 def run_control_window(shared_status, log_queue, base_dir, test_number):
     from eeg_stimulus_project.gui.control_window import ControlWindow
     app = QApplication(sys.argv)
-    window = ControlWindow(shared_status, log_queue=log_queue, base_dir, test_number)
+    window = ControlWindow(shared_status, log_queue, base_dir, test_number)
     window.show()
     sys.exit(app.exec_())
 
