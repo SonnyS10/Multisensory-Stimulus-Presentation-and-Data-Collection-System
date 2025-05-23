@@ -176,9 +176,9 @@ class ControlWindow(QMainWindow):
         #self.actichamp_timer.timeout.connect(self.check_actichamp_status)
         #self.actichamp_timer.start(5000)
         
-        #self.labrecorder_timer = QTimer(self)
-        #self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
-        #self.labrecorder_timer.start(5000)
+        self.labrecorder_timer = QTimer(self)
+        self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
+        self.labrecorder_timer.start(5000)
 
         #self.actichamp_linked = False
 

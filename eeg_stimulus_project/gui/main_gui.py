@@ -43,7 +43,7 @@ class GUI(QMainWindow):
         self.base_dir = base_dir
         self.test_number = test_number
         self.setWindowTitle("Data Collection App")
-        self.setGeometry(0, 0, screen_geometry.width() // 2, screen_geometry.height())
+        self.setGeometry(0, 100, screen_geometry.width() // 2, screen_geometry.height() - 150)
         self.setMinimumSize(800, 600)  # Set a minimum size if needed
         
         self.central_widget = QWidget()
@@ -128,6 +128,7 @@ class GUI(QMainWindow):
                 current_test = self.get_current_test()
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(current_frame, current_test, self.base_dir, self.test_number)
+                current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
                 # Add both to the middle_frame layout

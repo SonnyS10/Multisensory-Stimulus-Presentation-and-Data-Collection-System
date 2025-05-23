@@ -59,6 +59,8 @@ class MirroredDisplayWindow(QWidget):
 
         self.stacked_layout.setCurrentIndex(0)
 
+        self.paused = False
+
     # Methods to update the mirror
     def set_pixmap(self, pixmap):
         if pixmap:
@@ -68,14 +70,24 @@ class MirroredDisplayWindow(QWidget):
                 Qt.SmoothTransformation
             )
             self.image_label.setPixmap(scaled_pixmap)
+            self.set_overlay_visible(False)  # <-- Switch to experiment view
         else:
             self.image_label.clear()
-
-    def set_instruction_text(self, text, font=None):
+            
+    def set_instruction_text(self, text=None, font=None):
+        if text is None:
+            text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.clear()
         self.instructions_label.setText(text)
-        if font:
-            self.instructions_label.setFont(font)
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)  # <-- Hide countdown label
+        label_height = self.instructions_label.height()
+        if font is None:
+            font_size = max(8, int(label_height * 0.04))
+            font = QFont("Arial", font_size, QFont.Bold)
+        self.instructions_label.setFont(font)
+        self.set_overlay_visible(True)
 
     def set_timer(self, text):
         self.timer_label.setText(text)
@@ -105,8 +117,20 @@ class MirroredDisplayWindow(QWidget):
             self.countdown_label.setText("Go!")
             QTimer.singleShot(1000, self.begin_experiment)
 
+    def show_instruction_for_next_image(self, text=None, font=None):
+        self.set_instruction_text(text, font)
+        self.set_pixmap(None)
+
     def begin_experiment(self):
         self.stacked_layout.setCurrentIndex(1)
+
+    def pause_trial(self, event=None):
+        self.paused = True
+        # Optionally, show a visual indicator (e.g., overlay "Paused" text)
+
+    def resume_trial(self, event=None):
+        self.paused = False
+        # Optionally, remove the visual indicator
         
 # --- In DisplayWindow ---
 
@@ -178,6 +202,16 @@ class DisplayWindow(QMainWindow):
         self.timer.timeout.connect(self.update_timer)
         self.elapsed_time = 0
 
+        # Passive Transition timer
+        self.image_transition_timer = QTimer(self)
+        self.image_transition_timer.setSingleShot(True)
+        self.image_transition_timer.timeout.connect(self._on_image_transition)
+
+        # Stroop Transition timer
+        self.stroop_transition_timer = QTimer(self)
+        self.stroop_transition_timer.setSingleShot(True)
+        self.stroop_transition_timer.timeout.connect(self.hide_image)
+
         self.Paused = False
 
         # User data
@@ -191,16 +225,25 @@ class DisplayWindow(QMainWindow):
 
         self.current_pixmap = None
 
+        self.paused_image_index = 0 # Initialize image index after pause
+        self.paused_time = 0  # Initialize paused time
+
+
     def run_trial(self, event=None):
         current_test = self.current_test
         print(f"Current test: {current_test}")
         print(f"Available tests: {list(Display.test_assets.keys())}")
         if current_test:
             try:
-                self.images = Display.test_assets[current_test]
-                self.current_image_index = 0
-                self.elapsed_time = 0  # Reset the elapsed time
-                self.timer.start(1)  # Start the timer with 100 ms interval
+                if self.paused_time > 0:
+                    self.elapsed_time = self.paused_time
+                    self.current_image_index = self.paused_image_index - 1
+                    self.timer.start(1)  # Start the timer with 100 ms interval
+                else:
+                    self.images = Display.test_assets[current_test]
+                    self.current_image_index = 0  # Reset the image index for the new trial
+                    self.elapsed_time = 0  # Reset the elapsed time
+                    self.timer.start(1)  # Start the timer with 100 ms interval
                 if current_test in ['Multisensory Alcohol (Visual & Tactile)', 'Multisensory Neutral (Visual & Tactile)', 'Multisensory Alcohol (Visual & Olfactory)', 'Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
                 else:
@@ -210,12 +253,23 @@ class DisplayWindow(QMainWindow):
 
     def pause_trial(self, event=None):
         self.timer.stop()
+        self.image_transition_timer.stop()  # Stop the image transition timer
+        if hasattr(self, 'stroop_transition_timer'):
+            self.stroop_transition_timer.stop()  # Stop the Stroop timer
+        self.paused_time = self.elapsed_time
+        print(self.paused_time)
+        self.paused_image_index = self.current_image_index 
+        print(self.paused_image_index)
+         # Store the current image index
         self.Paused = True
-        print(self.elapsed_time)
-        
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.pause_trial()
+
     def resume_trial(self, event=None):
-        self.timer.start(1)
         self.Paused = False
+        self.run_trial()  # Resume the trial
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.resume_trial()
                
     def display_images_passive(self):
         if self.current_image_index < len(self.images):
@@ -223,17 +277,24 @@ class DisplayWindow(QMainWindow):
             self.current_pixmap = pixmap
             self.update_image_label()
             self.current_image_index += 1
-            QTimer.singleShot(5000, self.display_images_passive)  # Display each image for 5 seconds
+            self.image_transition_timer.start(5000)  # Display each image for 5 seconds
+            #QTimer.singleShot(5000, self.display_images_passive)  # Display each image for 5 seconds
         else:
-            self.current_image_index = 0  # Reset for the next trial
+            self.paused_image_index = 0  # Reset the paused image index
+            self.paused_time = 0  # Reset the paused time
+
+    def _on_image_transition(self):
+        if not self.Paused:
+            self.display_images_passive()
 
     def display_images_stroop(self):
-        
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
             self.current_pixmap = pixmap
             self.update_image_label()
-            QTimer.singleShot(2000, self.hide_image)  # Hide image after 2 seconds
+            self.current_image_index += 1
+            self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
+            #QTimer.singleShot(2000, self.hide_image) # Hide image after 2 seconds
         else:
             self.timer.stop()
             save_data = Save_Data(self.base_dir, self.test_number)
@@ -253,7 +314,7 @@ class DisplayWindow(QMainWindow):
                 self.mirror_widget.set_pixmap(self.current_pixmap)
         else:
             self.image_label.clear()
-            if hasattr(self, 'mirror_widget'):
+            if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
                 self.mirror_widget.set_pixmap(None)
 
     def resizeEvent(self, event):
@@ -272,7 +333,7 @@ class DisplayWindow(QMainWindow):
         font = QFont("Arial", font_size, QFont.Bold)
         self.image_label.setFont(font)
         # Update the mirror
-        if hasattr(self, 'mirror_widget'):
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(text, font)
 
     def hide_image(self):
@@ -294,11 +355,20 @@ class DisplayWindow(QMainWindow):
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
                         self.display_next_image()
+                        #if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+                        #    # After advancing, update the mirror to show the new image or instructions
+                        #    if self.current_image_index < len(self.images):
+                        #        # Show the new image in the mirror
+                        #        pixmap = QPixmap(self.images[self.current_image_index].filename)
+                        #        self.mirror_widget.set_pixmap(pixmap)
+                        #    else:
+                        #        # If done, clear the mirror
+                        #        self.mirror_widget.set_pixmap(None)
                         return True
             return super().eventFilter(source, event)
 
     def display_next_image(self):
-        self.current_image_index += 1
+        #self.current_image_index += 1
         self.display_images_stroop()  # Display the next image
 
     def update_timer(self):
