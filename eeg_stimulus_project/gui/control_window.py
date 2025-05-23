@@ -8,9 +8,8 @@ import psutil
 from pywinauto import Application
 import time 
 import threading
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 class Tee(object):
     def __init__(self, *streams):
@@ -32,8 +31,7 @@ class Tee(object):
                 s.flush()
 
 class ControlWindow(QMainWindow):
-    def __init__(self, shared_status=None, log_queue=None):
-    def __init__(self, shared_status, base_dir, test_number):
+    def __init__(self, shared_status, log_queue=None, base_dir=None, test_number=None):
         super().__init__()
         self.shared_status = shared_status
 
@@ -43,7 +41,7 @@ class ControlWindow(QMainWindow):
         self.base_dir = base_dir
         self.test_number = test_number
         self.setWindowTitle("Control Window")
-        self.setGeometry(screen_geometry.width() // 2, 0, screen_geometry.width() // 2, screen_geometry.height())
+        self.setGeometry(screen_geometry.width() // 2, 100, screen_geometry.width() // 2, screen_geometry.height()- 150)
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
@@ -183,9 +181,6 @@ class ControlWindow(QMainWindow):
         #self.labrecorder_timer.start(5000)
 
         #self.actichamp_linked = False
-        #self.labrecorder_connected = False
-        
-        self.base_dir = os.environ.get('BASE_DIR', '')
 
         self.labrecorder = None
         self.lab_recorder_connected = False
@@ -269,17 +264,13 @@ class ControlWindow(QMainWindow):
     #Connect to the LabRecorder application.
     def connect_labrecorder(self):
         try:
-            DeviceManager.labrecorder = LabRecorder(self.base_dir)
-            if DeviceManager.labrecorder.s is None:
-                print("LabRecorder socket is None after init.")
-                raise Exception("Socket not connected")
-            DeviceManager.lab_recorder_connected = True
+            self.labrecorder = LabRecorder(self.base_dir)
             self.shared_status['lab_recorder_connected'] = True
             print("Connected to LabRecorder.")
         except Exception as e:
-            DeviceManager.lab_recorder_connected = False
+            self.shared_status['lab_recorder_connected'] = False
             print(f"Failed to connect to LabRecorder: {e}")
-        self.update_app_status_icon(self.labrecorder_connected_icon, DeviceManager.lab_recorder_connected)
+        self.update_app_status_icon(self.labrecorder_connected_icon, self.shared_status['lab_recorder_connected'])
         
     #Update the application status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
@@ -291,24 +282,22 @@ class ControlWindow(QMainWindow):
         # Needed for compatibility with sys.stdout redirection
         pass
 
-    '''
-    def is_process_running(self, process_name):
-        for proc in psutil.process_iter(['name', 'exe', 'cmdline']):
-            try:
-                if process_name.lower() in proc.info['name'].lower():
-                    return True
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-        return False
+    #def is_process_running(self, process_name):
+    #    for proc in psutil.process_iter(['name', 'exe', 'cmdline']):
+    #        try:
+    #            if process_name.lower() in proc.info['name'].lower():
+    #                return True
+    #        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+    #            pass
+    #    return False
+    #
+    #def check_actichamp_status(self):
+    #    running = self.is_process_running("actiCHamp.exe")
+    #    self.update_app_status_icon(self.actichamp_status_icon, running)
 
-    def check_actichamp_status(self):
-        running = self.is_process_running("actiCHamp.exe")
-        self.update_app_status_icon(self.actichamp_status_icon, running)
-
-    def check_labrecorder_status(self):
-        running = self.is_process_running("LabRecorder.exe")
-        self.update_app_status_icon(self.labrecorder_status_icon, running)
-    '''
+    #def check_labrecorder_status(self):
+    #    connected = self.shared_status.get('lab_recorder_connected', False)
+    #    self.update_app_status_icon(self.labrecorder_connected_icon, connected)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

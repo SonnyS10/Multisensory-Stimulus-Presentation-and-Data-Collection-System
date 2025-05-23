@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
@@ -11,7 +11,6 @@ from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDispl
 from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.device_manager import DeviceManager
 
 
 class Tee(object):
@@ -284,19 +283,20 @@ class Frame(QFrame):
 
             eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
             bottom_layout.addWidget(eye_tracker_checkbox)
+        
+        self.labrecorder = None
 
     def start_button_clicked(self):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
-            if DeviceManager.labrecorder is None or DeviceManager.labrecorder.s is None:
-                DeviceManager.labrecorder = LabRecorder(self.base_dir)
-                if DeviceManager.labrecorder.s is not None:
-                    DeviceManager.lab_recorder_connected = True
+            if self.shared_status.get('lab_recorder_connected', False):
+                # LabRecorder is connected, proceed to use self.labrecorder or create a new one if needed
+                if self.labrecorder is None or self.labrecorder.s is None:
+                    self.labrecorder = LabRecorder(self.base_dir)
+                if self.labrecorder and self.labrecorder.s is not None:
+                    self.labrecorder.Start_Recorder(self.parent.get_current_test())
                 else:
-                    DeviceManager.lab_recorder_connected = False
-
-            if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
-                DeviceManager.labrecorder.Start_Recorder(self.parent.get_current_test())
+                    print("LabRecorder not connected")
             else:
                 print("LabRecorder not connected")
         else:
@@ -316,8 +316,8 @@ class Frame(QFrame):
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
-        if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
-            DeviceManager.labrecorder.Stop_Recorder()
+        if self.labrecorder and self.labrecorder.s is not None:
+            self.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
     def stop_button_clicked_passive(self):
@@ -327,8 +327,8 @@ class Frame(QFrame):
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
-        if DeviceManager.lab_recorder_connected and DeviceManager.labrecorder:
-            DeviceManager.labrecorder.Stop_Recorder()
+        if self.labrecorder and self.labrecorder.s is not None:
+            self.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
     
     def pause_display_window(self):
