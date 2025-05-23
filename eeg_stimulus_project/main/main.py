@@ -1,15 +1,8 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit
 import os
-import subprocess
-import psutil
-#from pywinauto import Application
-import time 
-from eeg_stimulus_project.lsl.stream_manager import LSL  # Import the LSL class from LSL.py
-from multiprocessing import Manager, Process, Queue
+from multiprocessing import Manager, Process
 
 class Tee(object):
     def __init__(self, *streams):
@@ -19,7 +12,7 @@ class Tee(object):
     def write(self, data):
         for s in self.streams:
             if hasattr(s, 'put'):
-                # It's a Queue
+
                 s.put(data)
             elif hasattr(s, 'write'):
                 s.write(data)
@@ -43,13 +36,6 @@ class MainWindow(QMainWindow):
         # Create a vertical layout for the central widget
         layout = QVBoxLayout(central_widget)
 
-        # LSL Status
-        #self.lsl_status_label = QLabel("LSL Status:", self)
-        #layout.addWidget(self.lsl_status_label)
-        #self.lsl_status_icon = QLabel(self)
-        #self.update_lsl_status_icon(False)
-        #layout.addWidget(self.lsl_status_icon)
-
         # Subject ID input
         self.subject_id_label = QLabel("Subject ID:", self)
         layout.addWidget(self.subject_id_label)
@@ -68,60 +54,11 @@ class MainWindow(QMainWindow):
         #self.start_button.setEnabled(False)  # Disable until LSL is streaming
         layout.addWidget(self.start_button)
 
-        # Retry LSL button
-        #self.retry_button = QPushButton("Retry LSL", self)
-        #self.retry_button.clicked.connect(self.retry_lsl)
-        #self.retry_button.setEnabled(False)
-        #layout.addWidget(self.retry_button)
-
-        # Initialize LSL
-        #self.init_lsl()
-
         # Process for the GUI
         self.gui_process = None
         self.control_process = None
         self.manager = None
         self.shared_status = None
-    
-    '''
-    def init_lsl(self):
-        """
-        Initialize LSL and update the status icon.
-        """
-        try:
-            if LSL.init_lsl_stream() == True:  # Call the LSL initialization method
-                self.update_lsl_status_icon(True)
-                self.start_button.setEnabled(True)
-                self.retry_button.setEnabled(False)
-            else:
-                self.show_error_message("Failed to initialize LSL: No stream found.")
-                self.update_lsl_status_icon(False)
-                self.start_button.setEnabled(True)
-                self.retry_button.setEnabled(True)
-        except Exception as e:
-            self.show_error_message(f"Failed to initialize LSL because of an Error: {str(e)}")
-            self.update_lsl_status_icon(False)
-            self.start_button.setEnabled(False)
-            self.retry_button.setEnabled(True)
-
-    def update_lsl_status_icon(self, is_streaming):
-        """
-        Update the LSL status icon to show a red or green light.
-        """
-        pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.green if is_streaming else Qt.red)
-        self.lsl_status_icon.setPixmap(pixmap)
-
-    def show_error_message(self, message):
-        """
-        Show an error message in a popup dialog.
-        """
-        error_dialog = QMessageBox(self)
-        error_dialog.setIcon(QMessageBox.Critical)
-        error_dialog.setWindowTitle("Error")
-        error_dialog.setText(message)
-        error_dialog.exec_()
-    '''
     
     def start_experiment(self):
         # Get the subject ID and test number from the input fields
@@ -152,6 +89,9 @@ class MainWindow(QMainWindow):
             ]
 
             # Select the appropriate tests based on the test number
+            # IN THE FUTURE, WE SHOULD MAKE THIS DAY NUMBER INSTEAD OF TEST NUMBER 
+            # AND WHICHEVER TESTS ARE DONE ON THAT DAY GET RECORDED INTO THEIR RESPECTIVE FOLDERS
+            # For now, we will just use test number
             if test_number == '1':
                 selected_tests = passive_tests
             else:
@@ -182,15 +122,6 @@ class MainWindow(QMainWindow):
 
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
-
-    #def retry_lsl(self):
-    #    """
-    #    Retry LSL initialization and update the status icon.
-    #    """
-    #    self.update_lsl_status_icon(False)
-    #    self.start_button.setEnabled(False)
-    #    self.retry_button.setEnabled(False)
-    #    self.init_lsl()
 
     def closeEvent(self, event):
         if self.gui_process is not None:

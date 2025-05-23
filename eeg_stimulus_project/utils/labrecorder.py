@@ -6,6 +6,8 @@ import time
 class LabRecorder:
     def __init__(self, base_dir):
         self.base_dir = base_dir
+
+        # Creates a connection with the LabRecorder Remote control server
         try:
             self.s = socket.create_connection(("localhost", 22345))
             print("LabRecorder socket connected.")
@@ -13,6 +15,7 @@ class LabRecorder:
             print(f"Could not connect to LabRecorder: {e}")
             self.s = None
 
+    # Sends commands to the LabRecorder server to begin recording and assigns a filepath
     def Start_Recorder(self, current_test):
         if not self.s:
             print("No LabRecorder connection.")
@@ -27,6 +30,7 @@ class LabRecorder:
         self.s.sendall(b"start\n")
         print(f"LabRecorder started recording: {xdf_path}")
 
+    # Sends commands to the LabRecorder server to stop recording
     def Stop_Recorder(self):
         if self.s:
             self.s.sendall(b"stop\n")

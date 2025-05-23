@@ -1,10 +1,8 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QStackedWidget, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit, QMessageBox, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer
-import os
+from PyQt5.QtCore import Qt, QTimer, QMetaObject
 import sys
 import subprocess
-import psutil
 from pywinauto import Application
 import time 
 import threading
@@ -40,9 +38,15 @@ class ControlWindow(QMainWindow):
         
         self.base_dir = base_dir
         self.test_number = test_number
+        self.labrecorder = None
+        self.lab_recorder_connected = False
+        self.log_queue = log_queue
+
+        # Set the window title and size (half of the screen width and full height)
         self.setWindowTitle("Control Window")
         self.setGeometry(screen_geometry.width() // 2, 100, screen_geometry.width() // 2, screen_geometry.height()- 150)
 
+        # Create the central widget and layout
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
 
@@ -73,7 +77,7 @@ class ControlWindow(QMainWindow):
         self.labrecorder_button.clicked.connect(self.start_labrecorder)
         labrecorder_row.addWidget(self.labrecorder_button)
         
-        self.labrecorder_connected_text = QLabel("Connected Status:", self)
+        self.labrecorder_connected_text = QLabel("Connection Status:", self)
         labrecorder_row.addWidget(self.labrecorder_connected_text)
         self.labrecorder_connected_icon = QLabel(self)
         self.update_app_status_icon(self.labrecorder_connected_icon, False)
@@ -87,7 +91,7 @@ class ControlWindow(QMainWindow):
         #self.eyetracker_button.clicked.connect() # Connect to the eyetracker
         eyetracker_row.addWidget(self.eyetracker_button)
         
-        self.eyetracker_connected_text = QLabel("Connected Status:", self)
+        self.eyetracker_connected_text = QLabel("Connection Status:", self)
         eyetracker_row.addWidget(self.eyetracker_connected_text)
         self.eyetracker_connected_icon = QLabel(self)
         self.update_app_status_icon(self.eyetracker_connected_icon, False)
@@ -101,7 +105,7 @@ class ControlWindow(QMainWindow):
         #self.touchbox_button.clicked.connect() # Connect to the touchbox
         touchbox_row.addWidget(self.touchbox_button)
         
-        self.touchbox_connected_text = QLabel("Connected Status:", self)
+        self.touchbox_connected_text = QLabel("Connection Status:", self)
         touchbox_row.addWidget(self.touchbox_connected_text)
         self.touchbox_connected_icon = QLabel(self)
         self.update_app_status_icon(self.touchbox_connected_icon, False)
@@ -115,7 +119,7 @@ class ControlWindow(QMainWindow):
         #self.vr_button.clicked.connect() # Connect to the VR device
         vr_row.addWidget(self.vr_button)
         
-        self.vr_connected_text = QLabel("Connected Status:", self)
+        self.vr_connected_text = QLabel("Connection Status:", self)
         vr_row.addWidget(self.vr_connected_text)
         self.vr_connected_icon = QLabel(self)
         self.update_app_status_icon(self.vr_connected_icon, False)
@@ -129,7 +133,7 @@ class ControlWindow(QMainWindow):
         #self.turntable_button.clicked.connect() # Connect to the turntable
         turntable_row.addWidget(self.turntable_button)
         
-        self.turntable_connected_text = QLabel("Connected Status:", self)
+        self.turntable_connected_text = QLabel("Connection Status:", self)
         turntable_row.addWidget(self.turntable_connected_text)
         self.turntable_connected_icon = QLabel(self)
         self.update_app_status_icon(self.turntable_connected_icon, False)
@@ -143,13 +147,21 @@ class ControlWindow(QMainWindow):
         #self.olfactory_button.clicked.connect() # Connect to the olfactory
         olfactory_row.addWidget(self.olfactory_button)
         
-        self.olfactory_connected_text = QLabel("Connected Status:", self)
+        self.olfactory_connected_text = QLabel("Connection Status:", self)
         olfactory_row.addWidget(self.olfactory_connected_text)
         self.olfactory_connected_icon = QLabel(self)
         self.update_app_status_icon(self.olfactory_connected_icon, False)
         olfactory_row.addWidget(self.olfactory_connected_icon)
         
         self.device_frame_layout.addLayout(olfactory_row)
+
+        # TO MAYBE BE IMPLEMENTED LATER
+        # LSL Status
+        #self.lsl_status_label = QLabel("LSL Status:", self)
+        #layout.addWidget(self.lsl_status_label)
+        #self.lsl_status_icon = QLabel(self)
+        #self.update_lsl_status_icon(False)
+        #layout.addWidget(self.lsl_status_icon)
         
         # --- MAIN LAYOUT ---
         self.control_layout = QVBoxLayout(self.central_widget)
@@ -172,29 +184,15 @@ class ControlWindow(QMainWindow):
         self.turntable_process = None
         self.olfactory_process = None
 
-        #self.actichamp_timer = QTimer(self)
-        #self.actichamp_timer.timeout.connect(self.check_actichamp_status)
-        #self.actichamp_timer.start(5000)
-        
-        self.labrecorder_timer = QTimer(self)
-        self.labrecorder_timer.timeout.connect(self.check_labrecorder_status)
-        self.labrecorder_timer.start(5000)
-
-        #self.actichamp_linked = False
-
-        self.labrecorder = None
-        self.lab_recorder_connected = False
-
-        self.log_queue = log_queue
-
         # Start a thread to listen to the log queue and print messages in the QTextEdit
         if self.log_queue is not None:
             self.log_thread = threading.Thread(target=self.listen_to_log_queue, daemon=True)
             self.log_thread.start()
 
         self.original_stdout = sys.stdout
-        sys.stdout = Tee(sys.stdout, self, self.log_queue)
+        sys.stdout = Tee(sys.stdout, self.log_queue)
 
+    # Redirect terminal outputs to the log queue
     def listen_to_log_queue(self):
         while True:
             try:
@@ -205,8 +203,8 @@ class ControlWindow(QMainWindow):
             except Exception as e:
                 self.write(f"Log queue error: {e}\n")
 
+    # Append message to QTextEdit in a thread-safe way
     def write(self, msg):
-        # Append message to QTextEdit in a thread-safe way
         def append():
             self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
             self.log_text_edit.insertPlainText(msg)
@@ -214,27 +212,20 @@ class ControlWindow(QMainWindow):
         if self.log_text_edit.thread() == QApplication.instance().thread():
             append()
         else:
-            QApplication.instance().postEvent(
-                self.log_text_edit,
-                type(QEvent)(),
-                lambda: append()
-            )
+            QMetaObject.invokeMethod(self.log_text_edit, append, Qt.QueuedConnection)
 
+    # Start the Actichamp application and automatically link to the EEG stream.
     def start_actichamp(self):
-        """
-        Start the Actichamp application.
-        """
         try:
             self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
             print("Actichamp started.")
             print("Attempting Link with the Actichamp Device")
             time.sleep(2)  # Wait for the application to start
-            self.link_actichamp()  # Link to the Actichamp device
+            self.link_actichamp()
         except Exception as e:
             print(f"Failed to start Actichamp: {e}")
-        # Update icon after a short delay to allow process to start
-        #QTimer.singleShot(1000, self.check_actichamp_status)
 
+    # Link to the EEG stream through the Actichamp application.
     def link_actichamp(self):
         try:
             app = Application(backend="uia").connect(title_re="actiCHamp Connector")
@@ -259,20 +250,21 @@ class ControlWindow(QMainWindow):
             QTimer.singleShot(5000, self.connect_labrecorder)  # Wait 5 seconds before connecting
         except Exception as e:
             print(f"Failed to open LabRecorder: {e}")
-        #QTimer.singleShot(1000, self.check_labrecorder_status)
 
-    #Connect to the LabRecorder application.
+    #Connect the LabRecorder application to the Actichamp stream.
     def connect_labrecorder(self):
         try:
             self.labrecorder = LabRecorder(self.base_dir)
-            self.shared_status['lab_recorder_connected'] = True
-            print("Connected to LabRecorder.")
-        except Exception as e:
+            if self.labrecorder.s is not None:
+                self.shared_status['lab_recorder_connected'] = True
+                print("Connected to LabRecorder.")
+            else:
+                raise Exception()
+        except Exception:
             self.shared_status['lab_recorder_connected'] = False
-            print(f"Failed to connect to LabRecorder: {e}")
         self.update_app_status_icon(self.labrecorder_connected_icon, self.shared_status['lab_recorder_connected'])
         
-    #Update the application status icon to show a red or green light.
+    #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
         pixmap = QPixmap(20, 20)
         pixmap.fill(Qt.green if is_green else Qt.red)
@@ -282,22 +274,46 @@ class ControlWindow(QMainWindow):
         # Needed for compatibility with sys.stdout redirection
         pass
 
-    #def is_process_running(self, process_name):
-    #    for proc in psutil.process_iter(['name', 'exe', 'cmdline']):
-    #        try:
-    #            if process_name.lower() in proc.info['name'].lower():
-    #                return True
-    #        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-    #            pass
-    #    return False
-    #
-    #def check_actichamp_status(self):
-    #    running = self.is_process_running("actiCHamp.exe")
-    #    self.update_app_status_icon(self.actichamp_status_icon, running)
+    # TO MAYBE BE IMPLEMENTED LATER
+    '''
+    def init_lsl(self):
+        """
+        Initialize LSL and update the status icon.
+        """
+        try:
+            if LSL.init_lsl_stream() == True:  # Call the LSL initialization method
+                self.update_lsl_status_icon(True)
+                self.start_button.setEnabled(True)
+                self.retry_button.setEnabled(False)
+            else:
+                self.show_error_message("Failed to initialize LSL: No stream found.")
+                self.update_lsl_status_icon(False)
+                self.start_button.setEnabled(True)
+                self.retry_button.setEnabled(True)
+        except Exception as e:
+            self.show_error_message(f"Failed to initialize LSL because of an Error: {str(e)}")
+            self.update_lsl_status_icon(False)
+            self.start_button.setEnabled(False)
+            self.retry_button.setEnabled(True)
 
-    #def check_labrecorder_status(self):
-    #    connected = self.shared_status.get('lab_recorder_connected', False)
-    #    self.update_app_status_icon(self.labrecorder_connected_icon, connected)
+    def update_lsl_status_icon(self, is_streaming):
+        """
+        Update the LSL status icon to show a red or green light.
+        """
+        pixmap = QPixmap(20, 20)
+        pixmap.fill(Qt.green if is_streaming else Qt.red)
+        self.lsl_status_icon.setPixmap(pixmap)
+
+    def show_error_message(self, message):
+        """
+        Show an error message in a popup dialog.
+        """
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Critical)
+        error_dialog.setWindowTitle("Error")
+        error_dialog.setText(message)
+        error_dialog.exec_()
+    '''
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

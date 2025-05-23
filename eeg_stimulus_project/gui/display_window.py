@@ -1,5 +1,4 @@
 import sys
-import os
 sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy
 from PyQt5.QtGui import QFont, QPixmap
@@ -7,11 +6,15 @@ from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 
+#This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
+#It contains the same layout and functionality as the main display window, but it is not interactive
+#It is used to show the experimenter what the subject is seeing
 class MirroredDisplayWindow(QWidget):
     def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
+
         self.current_test = current_test
-        self.setFixedSize(700, 700)
+        self.setFixedSize(1000, 1000)
 
         self.stacked_layout = QStackedLayout(self)
 
@@ -61,7 +64,7 @@ class MirroredDisplayWindow(QWidget):
 
         self.paused = False
 
-    # Methods to update the mirror
+    #Method to update the mirror image
     def set_pixmap(self, pixmap):
         if pixmap:
             scaled_pixmap = pixmap.scaled(
@@ -73,7 +76,8 @@ class MirroredDisplayWindow(QWidget):
             self.set_overlay_visible(False)  # <-- Switch to experiment view
         else:
             self.image_label.clear()
-            
+
+    #Method to update the mirror text        
     def set_instruction_text(self, text=None, font=None):
         if text is None:
             text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
@@ -89,16 +93,20 @@ class MirroredDisplayWindow(QWidget):
         self.instructions_label.setFont(font)
         self.set_overlay_visible(True)
 
+    #Method to set the timer text
     def set_timer(self, text):
         self.timer_label.setText(text)
 
+    #Method to set the overlay visibility
     def set_overlay_visible(self, visible):
         self.stacked_layout.setCurrentIndex(0 if visible else 1)
 
+    #Method to set the countdown text
     def set_countdown(self, text, visible=True):
         self.countdown_label.setText(text)
         self.countdown_label.setVisible(visible)
 
+    #Method to start the countdown only called from the DisplayWindow
     def start_countdown(self):
         self.instructions_label.setVisible(False)
         self.countdown_label.setVisible(True)
@@ -108,6 +116,7 @@ class MirroredDisplayWindow(QWidget):
         self.countdown_timer.timeout.connect(self.update_countdown)
         self.countdown_timer.start(1000)
 
+    #Method to update the countdown
     def update_countdown(self):
         self.countdown_seconds -= 1
         if self.countdown_seconds > 0:
@@ -117,31 +126,35 @@ class MirroredDisplayWindow(QWidget):
             self.countdown_label.setText("Go!")
             QTimer.singleShot(1000, self.begin_experiment)
 
+    #Method to show the instruction for the next image
     def show_instruction_for_next_image(self, text=None, font=None):
         self.set_instruction_text(text, font)
         self.set_pixmap(None)
 
+    #Method to show the image
     def begin_experiment(self):
         self.stacked_layout.setCurrentIndex(1)
 
+    #Method to pause the trial, this method is called from the DisplayWindow when the trial is paused
     def pause_trial(self, event=None):
         self.paused = True
-        # Optionally, show a visual indicator (e.g., overlay "Paused" text)
 
+    #Method to resume the trial, this method is called from the DisplayWindow when the trial is resumed
     def resume_trial(self, event=None):
         self.paused = False
-        # Optionally, remove the visual indicator
-        
-# --- In DisplayWindow ---
 
+#This is the main display window that contains the experiment and the logic to make the mirror display function 
+#It is the main window that the subject sees and interacts with
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
     def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None):
         super().__init__(parent)
+
         self.current_test = current_test
         self.base_dir = base_dir
         self.test_number = test_number
+
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
 
@@ -149,16 +162,14 @@ class DisplayWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         self.stacked_layout = QStackedLayout(central_widget)
 
-        # --- Overlay widget for instructions and countdown ---
         self.overlay_widget = QWidget()
         self.overlay_layout = QVBoxLayout(self.overlay_widget)
         self.overlay_widget.setStyleSheet("background-color: white;")
         self.overlay_widget.setGeometry(0, 0, 700, 650)
 
-        self.instructions_label = QLabel(
-            "Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.",
-            self.overlay_widget
-        )
+        #This is the overlay that shows the instructions for the experiment that the subject sees
+        #IN THE FUTURE THIS SHOULD BE DIFFERENT FOR EACH TEST
+        self.instructions_label = QLabel("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.", self.overlay_widget)
         self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.overlay_layout.addWidget(self.instructions_label)
@@ -169,7 +180,7 @@ class DisplayWindow(QMainWindow):
         self.countdown_label.setVisible(False)
         self.overlay_layout.addWidget(self.countdown_label)
 
-        # --- Main experiment widget (image, timer, buttons) ---
+        # Main experiment widget
         self.experiment_widget = QWidget()
         self.experiment_layout = QVBoxLayout(self.experiment_widget)
 
@@ -218,21 +229,23 @@ class DisplayWindow(QMainWindow):
         self.user_data = {
             'user_inputs': [],
             'elapsed_time': []
-        }  # List to store user inputs
+        }  # List to store user inputs and elapsed time
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.countdown_seconds = 3
 
         self.current_pixmap = None
 
-        self.paused_image_index = 0 # Initialize image index after pause
-        self.paused_time = 0  # Initialize paused time
+        # Initialize image index after pause
+        self.paused_image_index = 0
+        # Initialize paused time
+        self.paused_time = 0 
 
-
+    #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
         print(f"Current test: {current_test}")
-        print(f"Available tests: {list(Display.test_assets.keys())}")
+        #print(f"Available tests: {list(Display.test_assets.keys())}")
         if current_test:
             try:
                 if self.paused_time > 0:
@@ -251,6 +264,7 @@ class DisplayWindow(QMainWindow):
             except KeyError as e:
                 print(f"KeyError: {e}")
 
+    #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
         self.timer.stop()
         self.image_transition_timer.stop()  # Stop the image transition timer
@@ -265,12 +279,15 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.pause_trial()
 
+    #This method is called when the user presses the resume button to resume the trial, it starts the timer and the image transition timer, it also sets the paused time to 0 and also tells the mirror widget to resume
+    #It also calls the run_trial method to start the trial again
     def resume_trial(self, event=None):
         self.Paused = False
         self.run_trial()  # Resume the trial
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.resume_trial()
-               
+
+    #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
@@ -278,15 +295,12 @@ class DisplayWindow(QMainWindow):
             self.update_image_label()
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
-            #QTimer.singleShot(5000, self.display_images_passive)  # Display each image for 5 seconds
         else:
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
 
-    def _on_image_transition(self):
-        if not self.Paused:
-            self.display_images_passive()
-
+    #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
+    #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
         if self.current_image_index < len(self.images):
             pixmap = QPixmap(self.images[self.current_image_index].filename)
@@ -294,13 +308,20 @@ class DisplayWindow(QMainWindow):
             self.update_image_label()
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
-            #QTimer.singleShot(2000, self.hide_image) # Hide image after 2 seconds
         else:
             self.timer.stop()
             save_data = Save_Data(self.base_dir, self.test_number)
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
             self.current_image_index = 0  # Reset for the next trial
 
+
+    #This method is needed to make the image transition timer work, it is called when the image transition timer times out. It is the main way the pause and resume functionality works
+    #It is called from the image_transition_timer
+    def _on_image_transition(self):
+        if not self.Paused:
+            self.display_images_passive()
+
+    #This method is called to update the image label with the current image, it scales the image to fit the label and also updates the mirror widget if it exists
     def update_image_label(self):
         if self.current_pixmap:
             scaled_pixmap = self.current_pixmap.scaled(
@@ -317,6 +338,7 @@ class DisplayWindow(QMainWindow):
             if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
                 self.mirror_widget.set_pixmap(None)
 
+    #This method is called when the window is resized, it updates the image label and the instruction text
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.image_label.text():  # If instructions are showing
@@ -324,6 +346,7 @@ class DisplayWindow(QMainWindow):
         else:
             self.update_image_label()
 
+    #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
         text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.setText(text)
@@ -336,14 +359,17 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(text, font)
 
+    #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
         self.image_label.clear()  # Clear the image
         self.set_instruction_text()
         self.wait_for_input()  # Wait for input before displaying the next image
 
+    #This method is called to wait for the user input, it installs an event filter to capture the key press events
     def wait_for_input(self):
         self.installEventFilter(self)
 
+    #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
             if self.Paused == False:
                 if event.type() == QEvent.KeyPress:
@@ -355,22 +381,14 @@ class DisplayWindow(QMainWindow):
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
                         self.display_next_image()
-                        #if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-                        #    # After advancing, update the mirror to show the new image or instructions
-                        #    if self.current_image_index < len(self.images):
-                        #        # Show the new image in the mirror
-                        #        pixmap = QPixmap(self.images[self.current_image_index].filename)
-                        #        self.mirror_widget.set_pixmap(pixmap)
-                        #    else:
-                        #        # If done, clear the mirror
-                        #        self.mirror_widget.set_pixmap(None)
                         return True
             return super().eventFilter(source, event)
 
+    #This method is called to display the next image, it calls the display_images_stroop method to display the next image
     def display_next_image(self):
-        #self.current_image_index += 1
         self.display_images_stroop()  # Display the next image
 
+    #This method is called to update the timer label, it updates the elapsed time and formats the timer text
     def update_timer(self):
         self.elapsed_time += 1  # Increment by 1 millisecond
         minutes, remainder = divmod(self.elapsed_time, 60000)
@@ -379,13 +397,15 @@ class DisplayWindow(QMainWindow):
         self.timer_label.setText(timer_text)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_timer(self.timer_label.text())
-        
+
+    #This method is called to handle the key press events, it checks if the overlay widget is visible and if the space bar is pressed, it starts the countdown    
     def keyPressEvent(self, event):
         if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space:
             self.start_countdown()
         else:
             super().keyPressEvent(event)
 
+    #This method is called to start the countdown, it hides the instruction label and shows the countdown label, it also starts the countdown timer
     def start_countdown(self):
         self.instructions_label.setVisible(False)
         self.countdown_label.setVisible(True)
@@ -398,6 +418,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget'):
             self.mirror_widget.start_countdown()
 
+    #This method is called to update the countdown label, it decrements the countdown seconds and updates the countdown label, if the countdown reaches 0, it stops the timer and calls the begin_experiment method
     def update_countdown(self):
         self.countdown_seconds -= 1
         if self.countdown_seconds > 0:
@@ -407,6 +428,7 @@ class DisplayWindow(QMainWindow):
             self.countdown_label.setText("Go!")
             QTimer.singleShot(1000, self.begin_experiment)
 
+    #This method is called to begin the experiment, it sets the stacked layout to the experiment widget and starts the experiment
     def begin_experiment(self):
         self.stacked_layout.setCurrentIndex(1)
         if hasattr(self, 'mirror_widget'):
@@ -414,9 +436,11 @@ class DisplayWindow(QMainWindow):
         self.experiment_started.emit()  # Emit the signal to start the experiment
         self.run_trial()
 
+    #This method is called to set the mirror widget, it sets the mirror widget to the passed widget
     def set_mirror(self, mirror_widget):
         self.mirror_widget = mirror_widget
 
+    #This method is called to close the event, it stops the timer and closes the mirror widget if it exists
     def closeEvent(self, event):
         # Stop the timer to prevent update_timer from running after close
         if hasattr(self, 'timer') and self.timer.isActive():

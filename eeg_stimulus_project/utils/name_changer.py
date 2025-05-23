@@ -1,5 +1,9 @@
 import os
 
+# This script replaces occurrences of a specific string in files within a folder, excluding the script itself.
+# It checks for two specific folder paths and replaces the string "cpl4168" with "srs1520" or vice versa.
+# It also skips the file that contains this script to avoid infinite recursion.
+#This sript is intended to be used by the software developers to swap between two different user folders
 def replace_in_file(filepath, old, new):
     try:
         with open(filepath, 'r', encoding='utf-8') as f:

@@ -1,5 +1,4 @@
 import sys
-import os
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
 from PyQt5.QtGui import QFont
@@ -7,11 +6,8 @@ from PyQt5.QtCore import Qt
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
-#from eeg_stimulus_project.data.eeg_graph_widget import EEGGraphWidget
-from eeg_stimulus_project.lsl.stream_manager import LSL
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-
 
 class Tee(object):
     def __init__(self, *streams):
@@ -21,7 +17,7 @@ class Tee(object):
     def write(self, data):
         for s in self.streams:
             if hasattr(s, 'put'):
-                # It's a Queue
+
                 s.put(data)
             elif hasattr(s, 'write'):
                 s.write(data)
@@ -44,7 +40,7 @@ class GUI(QMainWindow):
         self.test_number = test_number
         self.setWindowTitle("Data Collection App")
         self.setGeometry(0, 100, screen_geometry.width() // 2, screen_geometry.height() - 150)
-        self.setMinimumSize(800, 600)  # Set a minimum size if needed
+        self.setMinimumSize(800, 600)
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -59,6 +55,7 @@ class GUI(QMainWindow):
         
         self.stacked_widget = self.main_frame.stacked_widget
         
+        #Passive Test Frames
         self.unisensory_neutral_visual = self.create_frame("Unisensory Neutral Visual", is_stroop_test=False)
         self.unisensory_alcohol_visual = self.create_frame("Unisensory Alcohol Visual", is_stroop_test=False)
         self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral Visual & Olfactory", is_stroop_test=False)
@@ -66,27 +63,28 @@ class GUI(QMainWindow):
         self.multisensory_neutral_visual_tactile_olfactory = self.create_frame("Multisensory Neutral Visual, Tactile & Olfactory", is_stroop_test=False)
         self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory", is_stroop_test=False)
         
-        # New frames for Stroop Test
+        #Stroop Test Frames
         self.multisensory_alcohol_visual_tactile = self.create_frame("Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_neutral_visual_tactile = self.create_frame("Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
         self.multisensory_neutral_visual_olfactory2 = self.create_frame("Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
         
+        # Add new frames to stacked_widget
+        #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
         self.stacked_widget.addWidget(self.unisensory_neutral_visual)
         self.stacked_widget.addWidget(self.unisensory_alcohol_visual)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile_olfactory)
-        
-        # Add new frames to stacked_widget
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory2)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
-      
+
+    #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
     
@@ -108,7 +106,6 @@ class GUI(QMainWindow):
     def show_multisensory_alcohol_visual_tactile_olfactory(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile_olfactory)
     
-    # New methods to show new frames
     def show_multisensory_alcohol_visual_tactile(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile)
     
@@ -121,6 +118,8 @@ class GUI(QMainWindow):
     def show_multisensory_neutral_visual_olfactory2(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory2)
     
+    # Function to open the secondary GUI and its mirror widget in the middle frame.
+    # This function is called when the checkbox is checked/unchecked
     def open_secondary_gui(self, state):
         current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
         if state == Qt.Checked:
@@ -137,14 +136,15 @@ class GUI(QMainWindow):
                 # Show the main display as a window
                 current_frame.display_widget.show()
         else:
-            # Optionally remove/hide the widgets
+            #Remove/hide the widgets when the stop button is pressed
             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
                 current_frame.display_widget.setParent(None)
                 current_frame.display_widget = None
             if hasattr(current_frame, 'mirror_display_widget') and current_frame.mirror_display_widget is not None:
                 current_frame.mirror_display_widget.setParent(None)
                 current_frame.mirror_display_widget = None
-    
+
+    #A function to get the current test name
     def get_current_test(self):
         current_widget = self.stacked_widget.currentWidget()
         if current_widget == self.unisensory_neutral_visual:
@@ -173,9 +173,12 @@ class GUI(QMainWindow):
 class Frame(QFrame):
     def __init__(self, parent, title, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None):
         super().__init__(parent)
+
         self.shared_status = shared_status
         self.base_dir = base_dir
         self.test_number = test_number
+        self.labrecorder = None
+        
         self.layout = QVBoxLayout(self)
         
         top_frame = QFrame(self)
@@ -196,12 +199,11 @@ class Frame(QFrame):
         self.middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
         self.middle_frame.setMinimumHeight(490)
         self.layout.addWidget(self.middle_frame)
-
-        middle_layout = QHBoxLayout(self.middle_frame)
-
+        
         # Save parent reference for later use
         self.parent = parent
 
+        #If the test is a stroop test, add these buttons and checkboxes
         if is_stroop_test:
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
@@ -232,6 +234,7 @@ class Frame(QFrame):
             bottom_frame.setMaximumHeight(70)
             self.layout.addWidget(bottom_frame)
 
+        #I the test is NOT a stroop test(Passive Test), add these buttons and checkboxes
         if not is_stroop_test:
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
@@ -268,30 +271,13 @@ class Frame(QFrame):
             bottom_frame.setMaximumHeight(70)
             self.layout.addWidget(bottom_frame)
 
-            bottom_layout = QHBoxLayout(bottom_frame)
-
-            visual_checkbox = QCheckBox("Visual", self)
-            bottom_layout.addWidget(visual_checkbox)
-
-            olfactory_checkbox = QCheckBox("Olfactory", self)
-            bottom_layout.addWidget(olfactory_checkbox)
-
-            tactile_checkbox = QCheckBox("Tactile", self)
-            bottom_layout.addWidget(tactile_checkbox)
-
-            input_keyboard_checkbox = QCheckBox("Input Keyboard", self)
-            bottom_layout.addWidget(input_keyboard_checkbox)
-
-            eye_tracker_checkbox = QCheckBox("Eye Tracker", self)
-            bottom_layout.addWidget(eye_tracker_checkbox)
-        
-        self.labrecorder = None
-
+    #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
+    #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
         if self.display_button.isChecked():
             self.parent.open_secondary_gui(Qt.Checked)
             if self.shared_status.get('lab_recorder_connected', False):
-                # LabRecorder is connected, proceed to use self.labrecorder or create a new one if needed
+                # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
                 if self.labrecorder is None or self.labrecorder.s is None:
                     self.labrecorder = LabRecorder(self.base_dir)
                 if self.labrecorder and self.labrecorder.s is not None:
@@ -303,6 +289,7 @@ class Frame(QFrame):
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
 
+    #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
         save_data = Save_Data(self.base_dir, self.test_number)
         try:
@@ -321,6 +308,7 @@ class Frame(QFrame):
             self.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
+    #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
         save_data = Save_Data(self.base_dir, self.test_number)
         try:
@@ -331,15 +319,18 @@ class Frame(QFrame):
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
         self.parent.open_secondary_gui(Qt.Unchecked)
-    
+
+    #Pauses the display window and the mirror display window
     def pause_display_window(self):
         self.display_widget.pause_trial()
         self.mirror_display_widget.pause_trial()
 
+    #Resumes the display window and the mirror display window
     def resume_display_window(self):
         self.display_widget.resume_trial()
         self.mirror_display_widget.resume_trial()
 
+    # Function to enable the pause and resume buttons(So they are not greyed out)
     def enable_pause_resume_buttons(self):
         self.pause_button.setEnabled(True)
         self.resume_button.setEnabled(True)

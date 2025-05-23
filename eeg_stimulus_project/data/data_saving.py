@@ -10,6 +10,7 @@ class Save_Data():
         self.base_dir = base_dir
         self.test_number = test_number
 
+    #NEEDS TO ADD IMAGE LABELING (KEEP TRACK)
     def save_data_stroop(self, current_test, user_inputs, elapsed_time, labrecorder=None):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
@@ -33,6 +34,7 @@ class Save_Data():
                 writer.writerow([input, time])
         print("Data saved successfully!")
 
+    # NEEDS TO ADD IMAGE LABELING (KEEP TRACK)
     def save_data_passive(self, current_test, labrecorder=None):
         # Check the test number and create the appropriate folder
         test_dir = os.path.join(self.base_dir, current_test)
