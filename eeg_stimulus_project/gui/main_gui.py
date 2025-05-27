@@ -8,6 +8,7 @@ from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
+from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 class Tee(object):
     def __init__(self, *streams):
@@ -120,7 +121,7 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state):
+    def open_secondary_gui(self, state, label_stream=None):
         current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
         if state == Qt.Checked:
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
@@ -133,6 +134,7 @@ class GUI(QMainWindow):
                 # Add both to the middle_frame layout
                 middle_layout = current_frame.middle_frame.layout()  # Or however you access the layout
                 middle_layout.addWidget(current_frame.mirror_display_widget)
+                middle_layout.setStretchFactor(current_frame.mirror_display_widget, 1)  # Optional, ensures it gets all available space
                 # Show the main display as a window
                 current_frame.display_widget.show()
         else:
@@ -178,6 +180,7 @@ class Frame(QFrame):
         self.base_dir = base_dir
         self.test_number = test_number
         self.labrecorder = None
+        self.label_stream = None
         
         self.layout = QVBoxLayout(self)
         
@@ -199,6 +202,8 @@ class Frame(QFrame):
         self.middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
         self.middle_frame.setMinimumHeight(490)
         self.layout.addWidget(self.middle_frame)
+
+        self.middle_frame.setLayout(QHBoxLayout())
         
         # Save parent reference for later use
         self.parent = parent
@@ -275,7 +280,9 @@ class Frame(QFrame):
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
         if self.display_button.isChecked():
-            self.parent.open_secondary_gui(Qt.Checked)
+            if self.label_stream is None:
+                self.label_stream = LSLLabelStream()
+                self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream)
             if self.shared_status.get('lab_recorder_connected', False):
                 # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
                 if self.labrecorder is None or self.labrecorder.s is None:

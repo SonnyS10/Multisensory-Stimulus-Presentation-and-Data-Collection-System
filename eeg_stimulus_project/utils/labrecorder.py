@@ -15,6 +15,8 @@ class LabRecorder:
             print(f"Could not connect to LabRecorder: {e}")
             self.s = None
 
+        self.check_tcp_port("localhost", 22345)
+
     # Sends commands to the LabRecorder server to begin recording and assigns a filepath
     def Start_Recorder(self, current_test):
         if not self.s:
@@ -35,3 +37,12 @@ class LabRecorder:
         if self.s:
             self.s.sendall(b"stop\n")
             print("LabRecorder stopped recording.")
+
+    def check_tcp_port(self, host, port):
+            try:
+                with socket.create_connection((host, port), timeout=5):
+                    print(f"Port {port} on {host} is open and connected.")
+            except (socket.timeout, ConnectionRefusedError):
+                print(f"Port {port} on {host} is not connected.")
+            except Exception as e:
+                print(f"An error occurred: {e}")

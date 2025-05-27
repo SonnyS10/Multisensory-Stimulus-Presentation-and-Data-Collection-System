@@ -1,10 +1,12 @@
 import sys
 sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.lsl.labels import LSLLabelStream
+import os
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -13,8 +15,9 @@ class MirroredDisplayWindow(QWidget):
     def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
 
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  
+
         self.current_test = current_test
-        self.setFixedSize(1000, 1000)
 
         self.stacked_layout = QStackedLayout(self)
 
@@ -142,14 +145,37 @@ class MirroredDisplayWindow(QWidget):
     #Method to resume the trial, this method is called from the DisplayWindow when the trial is resumed
     def resume_trial(self, event=None):
         self.paused = False
+        
+    def end_screen(self):
+        # Create a new widget for the end screen
+        end_widget = QWidget()
+        end_widget.setStyleSheet("background-color: white;")
+        end_layout = QVBoxLayout(end_widget)
+        end_layout.setAlignment(Qt.AlignCenter)  # Center contents
+
+        # Add a label with the end message
+        end_label = QLabel("Test has ended.\n Please wait for the experimenter to close the test.", end_widget)
+        end_label.setFont(QFont("Arial", 22))
+        end_label.setAlignment(Qt.AlignCenter)
+        end_layout.addWidget(end_label, alignment=Qt.AlignCenter)
+
+        # Make the end_widget fill the mirrored window
+        end_widget.setMinimumSize(self.size())
+        end_widget.setMaximumSize(self.size())
+
+        self.stacked_layout.addWidget(end_widget)
+        self.stacked_layout.setCurrentWidget(end_widget)
 
 #This is the main display window that contains the experiment and the logic to make the mirror display function 
 #It is the main window that the subject sees and interacts with
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None):
+    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None, label_stream=None):
         super().__init__(parent)
+
+        self.label_stream = label_stream if label_stream else LSLLabelStream()
+        self.current_label = None
 
         self.current_test = current_test
         self.base_dir = base_dir
@@ -223,6 +249,11 @@ class DisplayWindow(QMainWindow):
         self.stroop_transition_timer.setSingleShot(True)
         self.stroop_transition_timer.timeout.connect(self.hide_image)
 
+        #LSL Label Polling Timer
+        self.label_poll_timer = QTimer(self)
+        self.label_poll_timer.timeout.connect(self.poll_label)
+        self.label_poll_timer.start(1000)  # Poll every 100 ms (change as needed)
+
         self.Paused = False
 
         # User data
@@ -290,30 +321,53 @@ class DisplayWindow(QMainWindow):
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
         if self.current_image_index < len(self.images):
-            pixmap = QPixmap(self.images[self.current_image_index].filename)
+            img = self.images[self.current_image_index]
+            pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
+            # Push the filename (without extension) as label
+            if hasattr(img, 'filename'):
+                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+                self.label_stream.push_label(label)
+                self.current_label = label
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
         else:
+            self.end_screen()  # Show end screen after all images are displayed
+            self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
+            self.timer.stop()
+            self.label_poll_timer.stop()  # Stop the label polling timer
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
         if self.current_image_index < len(self.images):
-            pixmap = QPixmap(self.images[self.current_image_index].filename)
+            img = self.images[self.current_image_index]
+            pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
+            if hasattr(img, 'filename'):
+                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+                self.label_stream.push_label(label)
+                self.current_label = label
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
         else:
+            self.end_screen()
+            self.label_stream.push_label("Test Ended")
+            self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
             self.timer.stop()
+            self.label_poll_timer.stop()  # Stop the label polling timer
             save_data = Save_Data(self.base_dir, self.test_number)
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
-            self.current_image_index = 0  # Reset for the next trial
 
+
+
+    def poll_label(self):
+        # This will print the current label and the current time in ms
+        print(f"Polled at {self.elapsed_time} ms: Current label = {self.current_label}")
 
     #This method is needed to make the image transition timer work, it is called when the image transition timer times out. It is the main way the pause and resume functionality works
     #It is called from the image_transition_timer
@@ -341,13 +395,16 @@ class DisplayWindow(QMainWindow):
     #This method is called when the window is resized, it updates the image label and the instruction text
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self.image_label.text():  # If instructions are showing
-            self.set_instruction_text()
-        else:
-            self.update_image_label()
+        # Example: scale font size for instructions_label
+        label_height = self.instructions_label.height()
+        font_size = max(8, int(label_height * 0.08))  # Adjust multiplier as needed
+        font = QFont("Arial", font_size, QFont.Bold)
+        self.instructions_label.setFont(font)
+        # You can do similar scaling for other labels if needed
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
+        img = self.images[self.current_image_index - 1]
         text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -358,7 +415,10 @@ class DisplayWindow(QMainWindow):
         # Update the mirror
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(text, font)
-
+        if hasattr(img, 'filename'):
+              label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
+              self.label_stream.push_label(label)
+              self.current_label = label
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
         self.image_label.clear()  # Clear the image
@@ -371,13 +431,22 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
+            img = self.images[self.current_image_index - 1]
             if self.Paused == False:
                 if event.type() == QEvent.KeyPress:
                     if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
                         if event.key() == Qt.Key_Y:
                             self.user_data['user_inputs'].append('Yes') # Store the user input
+                            if hasattr(img, 'filename'):
+                                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
+                                self.label_stream.push_label(label)
+                                self.current_label = label  # Push label to LSL stream
                         else:
                             self.user_data['user_inputs'].append('No')  # Store the user input
+                            if hasattr(img, 'filename'):
+                                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
+                                self.label_stream.push_label(label)
+                                self.current_label = label  # Push label to LSL stream
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
                         self.display_next_image()
@@ -451,3 +520,22 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.deleteLater()    # Schedule for deletion
             self.mirror_widget = None
         super().closeEvent(event)
+
+    def end_screen(self):
+        # Create a new widget for the end screen
+        end_widget = QWidget()
+        end_layout = QVBoxLayout(end_widget)
+
+        # Add a label with the end message
+        end_label = QLabel("Test has ended. Please wait for the experimenter to close the test.", end_widget)
+        end_label.setFont(QFont("Arial", 18))
+        end_label.setAlignment(Qt.AlignCenter)
+        end_layout.addWidget(end_label)
+
+        # Set the end_widget as the only widget in the stacked layout
+        self.stacked_layout.addWidget(end_widget)
+        self.stacked_layout.setCurrentWidget(end_widget)
+
+        # Show end screen in the mirror as well
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.end_screen()
