@@ -249,10 +249,10 @@ class DisplayWindow(QMainWindow):
         self.stroop_transition_timer.setSingleShot(True)
         self.stroop_transition_timer.timeout.connect(self.hide_image)
 
-        #LSL Label Polling Timer
-        self.label_poll_timer = QTimer(self)
-        self.label_poll_timer.timeout.connect(self.poll_label)
-        self.label_poll_timer.start(1000)  # Poll every 100 ms (change as needed)
+        #LSL Label Polling Timer - good for debugging 
+        #self.label_poll_timer = QTimer(self)
+        #self.label_poll_timer.timeout.connect(self.poll_label)
+        #self.label_poll_timer.start(1000)  # Poll every 100 ms (change as needed)
 
         self.Paused = False
 
@@ -329,6 +329,7 @@ class DisplayWindow(QMainWindow):
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
                 self.label_stream.push_label(label)
+                print(f"Current label: {label}")
                 self.current_label = label
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
@@ -338,7 +339,7 @@ class DisplayWindow(QMainWindow):
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
             self.timer.stop()
-            self.label_poll_timer.stop()  # Stop the label polling timer
+            #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
@@ -351,6 +352,7 @@ class DisplayWindow(QMainWindow):
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
                 self.label_stream.push_label(label)
+                print(f"Current label: {label}")
                 self.current_label = label
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
@@ -359,7 +361,7 @@ class DisplayWindow(QMainWindow):
             self.label_stream.push_label("Test Ended")
             self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
             self.timer.stop()
-            self.label_poll_timer.stop()  # Stop the label polling timer
+            #self.label_poll_timer.stop()  # Stop the label polling timer(Good for debugging)
             save_data = Save_Data(self.base_dir, self.test_number)
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
 
@@ -418,6 +420,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(img, 'filename'):
               label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
               self.label_stream.push_label(label)
+              print(f"Current label: {label}")
               self.current_label = label
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
@@ -440,12 +443,14 @@ class DisplayWindow(QMainWindow):
                             if hasattr(img, 'filename'):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
                                 self.label_stream.push_label(label)
+                                print(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
                         else:
                             self.user_data['user_inputs'].append('No')  # Store the user input
                             if hasattr(img, 'filename'):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
                                 self.label_stream.push_label(label)
+                                print(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
