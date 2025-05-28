@@ -8,6 +8,7 @@ import time
 import threading
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
+from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 
 class Tee(object):
     def __init__(self, *streams):
@@ -88,7 +89,7 @@ class ControlWindow(QMainWindow):
         # Eye Tracker status row (button + icons + labels)
         eyetracker_row = QHBoxLayout()
         self.eyetracker_button = QPushButton("Eye Tracker", self)
-        #self.eyetracker_button.clicked.connect() # Connect to the eyetracker
+        self.eyetracker_button.clicked.connect(self.connect_eyetracker) # Connect to the eyetracker
         eyetracker_row.addWidget(self.eyetracker_button)
         
         self.eyetracker_connected_text = QLabel("Connection Status:", self)
@@ -263,6 +264,22 @@ class ControlWindow(QMainWindow):
         except Exception:
             self.shared_status['lab_recorder_connected'] = False
         self.update_app_status_icon(self.labrecorder_connected_icon, self.shared_status['lab_recorder_connected'])
+
+    #Connect to the Pupil Labs Eye Tracker.
+    def connect_eyetracker(self):
+        try:
+            self.eyetracker = PupilLabs()
+            if self.eyetracker.device is not None:
+                self.shared_status['eyetracker_connected'] = True
+                print("Connected to Eye Tracker.")
+                #self.eyetracker.device.estimate_time_offset()  # Estimate time offset
+            else:
+                raise Exception()
+        except Exception:
+            print(f"Failed to connect to Eye Tracker")
+            self.shared_status['eyetracker_connected'] = False
+
+        self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):

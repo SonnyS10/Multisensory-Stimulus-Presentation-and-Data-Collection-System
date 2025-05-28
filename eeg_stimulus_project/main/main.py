@@ -82,10 +82,10 @@ class MainWindow(QMainWindow):
             ]
 
             stroop_tests = [
-                'Multisensory Alcohol (Visual & Tactile)',
-                'Multisensory Neutral (Visual & Tactile)',
-                'Multisensory Alcohol (Visual & Olfactory)',
-                'Multisensory Neutral (Visual & Olfactory)'
+                'Stroop Multisensory Alcohol (Visual & Tactile)',
+                'Stroop Multisensory Neutral (Visual & Tactile)',
+                'Stroop Multisensory Alcohol (Visual & Olfactory)',
+                'Stroop Multisensory Neutral (Visual & Olfactory)'
             ]
 
             # Select the appropriate tests based on the test number
@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
             self.manager = Manager()
             self.shared_status = self.manager.dict()
             self.shared_status['lab_recorder_connected'] = False
+            self.shared_status['eyetracker_connected'] = False
 
             # Start the processes
             self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))

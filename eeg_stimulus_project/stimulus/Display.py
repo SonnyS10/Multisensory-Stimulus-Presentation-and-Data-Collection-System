@@ -24,13 +24,13 @@ def get_mixed_images(general_images, personalized_images):
     mixed_images = general_images.copy()
     mixed_images.extend(personalized_images)
     random.shuffle(mixed_images)
-    # Print the order after shuffling
-    print("Order of images after shuffling:")
-    for img in mixed_images:
-        if hasattr(img, 'filename'):
-            print(os.path.splitext(os.path.basename(img.filename))[0])
-        else:
-            print(img)
+    ## Print the order after shuffling
+    #print("Order of images after shuffling:")
+    #for img in mixed_images:
+    #    if hasattr(img, 'filename'):
+    #        print(os.path.splitext(os.path.basename(img.filename))[0])
+    #    else:
+    #        print(img)
     return mixed_images
 
 class Display():

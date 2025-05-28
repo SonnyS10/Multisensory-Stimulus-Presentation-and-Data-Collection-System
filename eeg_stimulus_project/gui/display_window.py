@@ -171,10 +171,11 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None, label_stream=None):
+    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None, label_stream=None, eyetracker=None):
         super().__init__(parent)
 
         self.label_stream = label_stream if label_stream else LSLLabelStream()
+        self.eyetracker = eyetracker
         self.current_label = None
 
         self.current_test = current_test
@@ -329,6 +330,8 @@ class DisplayWindow(QMainWindow):
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
                 self.label_stream.push_label(label)
+                if self.eyetracker is not None:
+                    self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 print(f"Current label: {label}")
                 self.current_label = label
             self.current_image_index += 1

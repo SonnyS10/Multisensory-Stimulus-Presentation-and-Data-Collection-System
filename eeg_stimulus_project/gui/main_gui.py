@@ -8,6 +8,7 @@ from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
+from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 class Tee(object):
@@ -65,10 +66,10 @@ class GUI(QMainWindow):
         self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory", is_stroop_test=False)
         
         #Stroop Test Frames
-        self.multisensory_alcohol_visual_tactile = self.create_frame("Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
-        self.multisensory_neutral_visual_tactile = self.create_frame("Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
-        self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
-        self.multisensory_neutral_visual_olfactory2 = self.create_frame("Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
+        self.multisensory_alcohol_visual_tactile = self.create_frame("Stroop Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
+        self.multisensory_neutral_visual_tactile = self.create_frame("Stroop Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
+        self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Stroop Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
+        self.multisensory_neutral_visual_olfactory2 = self.create_frame("Stroop Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
@@ -121,13 +122,32 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state, label_stream=None):
+    def open_secondary_gui(self, state, label_stream=None, eyetracker=None):
+        def any_display_widget_open():
+            # Check all frames for an open display_widget
+            frames = [
+                self.unisensory_neutral_visual,
+                self.unisensory_alcohol_visual,
+                self.multisensory_neutral_visual_olfactory,
+                self.multisensory_alcohol_visual_olfactory,
+                self.multisensory_neutral_visual_tactile_olfactory,
+                self.multisensory_alcohol_visual_tactile_olfactory,
+                self.multisensory_alcohol_visual_tactile,
+                self.multisensory_neutral_visual_tactile,
+                self.multisensory_alcohol_visual_olfactory2,
+                self.multisensory_neutral_visual_olfactory2,
+            ]
+            return any(getattr(f, 'display_widget', None) is not None for f in frames)
+
         current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
         if state == Qt.Checked:
+            if any_display_widget_open():
+                print("A display widget is already open in another frame. Not creating a new one.")
+                return
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(current_frame, current_test, self.base_dir, self.test_number)
+                current_frame.display_widget = DisplayWindow(current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker)
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -137,6 +157,8 @@ class GUI(QMainWindow):
                 middle_layout.setStretchFactor(current_frame.mirror_display_widget, 1)  # Optional, ensures it gets all available space
                 # Show the main display as a window
                 current_frame.display_widget.show()
+            else:
+                print("Display widget already exists, not creating a new one.")
         else:
             #Remove/hide the widgets when the stop button is pressed
             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
@@ -162,13 +184,13 @@ class GUI(QMainWindow):
         elif current_widget == self.multisensory_alcohol_visual_tactile_olfactory:
             return 'Multisensory Alcohol Visual, Tactile & Olfactory'
         elif current_widget == self.multisensory_alcohol_visual_tactile:
-            return 'Multisensory Alcohol (Visual & Tactile)'
+            return 'Stroop Multisensory Alcohol (Visual & Tactile)'
         elif current_widget == self.multisensory_neutral_visual_tactile:
-            return 'Multisensory Neutral (Visual & Tactile)'
+            return 'Stroop Multisensory Neutral (Visual & Tactile)'
         elif current_widget == self.multisensory_alcohol_visual_olfactory2:
-            return 'Multisensory Alcohol (Visual & Olfactory)'
+            return 'Stroop Multisensory Alcohol (Visual & Olfactory)'
         elif current_widget == self.multisensory_neutral_visual_olfactory2:
-            return 'Multisensory Neutral (Visual & Olfactory)'
+            return 'Stroop Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
         
@@ -181,6 +203,7 @@ class Frame(QFrame):
         self.test_number = test_number
         self.labrecorder = None
         self.label_stream = None
+        self.eyetracker = None
         
         self.layout = QVBoxLayout(self)
         
@@ -213,9 +236,9 @@ class Frame(QFrame):
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
 
-            start_button = QPushButton("Start", self)
-            start_button.clicked.connect(self.start_button_clicked)
-            button_layout.addWidget(start_button)
+            self.start_button = QPushButton("Start", self)
+            self.start_button.clicked.connect(self.start_button_clicked)
+            button_layout.addWidget(self.start_button)
 
             stop_button = QPushButton("Stop", self)
             stop_button.clicked.connect(self.stop_button_clicked_stroop)  # <-- update this line
@@ -244,9 +267,9 @@ class Frame(QFrame):
             button_layout = QHBoxLayout()
             top_layout.addLayout(button_layout)
 
-            start_button = QPushButton("Start", self)
-            start_button.clicked.connect(self.start_button_clicked)
-            button_layout.addWidget(start_button)
+            self.start_button = QPushButton("Start", self)
+            self.start_button.clicked.connect(self.start_button_clicked)
+            button_layout.addWidget(self.start_button)
 
             stop_button = QPushButton("Stop", self)
             stop_button.clicked.connect(self.stop_button_clicked_passive)
@@ -279,26 +302,39 @@ class Frame(QFrame):
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
-        if self.display_button.isChecked():
-            if self.label_stream is None:
-                self.label_stream = LSLLabelStream()
-                self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream)
-            if self.shared_status.get('lab_recorder_connected', False):
-                # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
-                if self.labrecorder is None or self.labrecorder.s is None:
-                    self.labrecorder = LabRecorder(self.base_dir)
-                if self.labrecorder and self.labrecorder.s is not None:
-                    self.labrecorder.Start_Recorder(self.parent.get_current_test())
+            if self.display_button.isChecked():
+                if self.label_stream is None:
+                    self.label_stream = LSLLabelStream()
+                    self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream, eyetracker=self.eyetracker)
+                    self.start_button.setEnabled(False)  # Disable the start button after starting the stream
+                if self.shared_status.get('lab_recorder_connected', False):
+                    # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
+                    if self.labrecorder is None or self.labrecorder.s is None:
+                        self.labrecorder = LabRecorder(self.base_dir)
+                    if self.labrecorder and self.labrecorder.s is not None:
+                        self.labrecorder.Start_Recorder(self.parent.get_current_test())
+                    else:
+                        print("LabRecorder not connected")
                 else:
                     print("LabRecorder not connected")
+
+                if self.shared_status.get('eyetracker_connected', False):
+                    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
+                    if self.eyetracker is None or self.eyetracker.device is None:
+                        self.eyetracker = PupilLabs()
+                    if self.eyetracker and self.eyetracker.device is not None:
+                        self.eyetracker.start_recording()
+                    else:
+                        print("eyetracker not connected")
+                else:
+                    print("eyetracker not connected")
             else:
-                print("LabRecorder not connected")
-        else:
-            self.parent.open_secondary_gui(Qt.Unchecked)
+                self.parent.open_secondary_gui(Qt.Unchecked)
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
         save_data = Save_Data(self.base_dir, self.test_number)
+        self.start_button.setEnabled(True)  # Re-enable the start button after stopping
         try:
             if hasattr(self, 'display_widget') and self.display_widget is not None:
                 save_data.save_data_stroop(
@@ -313,18 +349,28 @@ class Frame(QFrame):
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
+        # Stop the eyetracker if connected`
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.stop_recording()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
         save_data = Save_Data(self.base_dir, self.test_number)
+        self.start_button.setEnabled(True)  # Re-enable the start button after stopping
         try:
-            save_data.save_data_passive(self.parent.get_current_test())
+            if hasattr(self, 'display_widget') and self.display_widget is not None:
+                save_data.save_data_passive(self.parent.get_current_test())
+            else:
+                print("No display_widget found for saving data.")
         except Exception as e:
             print(f"Error saving data: {e}")
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
+        # Stop the eyetracker if connected`
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.stop_recording()
         self.parent.open_secondary_gui(Qt.Unchecked)
 
     #Pauses the display window and the mirror display window
