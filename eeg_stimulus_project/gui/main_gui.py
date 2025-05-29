@@ -122,7 +122,7 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state, label_stream=None, eyetracker=None):
+    def open_secondary_gui(self, state, label_stream, eyetracker=None, shared_status=None):
         def any_display_widget_open():
             # Check all frames for an open display_widget
             frames = [
@@ -147,7 +147,7 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker)
+                current_frame.display_widget = DisplayWindow(label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status)
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -305,7 +305,7 @@ class Frame(QFrame):
             if self.display_button.isChecked():
                 if self.label_stream is None:
                     self.label_stream = LSLLabelStream()
-                    self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream, eyetracker=self.eyetracker)
+                    self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
                     self.start_button.setEnabled(False)  # Disable the start button after starting the stream
                 if self.shared_status.get('lab_recorder_connected', False):
                     # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
@@ -318,16 +318,16 @@ class Frame(QFrame):
                 else:
                     print("LabRecorder not connected")
 
-                if self.shared_status.get('eyetracker_connected', False):
-                    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
-                    if self.eyetracker is None or self.eyetracker.device is None:
-                        self.eyetracker = PupilLabs()
-                    if self.eyetracker and self.eyetracker.device is not None:
-                        self.eyetracker.start_recording()
-                    else:
-                        print("eyetracker not connected")
-                else:
-                    print("eyetracker not connected")
+                #if self.shared_status.get('eyetracker_connected', False):
+                #    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
+                #    if self.eyetracker is None or self.eyetracker.device is None:
+                #        self.eyetracker = PupilLabs()
+                #    if self.eyetracker and self.eyetracker.device is not None:
+                #        self.eyetracker.start_recording()
+                #    else:
+                #        print("eyetracker not connected")
+                #else:
+                #    print("eyetracker not connected")
             else:
                 self.parent.open_secondary_gui(Qt.Unchecked)
 
@@ -350,9 +350,9 @@ class Frame(QFrame):
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
         # Stop the eyetracker if connected`
-        if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.stop_recording()
-        self.parent.open_secondary_gui(Qt.Unchecked)
+        #if self.eyetracker and self.eyetracker.device is not None:
+        #    self.eyetracker.stop_recording()
+        self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
@@ -369,9 +369,9 @@ class Frame(QFrame):
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
         # Stop the eyetracker if connected`
-        if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.stop_recording()
-        self.parent.open_secondary_gui(Qt.Unchecked)
+        #if self.eyetracker and self.eyetracker.device is not None:
+        #    self.eyetracker.stop_recording()
+        self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Pauses the display window and the mirror display window
     def pause_display_window(self):

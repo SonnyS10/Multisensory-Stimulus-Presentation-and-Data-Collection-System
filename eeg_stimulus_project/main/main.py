@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
         self.shared_status = None
     
     def start_experiment(self):
+        self.start_button.setEnabled(False)  # Disable the button to prevent multiple clicks
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
         test_number = self.test_number_input.text()

@@ -6,7 +6,9 @@ from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
+from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 import os
+import threading
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -171,11 +173,34 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, parent=None, current_test=None, base_dir=None, test_number=None, label_stream=None, eyetracker=None):
+    def __init__(self, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None):
         super().__init__(parent)
-
-        self.label_stream = label_stream if label_stream else LSLLabelStream()
+        
+        self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
         self.eyetracker = eyetracker
+        self.label_stream = label_stream if label_stream else LSLLabelStream()
+
+        if self.shared_status.get('eyetracker_connected', False):
+            # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
+            if self.eyetracker is None or self.eyetracker.device is None:
+                self.eyetracker = PupilLabs()
+            if self.eyetracker and self.eyetracker.device is not None:
+                self.eyetracker.start_recording()
+            else:
+                print("Eyetracker not connected1")
+        else:
+            print("Eyetracker not connected2")
+
+        #threads = [
+        #    threading.Thread(target=self.set_eyetracker(self.eyetracker)),
+        #]
+#
+        #for t in threads:
+        #    t.start()
+#
+        #for t in threads:
+        #    t.join()
+     
         self.current_label = None
 
         self.current_test = current_test
@@ -342,6 +367,7 @@ class DisplayWindow(QMainWindow):
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
             self.timer.stop()
+            self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
             #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
@@ -367,6 +393,7 @@ class DisplayWindow(QMainWindow):
             #self.label_poll_timer.stop()  # Stop the label polling timer(Good for debugging)
             save_data = Save_Data(self.base_dir, self.test_number)
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
+            self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
 
 
 
@@ -547,3 +574,15 @@ class DisplayWindow(QMainWindow):
         # Show end screen in the mirror as well
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.end_screen()
+
+    def set_eyetracker(self, eyetracker):
+        if self.shared_status.get('eyetracker_connected', False):
+            # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
+            if eyetracker is None or eyetracker.device is None:
+                eyetracker = PupilLabs()
+            if eyetracker and eyetracker.device is not None:
+                eyetracker.start_recording()
+            else:
+                print("Eyetracker not connected")
+        else:
+            print("Eyetracker not connected")
