@@ -1,0 +1,11 @@
+# socket_client.py
+import socket
+
+SERVER_IP = '192.168.0.5'  # Replace with the IP of the server (Computer B)
+PORT = 9999
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((SERVER_IP, PORT))
+    message = "Hello from Computer A!"
+    s.sendall(message.encode())
+    print("Message sent.")
