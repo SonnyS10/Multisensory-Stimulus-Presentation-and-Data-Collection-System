@@ -187,9 +187,9 @@ class DisplayWindow(QMainWindow):
             if self.eyetracker and self.eyetracker.device is not None:
                 self.eyetracker.start_recording()
             else:
-                print("Eyetracker not connected1")
+                print("Eyetracker not connected")
         else:
-            print("Eyetracker not connected2")
+            print("Eyetracker not connected in Control Window")
 
         #threads = [
         #    threading.Thread(target=self.set_eyetracker(self.eyetracker)),
@@ -297,6 +297,8 @@ class DisplayWindow(QMainWindow):
         self.paused_image_index = 0
         # Initialize paused time
         self.paused_time = 0 
+
+        self.stopped = False  # Flag to indicate if the trial has been stopped
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
@@ -429,7 +431,7 @@ class DisplayWindow(QMainWindow):
         super().resizeEvent(event)
         # Example: scale font size for instructions_label
         label_height = self.instructions_label.height()
-        font_size = max(8, int(label_height * 0.08))  # Adjust multiplier as needed
+        font_size = max(8, int(label_height * 0.03))  # Adjust multiplier as needed
         font = QFont("Arial", font_size, QFont.Bold)
         self.instructions_label.setFont(font)
         # You can do similar scaling for other labels if needed
@@ -546,15 +548,18 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to close the event, it stops the timer and closes the mirror widget if it exists
     def closeEvent(self, event):
-        # Stop the timer to prevent update_timer from running after close
-        if hasattr(self, 'timer') and self.timer.isActive():
-            self.timer.stop()
-        # Close or remove the mirror widget if it exists
-        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.setParent(None)  # Remove from layout
-            self.mirror_widget.deleteLater()    # Schedule for deletion
-            self.mirror_widget = None
-        super().closeEvent(event)
+        if getattr(self, 'stopped', False):
+            # Allow closing and do cleanup
+            if hasattr(self, 'timer') and self.timer.isActive():
+                self.timer.stop()
+            if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+                self.mirror_widget.setParent(None)
+                self.mirror_widget.deleteLater()
+                self.mirror_widget = None
+            super().closeEvent(event)
+        else:
+            # Prevent closing if stop wasn't pressed
+            event.ignore()
 
     def end_screen(self):
         # Create a new widget for the end screen
@@ -574,15 +579,3 @@ class DisplayWindow(QMainWindow):
         # Show end screen in the mirror as well
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.end_screen()
-
-    def set_eyetracker(self, eyetracker):
-        if self.shared_status.get('eyetracker_connected', False):
-            # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
-            if eyetracker is None or eyetracker.device is None:
-                eyetracker = PupilLabs()
-            if eyetracker and eyetracker.device is not None:
-                eyetracker.start_recording()
-            else:
-                print("Eyetracker not connected")
-        else:
-            print("Eyetracker not connected")

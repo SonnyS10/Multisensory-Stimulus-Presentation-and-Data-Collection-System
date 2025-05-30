@@ -316,7 +316,7 @@ class Frame(QFrame):
                     else:
                         print("LabRecorder not connected")
                 else:
-                    print("LabRecorder not connected")
+                    print("LabRecorder not connected in Control Window")
 
                 #if self.shared_status.get('eyetracker_connected', False):
                 #    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -352,6 +352,8 @@ class Frame(QFrame):
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()
+        if hasattr(self, 'display_widget') and self.display_widget is not None:
+            self.display_widget.stopped = True
         self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
@@ -371,6 +373,8 @@ class Frame(QFrame):
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()
+        if hasattr(self, 'display_widget') and self.display_widget is not None:
+            self.display_widget.stopped = True
         self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Pauses the display window and the mirror display window

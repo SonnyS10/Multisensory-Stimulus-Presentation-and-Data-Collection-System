@@ -13,10 +13,10 @@ class PupilLabs(threading.Thread):
     def __init__(self):
         super().__init__()
         print("Attempting to connect to Pupil Labs device...")
-        #self.device = discover_one_device(max_search_duration_seconds=5)
+        self.device = discover_one_device(max_search_duration_seconds=5)
 
-        ip = "172.20.10.2"
-        self.device = Device(address=ip, port="8080")
+        #ip = "172.20.10.2"
+        #self.device = Device(address=ip, port="8080")
         
         #print(f"Phone IP address: {self.device.phone_ip}")
         #print(f"Phone name: {self.device.phone_name}")
@@ -36,14 +36,15 @@ class PupilLabs(threading.Thread):
             print("Stopped and saved the eyetracker recording.")
 
     def estimate_time_offset(self):
-        estimate = self.device.estimate_time_offset()
-        if estimate is None:
-            self.device.close()
-            raise SystemExit("Pupil Companion app is too old")
-
-        print(f"Mean time offset: {estimate.time_offset_ms.mean} ms")
-        print(f"Mean roundtrip duration: {estimate.roundtrip_duration_ms.mean} ms")
-
+        if self.device:
+            estimate = self.device.estimate_time_offset()
+            if estimate is None:
+                self.device.close()
+                raise SystemExit("Pupil Companion app is too old")
+    
+            print(f"Mean time offset: {estimate.time_offset_ms.mean} ms")
+            print(f"Mean roundtrip duration: {estimate.roundtrip_duration_ms.mean} ms")
+    
     def send_marker(self, event):
         self.device.send_event(event)
 

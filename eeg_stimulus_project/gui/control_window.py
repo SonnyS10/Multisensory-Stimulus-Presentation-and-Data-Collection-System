@@ -61,7 +61,7 @@ class ControlWindow(QMainWindow):
         # Actichamp status row (button + icons + labels)
         actichamp_row = QHBoxLayout()
         self.actichamp_button = QPushButton("Actichamp", self)
-        self.actichamp_button.clicked.connect(self.start_actichamp)
+        self.actichamp_button.clicked.connect(lambda: threading.Thread(target=self.start_actichamp, daemon=True).start())
         actichamp_row.addWidget(self.actichamp_button)
         
         self.actichamp_linked_text = QLabel("Linked Status:", self)
@@ -75,7 +75,7 @@ class ControlWindow(QMainWindow):
         # LabRecorder status row (button + icons + labels)
         labrecorder_row = QHBoxLayout()
         self.labrecorder_button = QPushButton("LabRecorder", self)
-        self.labrecorder_button.clicked.connect(self.start_labrecorder)
+        self.labrecorder_button.clicked.connect(lambda: threading.Thread(target=self.start_labrecorder, daemon=True).start())
         labrecorder_row.addWidget(self.labrecorder_button)
         
         self.labrecorder_connected_text = QLabel("Connection Status:", self)
@@ -89,7 +89,7 @@ class ControlWindow(QMainWindow):
         # Eye Tracker status row (button + icons + labels)
         eyetracker_row = QHBoxLayout()
         self.eyetracker_button = QPushButton("Eye Tracker", self)
-        self.eyetracker_button.clicked.connect(self.connect_eyetracker) # Connect to the eyetracker
+        self.eyetracker_button.clicked.connect(lambda: threading.Thread(target=self.connect_eyetracker, daemon=True).start()) # Connect to the eyetracker
         eyetracker_row.addWidget(self.eyetracker_button)
         
         self.eyetracker_connected_text = QLabel("Connection Status:", self)
@@ -213,18 +213,20 @@ class ControlWindow(QMainWindow):
         if self.log_text_edit.thread() == QApplication.instance().thread():
             append()
         else:
-            QMetaObject.invokeMethod(self.log_text_edit, append, Qt.QueuedConnection)
+            QMetaObject.invokeMethod(self.log_text_edit, append(), Qt.QueuedConnection)
 
     # Start the Actichamp application and automatically link to the EEG stream.
     def start_actichamp(self):
-        try:
-            self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
-            print("Actichamp started.")
-            print("Attempting Link with the Actichamp Device")
-            time.sleep(2)  # Wait for the application to start
-            self.link_actichamp()
-        except Exception as e:
-            print(f"Failed to start Actichamp: {e}")
+        def worker():
+            try:
+                self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
+                print("Actichamp started.")
+                print("Attempting Link with the Actichamp Device")
+                time.sleep(2)  # Wait for the application to start
+                self.link_actichamp()
+            except Exception as e:
+                print(f"Failed to start Actichamp: {e}")
+        threading.Thread(target=worker, daemon=True).start()
 
     # Link to the EEG stream through the Actichamp application.
     def link_actichamp(self):
@@ -245,12 +247,15 @@ class ControlWindow(QMainWindow):
 
     #Start the LabRecorder application.
     def start_labrecorder(self):
-        try:
-            self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
-            print("LabRecorder opened.")
-            QTimer.singleShot(5000, self.connect_labrecorder)  # Wait 5 seconds before connecting
-        except Exception as e:
-            print(f"Failed to open LabRecorder: {e}")
+        def worker():
+            try:
+                self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
+                print("LabRecorder opened.")
+                time.sleep(5)  # Wait for the application to start
+                self.connect_labrecorder()  # Connect to LabRecorder after it has started
+            except Exception as e:
+                print(f"Failed to open LabRecorder: {e}")
+        threading.Thread(target=worker, daemon=True).start()
 
     #Connect the LabRecorder application to the Actichamp stream.
     def connect_labrecorder(self):
@@ -267,17 +272,19 @@ class ControlWindow(QMainWindow):
 
     #Connect to the Pupil Labs Eye Tracker.
     def connect_eyetracker(self):
-        try:
-            self.eyetracker = PupilLabs()
-            if self.eyetracker.device is not None:
-                self.shared_status['eyetracker_connected'] = True
-                print("Connected to Eye Tracker.")
-                #self.eyetracker.device.estimate_time_offset()  # Estimate time offset
-            else:
-                raise Exception()
-        except Exception:
-            print(f"Failed to connect to Eye Tracker")
-            self.shared_status['eyetracker_connected'] = False
+        def worker():
+            try:
+                self.eyetracker = PupilLabs()
+                if self.eyetracker.device is not None:
+                    self.shared_status['eyetracker_connected'] = True
+                    print("Connected to Eye Tracker.")
+                    self.eyetracker.device.estimate_time_offset()  # Estimate time offset
+                else:
+                    raise Exception()
+            except Exception:
+                print(f"Failed to connect to Eye Tracker")
+                self.shared_status['eyetracker_connected'] = False
+        threading.Thread(target=worker, daemon=True).start()
 
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
