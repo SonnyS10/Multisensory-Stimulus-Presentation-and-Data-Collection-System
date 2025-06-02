@@ -369,7 +369,8 @@ class DisplayWindow(QMainWindow):
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
             self.timer.stop()
-            self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
+            if self.eyetracker and self.eyetracker.device is not None:
+                self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
             #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
@@ -395,7 +396,8 @@ class DisplayWindow(QMainWindow):
             #self.label_poll_timer.stop()  # Stop the label polling timer(Good for debugging)
             save_data = Save_Data(self.base_dir, self.test_number)
             save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
-            self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
+            if self.eyetracker and self.eyetracker.device is not None:
+                self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
 
 
 
