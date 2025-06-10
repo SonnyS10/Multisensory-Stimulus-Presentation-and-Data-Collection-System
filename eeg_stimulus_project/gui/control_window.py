@@ -10,6 +10,7 @@ import json
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
+from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 class Tee(object):
     def __init__(self, *streams):
@@ -31,18 +32,21 @@ class Tee(object):
                 s.flush()
 
 class ControlWindow(QMainWindow):
-    def __init__(self, shared_status, log_queue=None, base_dir=None, test_number=None):
+    def __init__(self, connection, shared_status, log_queue=None, base_dir=None, test_number=None):
         super().__init__()
         self.shared_status = shared_status
+        self.connection = connection
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
         
         self.base_dir = base_dir
         self.test_number = test_number
+        self.label_stream = None
         self.labrecorder = None
         self.lab_recorder_connected = False
         self.eyetracker = None
+        self.current_test = None
         self.log_queue = log_queue
 
         # Set the window title and size (half of the screen width and full height)
@@ -91,7 +95,7 @@ class ControlWindow(QMainWindow):
         # Eye Tracker status row (button + icons + labels)
         eyetracker_row = QHBoxLayout()
         self.eyetracker_button = QPushButton("Eye Tracker", self)
-        self.eyetracker_button.clicked.connect(lambda: threading.Thread(target=self.connect_eyetracker, daemon=True).start()) # Connect to the eyetracker
+        self.eyetracker_button.clicked.connect(self.connect_eyetracker) # Connect to the eyetracker
         eyetracker_row.addWidget(self.eyetracker_button)
         
         self.eyetracker_connected_text = QLabel("Connection Status:", self)
@@ -195,6 +199,10 @@ class ControlWindow(QMainWindow):
         self.original_stdout = sys.stdout
         sys.stdout = Tee(sys.stdout, self.log_queue)
 
+        if self.connection is not None:
+            self.connection_thread = threading.Thread(target=self.host_command_listener, daemon=True)
+            self.connection_thread.start()
+
     # Redirect terminal outputs to the log queue
     def listen_to_log_queue(self):
         while True:
@@ -277,21 +285,19 @@ class ControlWindow(QMainWindow):
 
     #Connect to the Pupil Labs Eye Tracker.
     def connect_eyetracker(self):
-        def worker():
-            try:
-                self.eyetracker = PupilLabs()
-                time.sleep(2)  # Wait for the Pupil Labs device to initialize
-                if self.eyetracker.device is not None:
-                    self.shared_status['eyetracker_connected'] = True
-                    print("Connected to Eye Tracker.")
-                    self.eyetracker.estimate_time_offset()  # Estimate time offset
-                else:
-                    raise Exception()
-            except Exception:
-                print(f"Failed to connect to Eye Tracker")
-                self.shared_status['eyetracker_connected'] = False
-            self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
-        threading.Thread(target=worker, daemon=True).start()
+        try:
+            self.eyetracker = PupilLabs()
+            time.sleep(2)  # Wait for the Pupil Labs device to initialize
+            if self.eyetracker.device is not None:
+                self.shared_status['eyetracker_connected'] = True
+                print("Connected to Eye Tracker.")
+                self.eyetracker.estimate_time_offset()  # Estimate time offset
+            else:
+                raise Exception()
+        except Exception:
+            print(f"Failed to connect to Eye Tracker")
+            self.shared_status['eyetracker_connected'] = False
+        self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
@@ -303,27 +309,72 @@ class ControlWindow(QMainWindow):
         # Needed for compatibility with sys.stdout redirection
         pass
 
-    def host_command_listener(socket_conn, shared_status, base_dir, test_number):
+    def host_command_listener(self):
         while True:
-            data = socket_conn.recv(4096)
+            print("Host: Listening for commands...")
+            data = self.connection.recv(4096)
             if not data:
                 break
             try:
-                message = json.loads(data.decode('utf-8'))
-                action = message.get("action")
-                if action == "start_recording":
-                    # Start LabRecorder, etc.
-                    print("Host: Starting recording...")
-                    pass
-                elif action == "save_data_stroop":
-                    # Save stroop data
-                    pass
-                elif action == "save_data_passive":
-                    # Save passive data
-                    pass
-                # ...other actions...
+                messages = data.decode('utf-8').split('\n')
+                for msg in messages:
+                    if not msg.strip():
+                        continue
+                    message = json.loads(msg)
+                    action = message.get("action")
+                    if action == "start_button":
+                        test_name = message.get("test", None)
+                        if test_name:
+                            self.current_test = test_name  # Store for use in start_test
+                        self.start_test()
+                        print("Host: Starting test...")
+                        pass
+                    elif action == "stop_button":
+                        self.stop_test()
+                        print("Host: Stopping test...")
+                        pass
+                    elif action == "label":
+                        label = message.get("label", None)
+                        self.label_push(label)
+                        print(f"Host: Pushing label: {label}")
+                        pass
+                    # ...other actions...
             except Exception as e:
                 print(f"Host: Error handling command: {e}")
+
+    def start_test(self):
+        if self.label_stream is None:
+            self.label_stream = LSLLabelStream()
+
+        if self.labrecorder and self.labrecorder.s is not None:
+            test_name = self.current_test if self.current_test else "default_test"
+            self.labrecorder.Start_Recorder(test_name)
+        else:
+            print("LabRecorder not connected")
+
+        #if self.eyetracker is None or self.eyetracker.device is None:
+        #    self.eyetracker = PupilLabs()
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.start_recording()
+        else:
+            print("Eyetracker not connected")
+
+    def stop_test(self):
+        # Stop LabRecorder if connected
+        if self.labrecorder and self.labrecorder.s is not None:
+            self.labrecorder.Stop_Recorder()
+        # Stop the eyetracker if connected`
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.stop_recording()
+
+    def label_push(self, label):
+        """
+        Push a label to the LSL stream.
+        """
+        if self.label_stream is None:
+            self.label_stream = LSLLabelStream()
+        self.label_stream.push_label(label)
+        print(f"Label pushed: {label}")
 
     # TO MAYBE BE IMPLEMENTED LATER
     '''

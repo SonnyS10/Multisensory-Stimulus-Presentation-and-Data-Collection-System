@@ -159,17 +159,17 @@ class MainWindow(QMainWindow):
 
             if not client and not host:
                 # Run both
-                self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
-                self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
+                self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
                 self.control_process.start()
                 self.gui_process.start()
-            elif host:
-                # Only control panel
-                self.control_process = Process(target=run_control_window, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
-                self.control_process.start()
+            #elif host:
+            #    # Only control panel
+            #    self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
+            #    self.control_process.start()
             elif client:
                 # Only main GUI
-                self.gui_process = Process(target=run_main_gui, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
+                self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
                 self.gui_process.start()
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
@@ -185,6 +185,27 @@ class MainWindow(QMainWindow):
             conn, addr = server_socket.accept()
             print(f"Host: Connected by {addr}")
             self.connection = conn  # Save for later use
+
+            # Only create directories and processes after connection
+            subject_id = self.subject_id_input.text()
+            test_number = self.test_number_input.text()
+            base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
+            os.makedirs(base_dir, exist_ok=True)
+
+            from multiprocessing import Queue
+            log_queue = Queue()
+
+            self.manager = Manager()
+            self.shared_status = self.manager.dict()
+            self.shared_status['lab_recorder_connected'] = False
+            self.shared_status['eyetracker_connected'] = False
+
+            # Start the control window process only after connection
+            self.control_process = Process(
+                target=run_control_window_host,
+                args=(conn, self.shared_status, log_queue, base_dir, test_number)
+            )
+            self.control_process.start()
         except Exception as e:
             print(f"Host: Server error: {e}")
 
@@ -221,6 +242,21 @@ def run_main_gui(shared_status, log_queue, base_dir, test_number):
     sys.stdout = Tee(sys.stdout, log_queue)
     app = QApplication(sys.argv)
     window = GUI(shared_status, base_dir, test_number)  # If you want to use log_queue in GUI, add it to the constructor
+    window.show()
+    sys.exit(app.exec_())
+
+def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number):
+    from eeg_stimulus_project.gui.control_window import ControlWindow
+    app = QApplication(sys.argv)
+    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number)
+    window.show()
+    sys.exit(app.exec_())
+
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number):
+    from eeg_stimulus_project.gui.main_gui import GUI
+    sys.stdout = Tee(sys.stdout, log_queue)
+    app = QApplication(sys.argv)
+    window = GUI(connection, shared_status, base_dir, test_number)  # If you want to use log_queue in GUI, add it to the constructor
     window.show()
     sys.exit(app.exec_())
 

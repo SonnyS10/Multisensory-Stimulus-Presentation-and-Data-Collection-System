@@ -38,13 +38,11 @@ class GUI(QMainWindow):
         self.shared_status = shared_status
         self.connection = connection
 
-        message = {
-            "action": "start_recording",
-            "test_name": self.parent.get_current_test(),
-            "test_type": "stroop"  # or "passive", optional
-        
-        }
-        self.connection.sendall(json.dumps(message).encode('utf-8'))
+        if connection is not None:
+            message = {
+                "action": "start_recording",
+            }
+            self.connection.sendall(json.dumps(message).encode('utf-8'))
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
