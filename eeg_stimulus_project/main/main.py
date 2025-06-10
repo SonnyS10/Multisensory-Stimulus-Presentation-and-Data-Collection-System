@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         host_ip = self.host_ip_input.text().strip() if client else None
 
         # Networking setup
-        if host or (not host and not client):
+        if host:
             if not subject_id or test_number not in ['1', '2']:
                 print("Please enter a valid Subject ID and Test Number (1 or 2).")
                 self.start_as_host_button.setEnabled(True)

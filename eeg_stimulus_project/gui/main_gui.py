@@ -97,7 +97,7 @@ class GUI(QMainWindow):
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
+        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -156,7 +156,7 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status)
+                current_frame.display_widget = DisplayWindow(self.connection, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status)
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -204,7 +204,7 @@ class GUI(QMainWindow):
             return None
         
 class Frame(QFrame):
-    def __init__(self, parent, title, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None):
         super().__init__(parent)
 
         self.shared_status = shared_status
@@ -213,6 +213,7 @@ class Frame(QFrame):
         self.labrecorder = None
         self.label_stream = None
         self.eyetracker = None
+        self.connection = connection
         
         self.layout = QVBoxLayout(self)
         
@@ -312,7 +313,8 @@ class Frame(QFrame):
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
             if self.display_button.isChecked():
-                if self.label_stream is None:
+                self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
+                if self.label_stream is None:                
                     self.label_stream = LSLLabelStream()
                     self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
                     self.start_button.setEnabled(False)  # Disable the start button after starting the stream
@@ -342,6 +344,8 @@ class Frame(QFrame):
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
+        self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
+
         save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
         try:
@@ -369,6 +373,8 @@ class Frame(QFrame):
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
+        self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
+
         save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
         try:
@@ -404,6 +410,12 @@ class Frame(QFrame):
     def enable_pause_resume_buttons(self):
         self.pause_button.setEnabled(True)
         self.resume_button.setEnabled(True)
+
+    def send_message(self, message_dict):
+        try:
+            self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+        except Exception as e:
+            print(f"Error sending message: {e}")
 
 if __name__ == "__main__":
     import sys
