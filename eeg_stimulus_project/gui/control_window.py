@@ -41,6 +41,7 @@ class ControlWindow(QMainWindow):
         self.test_number = test_number
         self.labrecorder = None
         self.lab_recorder_connected = False
+        self.eyetracker = None
         self.log_queue = log_queue
 
         # Set the window title and size (half of the screen width and full height)
@@ -282,15 +283,14 @@ class ControlWindow(QMainWindow):
                 if self.eyetracker.device is not None:
                     self.shared_status['eyetracker_connected'] = True
                     print("Connected to Eye Tracker.")
-                    self.eyetracker.device.estimate_time_offset()  # Estimate time offset
+                    self.eyetracker.estimate_time_offset()  # Estimate time offset
                 else:
                     raise Exception()
             except Exception:
                 print(f"Failed to connect to Eye Tracker")
                 self.shared_status['eyetracker_connected'] = False
+            self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         threading.Thread(target=worker, daemon=True).start()
-
-        self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
