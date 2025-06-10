@@ -236,10 +236,13 @@ class ControlWindow(QMainWindow):
             link_button = window_spec.child_window(title="Link", control_type="Button")
             link_button.wait('enabled', timeout=5)
             link_button.click_input()
-            time.sleep(5)  # Wait for the linking process to complete
-            print('Actichamp Linked Successfully')
-            self.actichamp_linked = True
-            self.update_app_status_icon(self.actichamp_linked_icon, True)
+            time.sleep(10)  # Wait for the linking process to complete
+            if window_spec.child_window(title="Unlink", control_type="Button").exists():
+                print('Actichamp Linked Successfully')
+                self.actichamp_linked = True
+                self.update_app_status_icon(self.actichamp_linked_icon, True)
+            else:
+                raise Exception("Actichamp linking failed")
         except Exception as e:
             print(f"Failed to link Actichamp: {e}")
             self.actichamp_linked = False
@@ -275,6 +278,7 @@ class ControlWindow(QMainWindow):
         def worker():
             try:
                 self.eyetracker = PupilLabs()
+                time.sleep(2)  # Wait for the Pupil Labs device to initialize
                 if self.eyetracker.device is not None:
                     self.shared_status['eyetracker_connected'] = True
                     print("Connected to Eye Tracker.")

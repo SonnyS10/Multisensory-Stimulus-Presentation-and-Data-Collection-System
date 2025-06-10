@@ -13,12 +13,13 @@ class PupilLabs(threading.Thread):
     def __init__(self):
         super().__init__()
         print("Attempting to connect to Pupil Labs device...")
-        self.device = discover_one_device(max_search_duration_seconds=5)
+        #self.device = discover_one_device(max_search_duration_seconds=5)
 
         #ip = "172.20.10.2"
-        #self.device = Device(address=ip, port="8080")
+        ip = "10.117.59.253"
+        self.device = Device(address=ip, port="8080")
         
-        #print(f"Phone IP address: {self.device.phone_ip}")
+        print(f"Phone IP address: {self.device.phone_ip}")
         #print(f"Phone name: {self.device.phone_name}")
         #print(f"Phone unique ID: {self.device.phone_id}")
 
