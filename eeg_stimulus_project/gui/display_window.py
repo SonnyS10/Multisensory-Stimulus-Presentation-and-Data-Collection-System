@@ -67,6 +67,8 @@ class MirroredDisplayWindow(QWidget):
 
         self.stacked_layout.setCurrentIndex(0)
 
+        self.show_pre_instructions()
+
         self.paused = False
 
     #Method to update the mirror image
@@ -168,6 +170,32 @@ class MirroredDisplayWindow(QWidget):
         self.stacked_layout.addWidget(end_widget)
         self.stacked_layout.setCurrentWidget(end_widget)
 
+    def show_pre_instructions(self):
+        self.instructions_label.setFont(QFont("Arial", 18))
+        self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        self.stacked_layout.setCurrentIndex(0)
+    
+    def show_crosshair_period(self):
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setText("+")
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+    
+    def show_main_instructions(self):
+        self.instructions_label.setFont(QFont("Arial", 18))
+        self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+
 #This is the main display window that contains the experiment and the logic to make the mirror display function 
 #It is the main window that the subject sees and interacts with
 class DisplayWindow(QMainWindow):
@@ -259,6 +287,8 @@ class DisplayWindow(QMainWindow):
 
         # Show overlay first
         self.stacked_layout.setCurrentIndex(0)
+
+        self.show_pre_instructions()
 
         # Timer
         self.timer = QTimer(self)
@@ -364,7 +394,8 @@ class DisplayWindow(QMainWindow):
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
         else:
-            self.end_screen()  # Show end screen after all images are displayed
+            self.showing_second_pre = True
+            self.show_pre_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
             self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
@@ -389,7 +420,8 @@ class DisplayWindow(QMainWindow):
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
         else:
-            self.end_screen()
+            self.showing_second_pre = True
+            self.show_pre_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
             self.label_stream.push_label("Test Ended")
             self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
             self.timer.stop()
@@ -551,6 +583,7 @@ class DisplayWindow(QMainWindow):
     #This method is called to close the event, it stops the timer and closes the mirror widget if it exists
     def closeEvent(self, event):
         if getattr(self, 'stopped', False):
+            print("Closing DisplayWindow...")
             # Allow closing and do cleanup
             if hasattr(self, 'timer') and self.timer.isActive():
                 self.timer.stop()
@@ -558,6 +591,8 @@ class DisplayWindow(QMainWindow):
                 self.mirror_widget.setParent(None)
                 self.mirror_widget.deleteLater()
                 self.mirror_widget = None
+            if self.eyetracker and self.eyetracker.device is not None:
+                self.eyetracker.stop_recording()          
             super().closeEvent(event)
         else:
             # Prevent closing if stop wasn't pressed
@@ -581,3 +616,46 @@ class DisplayWindow(QMainWindow):
         # Show end screen in the mirror as well
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.end_screen()
+
+    def show_pre_instructions(self):
+        # Show your pre-instructions
+        self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_pre_instructions()
+        # After a short delay (5 seconds), show the crosshair
+        QTimer.singleShot(5000, self.show_crosshair_period)  # Show crosshair after 5 seconds (adjust as needed)
+        
+    def show_crosshair_period(self):
+        # Show a crosshair for 2 minutes
+        self.instructions_label.setText("+")
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_period()
+        # If this is the second time, show the end screen after a delay
+        if getattr(self, 'showing_second_pre', False):
+            QTimer.singleShot(5000, self.end_screen)  # Show end screen after 5 seconds
+            self.showing_second_pre = False
+        else:
+        # After 2 minutes, show the main instructions
+            QTimer.singleShot(5000, self.show_main_instructions)  # 2 minutes
+
+    def show_main_instructions(self):
+        # Restore your original instructions and allow the experiment to proceed
+        self.instructions_label.setFont(QFont("Arial", 18))
+        self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_main_instructions()
+

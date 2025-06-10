@@ -3,6 +3,7 @@ sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-R
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
+import time
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
@@ -354,6 +355,8 @@ class Frame(QFrame):
         #    self.eyetracker.stop_recording()
         if hasattr(self, 'display_widget') and self.display_widget is not None:
             self.display_widget.stopped = True
+            self.display_widget.close()  # Close the display widget
+        time.sleep(2)  # Give some time for the display widget to stop
         self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
@@ -375,6 +378,8 @@ class Frame(QFrame):
         #    self.eyetracker.stop_recording()
         if hasattr(self, 'display_widget') and self.display_widget is not None:
             self.display_widget.stopped = True
+            self.display_widget.close()
+        time.sleep(2)
         self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
 
     #Pauses the display window and the mirror display window
