@@ -3,6 +3,8 @@ sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-R
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit
 import os
 from multiprocessing import Manager, Process
+import socket
+import threading
 
 class Tee(object):
     def __init__(self, *streams):
@@ -48,6 +50,13 @@ class MainWindow(QMainWindow):
         self.test_number_input = QLineEdit(self)
         layout.addWidget(self.test_number_input)
 
+        # Host IP input (for client mode)
+        self.host_ip_label = QLabel("Host IP (for Client):", self)
+        layout.addWidget(self.host_ip_label)
+        self.host_ip_input = QLineEdit(self)
+        self.host_ip_input.setText("169.254.37.25")  # Set default IP
+        layout.addWidget(self.host_ip_input)
+
         # Start button
         self.start_button = QPushButton("Start with No Host/Client", self)
         self.start_button.clicked.connect(lambda: self.start_experiment(client=False, host=False))
@@ -68,15 +77,36 @@ class MainWindow(QMainWindow):
         self.control_process = None
         self.manager = None
         self.shared_status = None
+
+        self.connection = None  # Store socket connection
     
-    def start_experiment(self, client=False , host=False):
+    def start_experiment(self, client=False, host=False):
         self.start_button.setEnabled(False)  # Disable the button to prevent multiple clicks
         self.start_as_host_button.setEnabled(False)  # Disable the host button
         self.start_as_client_button.setEnabled(False)  # Disable the client button
-        
+
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
         test_number = self.test_number_input.text()
+
+        # Networking setup
+        if host:
+            # Start server in a thread to avoid blocking UI
+            threading.Thread(target=self.start_server, daemon=True).start()
+        elif client:
+            host_ip = self.host_ip_input.text().strip()
+            if not host_ip:
+                print("Please enter the Host IP for client mode.")
+                self.start_as_client_button.setEnabled(True)
+                self.start_as_host_button.setEnabled(True)
+                self.start_button.setEnabled(True)
+                return
+            if not self.connect_to_host(host_ip):
+                print("Could not connect to host. Check IP and network.")
+                self.start_as_client_button.setEnabled(True)
+                self.start_as_host_button.setEnabled(True)
+                self.start_button.setEnabled(True)
+                return
 
         # Check if the subject ID and test number are valid
         if subject_id and test_number in ['1', '2']:
@@ -144,6 +174,32 @@ class MainWindow(QMainWindow):
                 self.gui_process.start()
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
+
+    def start_server(self):
+        HOST = '0.0.0.0'
+        PORT = 9999
+        try:
+            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_socket.bind((HOST, PORT))
+            server_socket.listen(1)
+            print(f"Host: Waiting for client on port {PORT}...")
+            conn, addr = server_socket.accept()
+            print(f"Host: Connected by {addr}")
+            self.connection = conn  # Save for later use
+        except Exception as e:
+            print(f"Host: Server error: {e}")
+
+    def connect_to_host(self, host_ip):
+        PORT = 9999
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((host_ip, PORT))
+            print("Client: Connected to host.")
+            self.connection = s  # Save for later use
+            return True
+        except Exception as e:
+            print(f"Client: Connection error: {e}")
+            return False
 
     def closeEvent(self, event):
         if self.gui_process is not None:
