@@ -9,6 +9,7 @@ from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 import os
 import threading
+import json
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -67,7 +68,7 @@ class MirroredDisplayWindow(QWidget):
 
         self.stacked_layout.setCurrentIndex(0)
 
-        self.show_pre_instructions()
+        self.show_crosshair_instructions()
 
         self.paused = False
 
@@ -170,7 +171,7 @@ class MirroredDisplayWindow(QWidget):
         self.stacked_layout.addWidget(end_widget)
         self.stacked_layout.setCurrentWidget(end_widget)
 
-    def show_pre_instructions(self):
+    def show_crosshair_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
         self.instructions_label.setVisible(True)
@@ -201,7 +202,7 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None):
+    def __init__(self, connection, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None):
         super().__init__(parent)
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -218,22 +219,13 @@ class DisplayWindow(QMainWindow):
                 print("Eyetracker not connected")
         else:
             print("Eyetracker not connected in Control Window")
-
-        #threads = [
-        #    threading.Thread(target=self.set_eyetracker(self.eyetracker)),
-        #]
-#
-        #for t in threads:
-        #    t.start()
-#
-        #for t in threads:
-        #    t.join()
      
         self.current_label = None
 
         self.current_test = current_test
         self.base_dir = base_dir
         self.test_number = test_number
+        self.connection = connection
 
         self.setWindowTitle("Display App")
         self.setGeometry(100, 100, 700, 700)
@@ -288,7 +280,7 @@ class DisplayWindow(QMainWindow):
         # Show overlay first
         self.stacked_layout.setCurrentIndex(0)
 
-        self.show_pre_instructions()
+        self.show_crosshair_instructions()
 
         # Timer
         self.timer = QTimer(self)
@@ -346,7 +338,7 @@ class DisplayWindow(QMainWindow):
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
                     self.timer.start(1)  # Start the timer with 100 ms interval
-                if current_test in ['Multisensory Alcohol (Visual & Tactile)', 'Multisensory Neutral (Visual & Tactile)', 'Multisensory Alcohol (Visual & Olfactory)', 'Multisensory Neutral (Visual & Olfactory)']:
+                if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
                 else:
                     self.display_images_passive()
@@ -386,6 +378,7 @@ class DisplayWindow(QMainWindow):
             # Push the filename (without extension) as label
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+                self.send_message({"action": "label", "label": label})  # Send label to the server
                 self.label_stream.push_label(label)
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
@@ -394,8 +387,10 @@ class DisplayWindow(QMainWindow):
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
         else:
+            label = "Passive Test Ended"
+            self.send_message({"action": "label", "label": label})  # Send end label to the server
             self.showing_second_pre = True
-            self.show_pre_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
+            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
             self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
             self.paused_image_index = 0  # Reset the paused image index
             self.paused_time = 0  # Reset the paused time
@@ -414,7 +409,7 @@ class DisplayWindow(QMainWindow):
             self.update_image_label()
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-                
+                self.send_message({"action": "label", "label": label})
                 self.label_stream.push_label(label)
                 print(f"Current label: {label}")
                 self.current_label = label
@@ -422,7 +417,9 @@ class DisplayWindow(QMainWindow):
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
         else:
             self.showing_second_pre = True
-            self.show_pre_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
+            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
+            label = "Stroop Test Ended"
+            self.send_message({"action": "label", "label": label})  # Send end label to the server
             self.label_stream.push_label("Test Ended")
             self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
             self.timer.stop()
@@ -509,6 +506,7 @@ class DisplayWindow(QMainWindow):
                             self.user_data['user_inputs'].append('Yes') # Store the user input
                             if hasattr(img, 'filename'):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
+                                self.send_message({"action": "label", "label": label})
                                 self.label_stream.push_label(label)
                                 print(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
@@ -516,6 +514,7 @@ class DisplayWindow(QMainWindow):
                             self.user_data['user_inputs'].append('No')  # Store the user input
                             if hasattr(img, 'filename'):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
+                                self.send_message({"action": "label", "label": label})
                                 self.label_stream.push_label(label)
                                 print(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
@@ -548,6 +547,8 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to start the countdown, it hides the instruction label and shows the countdown label, it also starts the countdown timer
     def start_countdown(self):
+        label = "Starting countdown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setVisible(False)
         self.countdown_label.setVisible(True)
         self.countdown_seconds = 3
@@ -567,6 +568,8 @@ class DisplayWindow(QMainWindow):
         else:
             self.countdown_timer.stop()
             self.countdown_label.setText("Go!")
+            label = "Countdown Finished, starting experiment"
+            self.send_message({"action": "label", "label": label})  # Send label to the server
             QTimer.singleShot(1000, self.begin_experiment)
 
     #This method is called to begin the experiment, it sets the stacked layout to the experiment widget and starts the experiment
@@ -618,20 +621,24 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.end_screen()
 
-    def show_pre_instructions(self):
+    def show_crosshair_instructions(self):
         # Show your pre-instructions
+        label = "showing crosshair instructions"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.show_pre_instructions()
+            self.mirror_widget.show_crosshair_instructions()
         # After a short delay (5 seconds), show the crosshair
         QTimer.singleShot(5000, self.show_crosshair_period)  # Show crosshair after 5 seconds (adjust as needed)
         
     def show_crosshair_period(self):
         # Show a crosshair for 2 minutes
+        label = "showing crosshair period"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -647,10 +654,12 @@ class DisplayWindow(QMainWindow):
             self.showing_second_pre = False
         else:
         # After 2 minutes, show the main instructions
-            QTimer.singleShot(5000, self.show_main_instructions)  # 2 minutes
+            QTimer.singleShot(5000, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
+        label = "showing main instructions"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
         self.instructions_label.setVisible(True)
@@ -659,4 +668,10 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_main_instructions()
+
+    def send_message(self, message_dict):
+        try:
+            self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+        except Exception as e:
+            print(f"Error sending message: {e}")
 

@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         host_ip = self.host_ip_input.text().strip() if client else None
 
         # Networking setup
-        if host or (not host and not client):
+        if host:
             if not subject_id or test_number not in ['1', '2']:
                 print("Please enter a valid Subject ID and Test Number (1 or 2).")
                 self.start_as_host_button.setEnabled(True)
@@ -106,73 +106,62 @@ class MainWindow(QMainWindow):
                 self.start_button.setEnabled(True)
                 self.start_as_host_button.setEnabled(True)
                 return
-
-        # Only create directories and processes if host or both
-        if host or (not host and not client):
-            # Create base directory structure
-            base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
-            os.makedirs(base_dir, exist_ok=True)
-
-            # List of tests
-            passive_tests = [
-                'Unisensory Neutral Visual',
-                'Unisensory Alcohol Visual',
-                'Multisensory Neutral Visual & Olfactory',
-                'Multisensory Alcohol Visual & Olfactory',
-                'Multisensory Neutral Visual, Tactile & Olfactory',
-                'Multisensory Alcohol Visual, Tactile & Olfactory'
-            ]
-
-            stroop_tests = [
-                'Stroop Multisensory Alcohol (Visual & Tactile)',
-                'Stroop Multisensory Neutral (Visual & Tactile)',
-                'Stroop Multisensory Alcohol (Visual & Olfactory)',
-                'Stroop Multisensory Neutral (Visual & Olfactory)'
-            ]
-
-            # Select the appropriate tests based on the test number
-            # IN THE FUTURE, WE SHOULD MAKE THIS DAY NUMBER INSTEAD OF TEST NUMBER 
-            # AND WHICHEVER TESTS ARE DONE ON THAT DAY GET RECORDED INTO THEIR RESPECTIVE FOLDERS
-            # For now, we will just use test number
-            if test_number == '1':
-                selected_tests = passive_tests
-            else:
-                selected_tests = stroop_tests
-
-            # Create subdirectories for each selected test and clear the data.csv file if it exists
-            for test in selected_tests:
-                test_dir = os.path.join(base_dir, test)
-                os.makedirs(test_dir, exist_ok=True)
-                file_path = os.path.join(test_dir, 'data.csv')
-                if os.path.exists(file_path):
-                    with open(file_path, 'w') as file:
-                        file.truncate(0)
-
-            # Create the Manager and shared_status dict
-            from multiprocessing import Queue
-            log_queue = Queue()
-
-            self.manager = Manager()
-            self.shared_status = self.manager.dict()
-            self.shared_status['lab_recorder_connected'] = False
-            self.shared_status['eyetracker_connected'] = False
-
-            if not client and not host:
-                # Run both
-                self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
-                self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
-                self.control_process.start()
-                self.gui_process.start()
-            elif host:
-                # Only control panel
-                self.control_process = Process(target=run_control_window, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
-                self.control_process.start()
-            elif client:
-                # Only main GUI
-                self.gui_process = Process(target=run_main_gui, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
-                self.gui_process.start()
+            
+        # Create base directory structure
+        base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
+        os.makedirs(base_dir, exist_ok=True)
+        # List of tests
+        passive_tests = [
+            'Unisensory Neutral Visual',
+            'Unisensory Alcohol Visual',
+            'Multisensory Neutral Visual & Olfactory',
+            'Multisensory Alcohol Visual & Olfactory',
+            'Multisensory Neutral Visual, Tactile & Olfactory',
+            'Multisensory Alcohol Visual, Tactile & Olfactory'
+        ]
+        stroop_tests = [
+            'Stroop Multisensory Alcohol (Visual & Tactile)',
+            'Stroop Multisensory Neutral (Visual & Tactile)',
+            'Stroop Multisensory Alcohol (Visual & Olfactory)',
+            'Stroop Multisensory Neutral (Visual & Olfactory)'
+        ]
+        # Select the appropriate tests based on the test number
+        # IN THE FUTURE, WE SHOULD MAKE THIS DAY NUMBER INSTEAD OF TEST NUMBER 
+        # AND WHICHEVER TESTS ARE DONE ON THAT DAY GET RECORDED INTO THEIR RESPECTIVE FOLDERS
+        # For now, we will just use test number
+        if test_number == '1':
+            selected_tests = passive_tests
         else:
-            print("Please enter a valid Subject ID and Test Number (1 or 2).")
+            selected_tests = stroop_tests
+        # Create subdirectories for each selected test and clear the data.csv file if it exists
+        for test in selected_tests:
+            test_dir = os.path.join(base_dir, test)
+            os.makedirs(test_dir, exist_ok=True)
+            file_path = os.path.join(test_dir, 'data.csv')
+            if os.path.exists(file_path):
+                with open(file_path, 'w') as file:
+                    file.truncate(0)
+        # Create the Manager and shared_status dict
+        from multiprocessing import Queue
+        log_queue = Queue()
+        self.manager = Manager()
+        self.shared_status = self.manager.dict()
+        self.shared_status['lab_recorder_connected'] = False
+        self.shared_status['eyetracker_connected'] = False
+        if not client and not host:
+            # Run both
+            self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
+            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
+            self.control_process.start()
+            self.gui_process.start()
+        elif host:
+            # Only control panel
+            self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
+            self.control_process.start()
+        elif client:
+            # Only main GUI
+            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
+            self.gui_process.start()
 
     def start_server(self):
         HOST = '0.0.0.0'
@@ -221,6 +210,21 @@ def run_main_gui(shared_status, log_queue, base_dir, test_number):
     sys.stdout = Tee(sys.stdout, log_queue)
     app = QApplication(sys.argv)
     window = GUI(shared_status, base_dir, test_number)  # If you want to use log_queue in GUI, add it to the constructor
+    window.show()
+    sys.exit(app.exec_())
+
+def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number):
+    from eeg_stimulus_project.gui.control_window import ControlWindow
+    app = QApplication(sys.argv)
+    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number)
+    window.show()
+    sys.exit(app.exec_())
+
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number):
+    from eeg_stimulus_project.gui.main_gui import GUI
+    sys.stdout = Tee(sys.stdout, log_queue)
+    app = QApplication(sys.argv)
+    window = GUI(connection, shared_status, base_dir, test_number)  # If you want to use log_queue in GUI, add it to the constructor
     window.show()
     sys.exit(app.exec_())
 

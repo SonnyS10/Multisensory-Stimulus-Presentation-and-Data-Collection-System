@@ -41,8 +41,8 @@ class Display():
         'Multisensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
         'Multisensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
         'Multisensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
-        'Multisensory Alcohol (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
-        'Multisensory Alcohol (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
-        'Multisensory Neutral (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
-        'Multisensory Neutral (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
+        'Stroop Multisensory Alcohol (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
+        'Stroop Multisensory Alcohol (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
+        'Stroop Multisensory Neutral (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
+        'Stroop Multisensory Neutral (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
     }
