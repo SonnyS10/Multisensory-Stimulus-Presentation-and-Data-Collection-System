@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFra
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 import time
+import json
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
@@ -32,16 +33,25 @@ class Tee(object):
                 s.flush()
 
 class GUI(QMainWindow):
-    def __init__(self, shared_status, base_dir, test_number):
+    def __init__(self, connection, shared_status, base_dir, test_number):
         super().__init__()
         self.shared_status = shared_status
+        self.connection = connection
+
+        message = {
+            "action": "start_recording",
+            "test_name": self.parent.get_current_test(),
+            "test_type": "stroop"  # or "passive", optional
+        
+        }
+        self.connection.sendall(json.dumps(message).encode('utf-8'))
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
 
         self.base_dir = base_dir
         self.test_number = test_number
-        self.setWindowTitle("Data Collection App")
+        self.setWindowTitle("Experiment Control Window")
         self.setGeometry(0, 100, screen_geometry.width() // 2, screen_geometry.height() - 150)
         self.setMinimumSize(800, 600)
         

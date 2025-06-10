@@ -414,6 +414,7 @@ class DisplayWindow(QMainWindow):
             self.update_image_label()
             if hasattr(img, 'filename'):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+                
                 self.label_stream.push_label(label)
                 print(f"Current label: {label}")
                 self.current_label = label

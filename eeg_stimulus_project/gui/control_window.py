@@ -6,6 +6,7 @@ import subprocess
 from pywinauto import Application
 import time 
 import threading
+import json
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
@@ -301,6 +302,28 @@ class ControlWindow(QMainWindow):
     def flush(self):
         # Needed for compatibility with sys.stdout redirection
         pass
+
+    def host_command_listener(socket_conn, shared_status, base_dir, test_number):
+        while True:
+            data = socket_conn.recv(4096)
+            if not data:
+                break
+            try:
+                message = json.loads(data.decode('utf-8'))
+                action = message.get("action")
+                if action == "start_recording":
+                    # Start LabRecorder, etc.
+                    print("Host: Starting recording...")
+                    pass
+                elif action == "save_data_stroop":
+                    # Save stroop data
+                    pass
+                elif action == "save_data_passive":
+                    # Save passive data
+                    pass
+                # ...other actions...
+            except Exception as e:
+                print(f"Host: Error handling command: {e}")
 
     # TO MAYBE BE IMPLEMENTED LATER
     '''
