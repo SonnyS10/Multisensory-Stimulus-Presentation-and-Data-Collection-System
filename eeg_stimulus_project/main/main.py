@@ -49,10 +49,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.test_number_input)
 
         # Start button
-        self.start_button = QPushButton("Start", self)
-        self.start_button.clicked.connect(self.start_experiment)
-        #self.start_button.setEnabled(False)  # Disable until LSL is streaming
+        self.start_button = QPushButton("Start with No Host/Client", self)
+        self.start_button.clicked.connect(lambda: self.start_experiment(client=False, host=False))
         layout.addWidget(self.start_button)
+
+        # Start Button as host 
+        self.start_as_host_button = QPushButton("Start as Host", self)
+        self.start_as_host_button.clicked.connect(lambda: self.start_experiment(client=False, host=True))
+        layout.addWidget(self.start_as_host_button)
+
+        # Start Button as client
+        self.start_as_client_button = QPushButton("Start as Client", self)
+        self.start_as_client_button.clicked.connect(lambda: self.start_experiment(client=True, host=False))
+        layout.addWidget(self.start_as_client_button)
 
         # Process for the GUI
         self.gui_process = None
@@ -60,8 +69,11 @@ class MainWindow(QMainWindow):
         self.manager = None
         self.shared_status = None
     
-    def start_experiment(self):
+    def start_experiment(self, client=False , host=False):
         self.start_button.setEnabled(False)  # Disable the button to prevent multiple clicks
+        self.start_as_host_button.setEnabled(False)  # Disable the host button
+        self.start_as_client_button.setEnabled(False)  # Disable the client button
+        
         # Get the subject ID and test number from the input fields
         subject_id = self.subject_id_input.text()
         test_number = self.test_number_input.text()
@@ -116,12 +128,20 @@ class MainWindow(QMainWindow):
             self.shared_status['lab_recorder_connected'] = False
             self.shared_status['eyetracker_connected'] = False
 
-            # Start the processes
-            self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
-            self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
-            self.control_process.start()
-            self.gui_process.start()
-
+            if not client and not host:
+                # Run both
+                self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.control_process.start()
+                self.gui_process.start()
+            elif host:
+                # Only control panel
+                self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.control_process.start()
+            elif client:
+                # Only main GUI
+                self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.gui_process.start()
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
 

@@ -1,7 +1,7 @@
 # socket_client.py
 import socket
 
-SERVER_IP = '192.168.0.5'  # Replace with the IP of the server (Computer B)
+SERVER_IP = '169.254.37.25'  # Replace with the IP of the server (Computer B)
 PORT = 9999
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
