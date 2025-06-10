@@ -24,7 +24,3 @@ class LSLLabelStream:
         """
         if self.outlet:
             self.outlet.push_sample([str(label)])
-
-# Example usage:
-# label_stream = LSLLabelStream()
-# label_stream.push_label("stimulus_onset")

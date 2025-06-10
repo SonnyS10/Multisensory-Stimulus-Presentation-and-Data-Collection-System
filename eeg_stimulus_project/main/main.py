@@ -31,85 +31,84 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Subject Information")
         self.setGeometry(100, 100, 400, 300)
 
-        # Create the central widget and set it as the central widget of the main window
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
-        # Create a vertical layout for the central widget
         layout = QVBoxLayout(central_widget)
 
-        # Subject ID input
+        # --- Host Section ---
         self.subject_id_label = QLabel("Subject ID:", self)
-        layout.addWidget(self.subject_id_label)
         self.subject_id_input = QLineEdit(self)
-        layout.addWidget(self.subject_id_input)
-
-        # Test number input
         self.test_number_label = QLabel("Test Number (1 or 2):", self)
-        layout.addWidget(self.test_number_label)
         self.test_number_input = QLineEdit(self)
+        self.start_as_host_button = QPushButton("Start as Host", self)
+        self.start_as_host_button.clicked.connect(lambda: self.start_experiment(client=False, host=True))
+
+        layout.addWidget(self.subject_id_label)
+        layout.addWidget(self.subject_id_input)
+        layout.addWidget(self.test_number_label)
         layout.addWidget(self.test_number_input)
+        layout.addWidget(self.start_as_host_button)
 
-        # Host IP input (for client mode)
+        # --- Client Section ---
         self.host_ip_label = QLabel("Host IP (for Client):", self)
-        layout.addWidget(self.host_ip_label)
         self.host_ip_input = QLineEdit(self)
-        self.host_ip_input.setText("169.254.37.25")  # Set default IP
-        layout.addWidget(self.host_ip_input)
+        self.host_ip_input.setText("169.254.37.25")
+        self.start_as_client_button = QPushButton("Start as Client", self)
+        self.start_as_client_button.clicked.connect(lambda: self.start_experiment(client=True, host=False))
 
-        # Start button
+        layout.addWidget(self.host_ip_label)
+        layout.addWidget(self.host_ip_input)
+        layout.addWidget(self.start_as_client_button)
+
+        # --- Optional: Both Section ---
         self.start_button = QPushButton("Start with No Host/Client", self)
         self.start_button.clicked.connect(lambda: self.start_experiment(client=False, host=False))
         layout.addWidget(self.start_button)
 
-        # Start Button as host 
-        self.start_as_host_button = QPushButton("Start as Host", self)
-        self.start_as_host_button.clicked.connect(lambda: self.start_experiment(client=False, host=True))
-        layout.addWidget(self.start_as_host_button)
-
-        # Start Button as client
-        self.start_as_client_button = QPushButton("Start as Client", self)
-        self.start_as_client_button.clicked.connect(lambda: self.start_experiment(client=True, host=False))
-        layout.addWidget(self.start_as_client_button)
-
-        # Process for the GUI
+        # Processes and state
         self.gui_process = None
         self.control_process = None
         self.manager = None
         self.shared_status = None
-
         self.connection = None  # Store socket connection
-    
-    def start_experiment(self, client=False, host=False):
-        self.start_button.setEnabled(False)  # Disable the button to prevent multiple clicks
-        self.start_as_host_button.setEnabled(False)  # Disable the host button
-        self.start_as_client_button.setEnabled(False)  # Disable the client button
 
-        # Get the subject ID and test number from the input fields
-        subject_id = self.subject_id_input.text()
-        test_number = self.test_number_input.text()
+    def start_experiment(self, client=False, host=False):
+        self.start_button.setEnabled(False)
+        self.start_as_host_button.setEnabled(False)
+        self.start_as_client_button.setEnabled(False)
+
+        # Only require subject_id and test_number for host or both
+        subject_id = self.subject_id_input.text() if host or (not host and not client) else None
+        test_number = self.test_number_input.text() if host or (not host and not client) else None
+
+        # Only require host_ip for client
+        host_ip = self.host_ip_input.text().strip() if client else None
 
         # Networking setup
-        if host:
-            # Start server in a thread to avoid blocking UI
+        if host or (not host and not client):
+            if not subject_id or test_number not in ['1', '2']:
+                print("Please enter a valid Subject ID and Test Number (1 or 2).")
+                self.start_as_host_button.setEnabled(True)
+                self.start_button.setEnabled(True)
+                self.start_as_client_button.setEnabled(True)
+                return
             threading.Thread(target=self.start_server, daemon=True).start()
         elif client:
-            host_ip = self.host_ip_input.text().strip()
             if not host_ip:
                 print("Please enter the Host IP for client mode.")
                 self.start_as_client_button.setEnabled(True)
-                self.start_as_host_button.setEnabled(True)
                 self.start_button.setEnabled(True)
+                self.start_as_host_button.setEnabled(True)
                 return
             if not self.connect_to_host(host_ip):
                 print("Could not connect to host. Check IP and network.")
                 self.start_as_client_button.setEnabled(True)
-                self.start_as_host_button.setEnabled(True)
                 self.start_button.setEnabled(True)
+                self.start_as_host_button.setEnabled(True)
                 return
 
-        # Check if the subject ID and test number are valid
-        if subject_id and test_number in ['1', '2']:
+        # Only create directories and processes if host or both
+        if host or (not host and not client):
             # Create base directory structure
             base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
             os.makedirs(base_dir, exist_ok=True)
@@ -166,11 +165,11 @@ class MainWindow(QMainWindow):
                 self.gui_process.start()
             elif host:
                 # Only control panel
-                self.control_process = Process(target=run_control_window, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.control_process = Process(target=run_control_window, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
                 self.control_process.start()
             elif client:
                 # Only main GUI
-                self.gui_process = Process(target=run_main_gui, args=(self.shared_status, log_queue, base_dir, test_number))
+                self.gui_process = Process(target=run_main_gui, args=(self.connection, self.shared_status, log_queue, base_dir, test_number))
                 self.gui_process.start()
         else:
             print("Please enter a valid Subject ID and Test Number (1 or 2).")
