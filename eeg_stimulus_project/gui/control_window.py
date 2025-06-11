@@ -32,7 +32,7 @@ class Tee(object):
                 s.flush()
 
 class ControlWindow(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue=None, base_dir=None, test_number=None):
+    def __init__(self, connection, shared_status, log_queue=None, base_dir=None, test_number=None, host=False):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -48,6 +48,7 @@ class ControlWindow(QMainWindow):
         self.eyetracker = None
         self.current_test = None
         self.log_queue = log_queue
+        self.host = host
 
         # Set the window title and size (half of the screen width and full height)
         self.setWindowTitle("Control Window")
@@ -199,9 +200,11 @@ class ControlWindow(QMainWindow):
         self.original_stdout = sys.stdout
         sys.stdout = Tee(sys.stdout, self.log_queue)
 
-        if self.connection is not None:
-            self.connection_thread = threading.Thread(target=self.host_command_listener, daemon=True)
-            self.connection_thread.start()
+        if self.host:
+            # If this is the host, start listening for commands from the client
+            if self.connection is not None:
+                self.connection_thread = threading.Thread(target=self.host_command_listener, daemon=True)
+                self.connection_thread.start()
 
     # Redirect terminal outputs to the log queue
     def listen_to_log_queue(self):
@@ -310,8 +313,8 @@ class ControlWindow(QMainWindow):
         pass
 
     def host_command_listener(self):
+        print("Host: Listening for commands...")
         while True:
-            print("Host: Listening for commands...")
             data = self.connection.recv(4096)
             if not data:
                 break
@@ -338,6 +341,9 @@ class ControlWindow(QMainWindow):
                         self.label_push(label)
                         print(f"Host: Pushing label: {label}")
                         pass
+                    elif action == "latency_ping":
+                        pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
+                        self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
                     # ...other actions...
             except Exception as e:
                 print(f"Host: Error handling command: {e}")
@@ -374,7 +380,7 @@ class ControlWindow(QMainWindow):
         if self.label_stream is None:
             self.label_stream = LSLLabelStream()
         self.label_stream.push_label(label)
-        print(f"Label pushed: {label}")
+        #print(f"Label pushed: {label}")
 
     # TO MAYBE BE IMPLEMENTED LATER
     '''
