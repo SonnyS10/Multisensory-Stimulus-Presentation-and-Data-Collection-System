@@ -79,6 +79,9 @@ class GUI(QMainWindow):
         self.multisensory_neutral_visual_tactile = self.create_frame("Stroop Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Stroop Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
         self.multisensory_neutral_visual_olfactory2 = self.create_frame("Stroop Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
+
+        # Instructions Frame
+        self.instruction_frame = InstructionFrame(self)
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
@@ -92,8 +95,9 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory2)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
+        self.stacked_widget.addWidget(self.instruction_frame)
         
-        self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
+        self.stacked_widget.setCurrentWidget(self.instruction_frame)
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
@@ -128,6 +132,12 @@ class GUI(QMainWindow):
     
     def show_multisensory_neutral_visual_olfactory2(self):
         self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory2)
+
+    def show_instruction_frame(self):
+        self.stacked_widget.setCurrentWidget(self.instruction_frame)
+
+    def show_first_test_frame(self):
+        self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
@@ -416,6 +426,21 @@ class Frame(QFrame):
             self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
         except Exception as e:
             print(f"Error sending message: {e}")
+
+class InstructionFrame(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout(self)
+        label = QLabel("Welcome!\n\nPlease read the instructions carefully before starting.\n\n[Your instructions here]")
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignCenter)
+        label.setFont(QFont("Arial", 16))
+        layout.addWidget(label)
+        continue_button = QPushButton("Continue")
+        continue_button.setFont(QFont("Arial", 14))
+        continue_button.clicked.connect(parent.show_first_test_frame)
+        layout.addWidget(continue_button, alignment=Qt.AlignCenter)
 
 if __name__ == "__main__":
     import sys

@@ -56,6 +56,12 @@ class Sidebar(QFrame):
             ("Multisensory Neutral (Visual & Olfactory)", parent.show_multisensory_neutral_visual_olfactory2)
         ])
 
+        instructions_button = QPushButton("Show Instructions", self)
+        instructions_button.setFont(QFont("Arial", 8, QFont.Bold))
+        instructions_button.setStyleSheet("background-color: #F5E1FD;")
+        instructions_button.clicked.connect(parent.show_instruction_frame)
+        self.layout.addWidget(instructions_button)
+        
     # Add a submenu with a heading and options  
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)

@@ -10,6 +10,7 @@ from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 import os
 import threading
 import json
+import time
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -347,6 +348,8 @@ class DisplayWindow(QMainWindow):
 
     #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
+        label = "Paused Trial"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.timer.stop()
         self.image_transition_timer.stop()  # Stop the image transition timer
         if hasattr(self, 'stroop_transition_timer'):
@@ -363,6 +366,8 @@ class DisplayWindow(QMainWindow):
     #This method is called when the user presses the resume button to resume the trial, it starts the timer and the image transition timer, it also sets the paused time to 0 and also tells the mirror widget to resume
     #It also calls the run_trial method to start the trial again
     def resume_trial(self, event=None):
+        label = "Resumed Trial"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.Paused = False
         self.run_trial()  # Resume the trial
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -416,10 +421,10 @@ class DisplayWindow(QMainWindow):
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
         else:
-            self.showing_second_pre = True
-            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
             label = "Stroop Test Ended"
             self.send_message({"action": "label", "label": label})  # Send end label to the server
+            self.showing_second_pre = True
+            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
             self.label_stream.push_label("Test Ended")
             self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
             self.timer.stop()
@@ -674,4 +679,3 @@ class DisplayWindow(QMainWindow):
             self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
         except Exception as e:
             print(f"Error sending message: {e}")
-
