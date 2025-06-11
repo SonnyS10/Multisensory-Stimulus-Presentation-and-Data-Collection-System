@@ -202,11 +202,12 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, connection, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None):
+    def __init__(self, connection, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False):
         super().__init__(parent)
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
         self.eyetracker = eyetracker
+        self.client = client
         self.label_stream = label_stream if label_stream else LSLLabelStream()
 
         if self.shared_status.get('eyetracker_connected', False):
@@ -670,8 +671,9 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.show_main_instructions()
 
     def send_message(self, message_dict):
-        try:
-            self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
-        except Exception as e:
-            print(f"Error sending message: {e}")
+        if self.client:
+            try:
+                self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+            except Exception as e:
+                print(f"Error sending message: {e}")
 

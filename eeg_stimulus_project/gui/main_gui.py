@@ -33,10 +33,11 @@ class Tee(object):
                 s.flush()
 
 class GUI(QMainWindow):
-    def __init__(self, connection, shared_status, base_dir, test_number):
+    def __init__(self, connection, shared_status, base_dir, test_number, client=False):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
+        self.client = client
 
         if connection is not None:
             message = {
@@ -156,7 +157,7 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(self.connection, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status)
+                current_frame.display_widget = DisplayWindow(self.connection, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status, client=self.client)
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -204,7 +205,7 @@ class GUI(QMainWindow):
             return None
         
 class Frame(QFrame):
-    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
         super().__init__(parent)
 
         self.shared_status = shared_status
@@ -214,6 +215,7 @@ class Frame(QFrame):
         self.label_stream = None
         self.eyetracker = None
         self.connection = connection
+        self.client = client
         
         self.layout = QVBoxLayout(self)
         
@@ -412,10 +414,12 @@ class Frame(QFrame):
         self.resume_button.setEnabled(True)
 
     def send_message(self, message_dict):
-        try:
-            self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
-        except Exception as e:
-            print(f"Error sending message: {e}")
+        if self.client:
+            # If this is a client, send the message to the server
+            try:
+                self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+            except Exception as e:
+                print(f"Error sending message: {e}")
 
 if __name__ == "__main__":
     import sys
