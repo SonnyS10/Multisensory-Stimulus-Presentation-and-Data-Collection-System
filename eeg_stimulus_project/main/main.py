@@ -79,21 +79,6 @@ def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_num
     window.show()
     sys.exit(app.exec_())
 
-def run_control_window(shared_status, log_queue, base_dir, test_number):
-    from eeg_stimulus_project.gui.control_window import ControlWindow
-    app = QApplication(sys.argv)
-    window = ControlWindow(shared_status, log_queue, base_dir, test_number)
-    window.show()
-    sys.exit(app.exec_())
-
-def run_main_gui(shared_status, log_queue, base_dir, test_number):
-    from eeg_stimulus_project.gui.main_gui import GUI
-    sys.stdout = Tee(sys.stdout, log_queue)
-    app = QApplication(sys.argv)
-    window = GUI(shared_status, base_dir, test_number)
-    window.show()
-    sys.exit(app.exec_())
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -140,6 +125,7 @@ class MainWindow(QMainWindow):
         self.manager = None
         self.shared_status = None
         self.connection = None  # Store socket connection
+        self.client_connected = False
 
     def start_experiment(self, client=False, host=False):
         self.start_button.setEnabled(False)
@@ -203,6 +189,10 @@ class MainWindow(QMainWindow):
             conn, addr = server_socket.accept()
             print(f"Host: Connected by {addr}")
             self.connection = conn  # Save for later use
+            self.client_connected = True
+
+            # Start a thread to monitor client connection
+            threading.Thread(target=self.monitor_client_connection, daemon=True).start()
 
             # Only create directories and processes after connection
             subject_id = self.subject_id_input.text()
@@ -232,6 +222,10 @@ class MainWindow(QMainWindow):
             return False
 
     def closeEvent(self, event):
+        if getattr(self, "client_connected", False):
+            print("Cannot close host while client is connected. Please close the client first.")
+            event.ignore()
+            return
         if self.gui_process is not None:
             self.gui_process.terminate()
             self.gui_process.join()
@@ -239,6 +233,17 @@ class MainWindow(QMainWindow):
             self.control_process.terminate()
             self.control_process.join()
         event.accept()
+
+    def monitor_client_connection(self):
+        try:
+            while True:
+                data = self.connection.recv(1)
+                if not data:
+                    break
+        except Exception:
+            pass
+        print("Client disconnected.")
+        self.client_connected = False
 
 if __name__ == "__main__":
     # Create the application and main window, then run the application

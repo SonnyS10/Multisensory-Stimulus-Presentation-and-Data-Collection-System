@@ -7,6 +7,14 @@ from pywinauto import Application
 import time 
 import threading
 import json
+import traceback
+
+def excepthook(type, value, tb):
+    print("Uncaught exception:", value)
+    traceback.print_exception(type, value, tb)
+
+sys.excepthook = excepthook
+
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
@@ -239,6 +247,7 @@ class ControlWindow(QMainWindow):
                 self.link_actichamp()
             except Exception as e:
                 print(f"Failed to start Actichamp: {e}")
+                traceback.print_exc()
         threading.Thread(target=worker, daemon=True).start()
 
     # Link to the EEG stream through the Actichamp application.
@@ -271,6 +280,7 @@ class ControlWindow(QMainWindow):
                 self.connect_labrecorder()  # Connect to LabRecorder after it has started
             except Exception as e:
                 print(f"Failed to open LabRecorder: {e}")
+                traceback.print_exc()
         threading.Thread(target=worker, daemon=True).start()
 
     #Connect the LabRecorder application to the Actichamp stream.
@@ -314,39 +324,55 @@ class ControlWindow(QMainWindow):
 
     def host_command_listener(self):
         print("Host: Listening for commands...")
-        while True:
-            data = self.connection.recv(4096)
-            if not data:
-                break
-            try:
-                messages = data.decode('utf-8').split('\n')
-                for msg in messages:
-                    if not msg.strip():
-                        continue
-                    message = json.loads(msg)
-                    action = message.get("action")
-                    if action == "start_button":
-                        test_name = message.get("test", None)
-                        if test_name:
-                            self.current_test = test_name  # Store for use in start_test
-                        self.start_test()
-                        print("Host: Starting test...")
-                        pass
-                    elif action == "stop_button":
-                        self.stop_test()
-                        print("Host: Stopping test...")
-                        pass
-                    elif action == "label":
-                        label = message.get("label", None)
-                        self.label_push(label)
-                        print(f"Host: Pushing label: {label}")
-                        pass
-                    elif action == "latency_ping":
-                        pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
-                        self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
-                    # ...other actions...
-            except Exception as e:
-                print(f"Host: Error handling command: {e}")
+        buffer = ''
+        try:
+            while True:
+                data = self.connection.recv(4096).decode('utf-8')
+                if not data:
+                    break
+                try:
+                    buffer += data
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        print(f'Host: Received line: {repr(line)}')
+                        if not line.strip():
+                            continue
+                        try:
+                            if not line.startswith("{"):
+                                line = "{" + line
+                            if not line.endswith("}"):
+                                line = line + "}"
+                            message = json.loads(line)
+                            action = message.get("action")
+                            if action == "start_button":
+                                test_name = message.get("test", None)
+                                if test_name:
+                                    self.current_test = test_name  # Store for use in start_test
+                                self.start_test()
+                                print("Host: Starting test...")
+                                pass
+                            elif action == "stop_button":
+                                self.stop_test()
+                                print("Host: Stopping test...")
+                                pass
+                            elif action == "label":
+                                label = message.get("label", None)
+                                self.label_push(label)
+                                print(f"Host: Pushing label: {label}")
+                                pass
+                            elif action == "latency_ping":
+                                pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
+                                self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
+                            # ...other actions...
+                        except Exception as e:
+                            print(f"Host: Error processing command: {e}")
+                            traceback.print_exc()
+                except Exception as e:
+                    print(f"Host: Error handling command: {e}")
+                    traceback.print_exc()
+        except Exception as e:
+            print(f"Host: Listener crashed: {e}")
+            traceback.print_exc()
 
     def start_test(self):
         if self.label_stream is None:
@@ -381,6 +407,14 @@ class ControlWindow(QMainWindow):
             self.label_stream = LSLLabelStream()
         self.label_stream.push_label(label)
         #print(f"Label pushed: {label}")
+
+    # To send status updates, periodically or on change:
+        #status_msg = {
+        #    "action": "host_status",
+        #    "status": f"LabRecorder: {'Connected' if self.shared_status['lab_recorder_connected'] else 'Not Connected'}, "
+        #              f"Eyetracker: {'Connected' if self.shared_status['eyetracker_connected'] else 'Not Connected'}"
+        #}
+        #self.connection.sendall((json.dumps(status_msg) + "\n").encode('utf-8'))
 
     # TO MAYBE BE IMPLEMENTED LATER
     '''
