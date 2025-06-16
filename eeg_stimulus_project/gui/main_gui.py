@@ -5,6 +5,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 import time
 import json
+import threading
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
@@ -40,10 +41,7 @@ class GUI(QMainWindow):
         self.client = client
 
         if connection is not None:
-            message = {
-                "action": "start_recording",
-            }
-            self.connection.sendall(json.dumps(message).encode('utf-8'))
+            self.start_listener()
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -100,6 +98,10 @@ class GUI(QMainWindow):
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
 
+        self._latency_test_active = False
+        self._latency_rtts = []
+        self._latency_test_count = 0
+        
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
@@ -213,6 +215,74 @@ class GUI(QMainWindow):
             return 'Stroop Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
+
+    def start_latency_test(self):
+        if self._latency_test_active:
+            return  # Already running
+        self._latency_test_active = True
+        self._latency_rtts = []
+        self._latency_test_count = 0
+        self.instruction_frame.latency_label.setText("Measuring latency...")
+        def ping_loop():
+            start_time = time.time()
+            while time.time() - start_time < 5.0:
+                self.send_latency_ping(single_test=False)
+                time.sleep(.1)  # 10 pings per second
+            # After 5 seconds, show average
+            self._latency_test_active = False
+            if self._latency_rtts:
+                avg = sum(self._latency_rtts) / len(self._latency_rtts)
+                self.instruction_frame.update_latency(0, count=len(self._latency_rtts), avg=avg)
+            else:
+                self.instruction_frame.latency_label.setText("No latency samples received.")
+        threading.Thread(target=ping_loop, daemon=True).start()
+
+    def send_latency_ping(self, single_test=True):
+        if self.connection:
+            self._ping_time = time.time()
+            msg = {"action": "latency_ping", "timestamp": self._ping_time}
+            try:
+                self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+            except Exception as e:
+                print(f"Error sending ping: {e}")
+            if single_test:
+                self._latency_test_active = False  # For single ping
+
+    def handle_latency_pong(self, pong_msg):
+        pong_time = time.time()
+        sent_time = pong_msg.get("timestamp")
+        if sent_time:
+            rtt = pong_time - sent_time
+            latency_ms = rtt * 1000
+            if self._latency_test_active:
+                self._latency_rtts.append(latency_ms)
+                self._latency_test_count += 1
+            else:
+                self.instruction_frame.update_latency(latency_ms)
+
+    def start_listener(self):
+        def listen():
+            buffer = ""
+            while True:
+                try:
+                    data = self.connection.recv(4096).decode('utf-8')
+                    if not data:
+                        break
+                    buffer += data
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        if not line.strip():
+                            continue
+                        msg = json.loads(line)
+                        if msg.get("action") == "latency_pong":
+                            self.handle_latency_pong(msg)
+                        elif msg.get("action") == "host_status":
+                            status = msg.get("status", "Unknown")
+                            self.instruction_frame.update_status(status)
+                except Exception as e:
+                    print(f"Listener error: {e}")
+                    break
+        threading.Thread(target=listen, daemon=True).start()
         
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
@@ -434,6 +504,7 @@ class Frame(QFrame):
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.parent = parent
 
         layout = QVBoxLayout(self)
         label = QLabel("Welcome!\n\nPlease read the instructions carefully before starting.\n\n[Your instructions here]")
@@ -441,10 +512,39 @@ class InstructionFrame(QWidget):
         label.setAlignment(Qt.AlignCenter)
         label.setFont(QFont("Arial", 16))
         layout.addWidget(label)
+
+        # Latency check
+        self.latency_label = QLabel("Latency: Not checked")
+        self.latency_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.latency_label)
+
+        latency_button = QPushButton("Check Latency")
+        latency_button.setFont(QFont("Arial", 12))
+        latency_button.clicked.connect(self.send_latency_ping)
+        layout.addWidget(latency_button, alignment=Qt.AlignCenter)
+
+        # Host status
+        self.status_label = QLabel("Host Status: Unknown")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_label)
+
         continue_button = QPushButton("Continue")
         continue_button.setFont(QFont("Arial", 14))
         continue_button.clicked.connect(parent.show_first_test_frame)
         layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+
+    def send_latency_ping(self):
+        if hasattr(self.parent, "start_latency_test"):
+            self.parent.start_latency_test()
+            
+    def update_latency(self, latency_ms, count=None, avg=None):
+        if avg is not None:
+            self.latency_label.setText(f"Average Latency: {avg:.2f} ms ({count} samples)")
+        else:
+            self.latency_label.setText(f"Latency: {latency_ms:.2f} ms")
+    
+    def update_status(self, status_text):
+        self.status_label.setText(f"Host Status: {status_text}")
 
 if __name__ == "__main__":
     import sys
