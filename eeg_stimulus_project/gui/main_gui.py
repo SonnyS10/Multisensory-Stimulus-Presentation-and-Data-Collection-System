@@ -13,6 +13,7 @@ from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
+from eeg_stimulus_project.utils.socket_json import send_json, recv_json
 
 class Tee(object):
     def __init__(self, *streams):
@@ -242,7 +243,7 @@ class GUI(QMainWindow):
             self._ping_time = time.time()
             msg = {"action": "latency_ping", "timestamp": self._ping_time}
             try:
-                self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+                send_json(self.connection, msg)
             except Exception as e:
                 print(f"Error sending ping: {e}")
             if single_test:
@@ -262,23 +263,16 @@ class GUI(QMainWindow):
 
     def start_listener(self):
         def listen():
-            buffer = ""
             while True:
                 try:
-                    data = self.connection.recv(4096).decode('utf-8')
-                    if not data:
+                    msg = recv_json(self.connection)
+                    if msg is None:
                         break
-                    buffer += data
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        if not line.strip():
-                            continue
-                        msg = json.loads(line)
-                        if msg.get("action") == "latency_pong":
-                            self.handle_latency_pong(msg)
-                        elif msg.get("action") == "host_status":
-                            status = msg.get("status", "Unknown")
-                            self.instruction_frame.update_status(status)
+                    if msg.get("action") == "latency_pong":
+                        self.handle_latency_pong(msg)
+                    elif msg.get("action") == "host_status":
+                        status = msg.get("status", "Unknown")
+                        self.instruction_frame.update_status(status)
                 except Exception as e:
                     print(f"Listener error: {e}")
                     break
@@ -497,7 +491,7 @@ class Frame(QFrame):
         if self.client:
             # If this is a client, send the message to the server
             try:
-                self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+                send_json(self.connection, message_dict)
             except Exception as e:
                 print(f"Error sending message: {e}")
 
