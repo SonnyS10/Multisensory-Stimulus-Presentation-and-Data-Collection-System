@@ -19,7 +19,6 @@ sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-R
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
-from eeg_stimulus_project.utils.socket_json import send_json, recv_json
 
 class Tee(object):
     def __init__(self, *streams):
@@ -105,7 +104,7 @@ class ControlWindow(QMainWindow):
         # Eye Tracker status row (button + icons + labels)
         eyetracker_row = QHBoxLayout()
         self.eyetracker_button = QPushButton("Eye Tracker", self)
-        self.eyetracker_button.clicked.connect(lambda: threading.Thread(target=self.connect_eyetracker, daemon=True).start()) # Connect to the eyetracker
+        self.eyetracker_button.clicked.connect(self.connect_eyetracker) # Connect to the eyetracker
         eyetracker_row.addWidget(self.eyetracker_button)
         
         self.eyetracker_connected_text = QLabel("Connection Status:", self)
@@ -325,30 +324,49 @@ class ControlWindow(QMainWindow):
 
     def host_command_listener(self):
         print("Host: Listening for commands...")
+        buffer = ''
         try:
             while True:
+                data = self.connection.recv(4096).decode('utf-8')
+                if not data:
+                    break
                 try:
-                    message = recv_json(self.connection)
-                    if message is None:
-                        break
-                    action = message.get("action")
-                    if action == "start_button":
-                        test_name = message.get("test", None)
-                        if test_name:
-                            self.current_test = test_name
-                        self.start_test()
-                        print("Host: Starting test...")
-                    elif action == "stop_button":
-                        self.stop_test()
-                        print("Host: Stopping test...")
-                    elif action == "label":
-                        label = message.get("label", None)
-                        self.label_push(label)
-                        print(f"Host: Pushing label: {label}")
-                    elif action == "latency_ping":
-                        pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
-                        send_json(self.connection, pong)
-                    # ...other actions...
+                    buffer += data
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        print(f'Host: Received line: {repr(line)}')
+                        if not line.strip():
+                            continue
+                        try:
+                            if not line.startswith("{"):
+                                line = "{" + line
+                            if not line.endswith("}"):
+                                line = line + "}"
+                            message = json.loads(line)
+                            action = message.get("action")
+                            if action == "start_button":
+                                test_name = message.get("test", None)
+                                if test_name:
+                                    self.current_test = test_name  # Store for use in start_test
+                                self.start_test()
+                                print("Host: Starting test...")
+                                pass
+                            elif action == "stop_button":
+                                self.stop_test()
+                                print("Host: Stopping test...")
+                                pass
+                            elif action == "label":
+                                label = message.get("label", None)
+                                self.label_push(label)
+                                print(f"Host: Pushing label: {label}")
+                                pass
+                            elif action == "latency_ping":
+                                pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
+                                self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
+                            # ...other actions...
+                        except Exception as e:
+                            print(f"Host: Error processing command: {e}")
+                            traceback.print_exc()
                 except Exception as e:
                     print(f"Host: Error handling command: {e}")
                     traceback.print_exc()
