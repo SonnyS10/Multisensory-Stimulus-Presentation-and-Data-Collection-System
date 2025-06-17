@@ -2,6 +2,9 @@ import pyxdf
 import pandas as pd
 import os
 
+#This script is used to load and process XDF files, specifically for EEG data.
+#It provides functions to load an XDF file, print stream information, and save a specific stream to a CSV file.
+
 def load_xdf_file(file_path):
     """
     Load an XDF file and return its streams.
