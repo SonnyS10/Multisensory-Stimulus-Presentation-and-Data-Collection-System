@@ -8,6 +8,7 @@ import time
 import threading
 import json
 import traceback
+import zmq
 
 def excepthook(type, value, tb):
     print("Uncaught exception:", value)
@@ -40,10 +41,15 @@ class Tee(object):
                 s.flush()
 
 class ControlWindow(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue=None, base_dir=None, test_number=None, host=False):
+    def __init__(self, port, shared_status, log_queue=None, base_dir=None, test_number=None, host=False):
         super().__init__()
         self.shared_status = shared_status
-        self.connection = connection
+        
+        self.zmq_context = zmq.Context()
+        self.zmq_socket = self.zmq_context.socket(zmq.REP)
+        self.zmq_socket.bind(f"tcp://*:{port}")
+        # Start listener thread
+        threading.Thread(target=self.zmq_listener, daemon=True).start()
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -322,57 +328,30 @@ class ControlWindow(QMainWindow):
         # Needed for compatibility with sys.stdout redirection
         pass
 
-    def host_command_listener(self):
-        print("Host: Listening for commands...")
-        buffer = ''
-        try:
-            while True:
-                data = self.connection.recv(4096).decode('utf-8')
-                if not data:
-                    break
-                try:
-                    buffer += data
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        print(f'Host: Received line: {repr(line)}')
-                        if not line.strip():
-                            continue
-                        try:
-                            if not line.startswith("{"):
-                                line = "{" + line
-                            if not line.endswith("}"):
-                                line = line + "}"
-                            message = json.loads(line)
-                            action = message.get("action")
-                            if action == "start_button":
-                                test_name = message.get("test", None)
-                                if test_name:
-                                    self.current_test = test_name  # Store for use in start_test
-                                self.start_test()
-                                print("Host: Starting test...")
-                                pass
-                            elif action == "stop_button":
-                                self.stop_test()
-                                print("Host: Stopping test...")
-                                pass
-                            elif action == "label":
-                                label = message.get("label", None)
-                                self.label_push(label)
-                                print(f"Host: Pushing label: {label}")
-                                pass
-                            elif action == "latency_ping":
-                                pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
-                                self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
-                            # ...other actions...
-                        except Exception as e:
-                            print(f"Host: Error processing command: {e}")
-                            traceback.print_exc()
-                except Exception as e:
-                    print(f"Host: Error handling command: {e}")
-                    traceback.print_exc()
-        except Exception as e:
-            print(f"Host: Listener crashed: {e}")
-            traceback.print_exc()
+    def zmq_listener(self, port=5555):
+        print(f"Host: Listening for ZMQ messages on port {port}...")
+        while True:
+            try:
+                msg = self.zmq_socket.recv_json()
+                print(f"Host received: {msg}")
+                action = msg.get("action")
+                if action == "start_button":
+                    test_name = msg.get("test", None)
+                    if test_name:
+                        self.current_test = test_name
+                    self.start_test()
+                    self.zmq_socket.send_json({"status": "started"})
+                elif action == "stop_button":
+                    self.stop_test()
+                    self.zmq_socket.send_json({"status": "stopped"})
+                elif action == "latency_ping":
+                    pong = {"action": "latency_pong", "timestamp": msg.get("timestamp")}
+                    self.zmq_socket.send_json(pong)
+                else:
+                    self.zmq_socket.send_json({"status": "ok"})
+            except Exception as e:
+                print(f"Host: ZMQ error: {e}")
+                break
 
     def start_test(self):
         if self.label_stream is None:
