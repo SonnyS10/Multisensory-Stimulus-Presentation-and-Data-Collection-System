@@ -5,7 +5,6 @@ import os
 from multiprocessing import Manager, Process, Queue
 import socket
 import threading
-import zmq
 
 class Tee(object):
     def __init__(self, *streams):
@@ -65,18 +64,18 @@ def init_shared_resources():
     log_queue = Queue()
     return manager, shared_status, log_queue
 
-def run_control_window_host(port, shared_status, log_queue, base_dir, test_number, host):
+def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number, host):
     from eeg_stimulus_project.gui.control_window import ControlWindow
     app = QApplication(sys.argv)
-    window = ControlWindow(port, shared_status, log_queue, base_dir, test_number, host)
+    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host)
     window.show()
     sys.exit(app.exec_())
 
-def run_main_gui_client(host_ip, port, shared_status, log_queue, base_dir, test_number, client):
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client):
     from eeg_stimulus_project.gui.main_gui import GUI
     sys.stdout = Tee(sys.stdout, log_queue)
     app = QApplication(sys.argv)
-    window = GUI(host_ip, port, shared_status, base_dir, test_number, client)
+    window = GUI(connection, shared_status, base_dir, test_number, client)
     window.show()
     sys.exit(app.exec_())
 
@@ -159,7 +158,7 @@ class MainWindow(QMainWindow):
             # Directory and shared resources for client
             base_dir = None
             self.manager, self.shared_status, log_queue = init_shared_resources()
-            self.gui_process = Process(target=run_main_gui_client, args=(host_ip, 5555, self.shared_status, log_queue, base_dir, test_number, True)) # client=True
+            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True)) # client=True
             self.gui_process.start()
         else:
             # Both: local experiment
@@ -169,8 +168,8 @@ class MainWindow(QMainWindow):
                 return
             base_dir = create_data_dirs(subject_id, test_number)
             self.manager, self.shared_status, log_queue = init_shared_resources()
-            self.control_process = Process(target=run_control_window_host, args=(5555, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
-            self.gui_process = Process(target=run_main_gui_client, args=(host_ip, 5555, self.shared_status, log_queue, base_dir, test_number, False)) # client=False
+            self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
+            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # client=False
             self.control_process.start()
             self.gui_process.start()
 
@@ -180,14 +179,20 @@ class MainWindow(QMainWindow):
         self.start_as_client_button.setEnabled(True)
 
     def start_server(self):
+        HOST = '0.0.0.0'
+        PORT = 9999
         try:
-            context = zmq.Context()
-            self.zmq_socket = context.socket(zmq.REP)
-            self.zmq_socket.bind("tcp://*:5555")  # Listen on all interfaces, port 5555
-            print("Host: Waiting for client on port 5555...")
+            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_socket.bind((HOST, PORT))
+            server_socket.listen(1)
+            print(f"Host: Waiting for client on port {PORT}...")
+            conn, addr = server_socket.accept()
+            print(f"Host: Connected by {addr}")
+            self.connection = conn  # Save for later use
+            self.client_connected = True
 
             # Start a thread to monitor client connection
-            #threading.Thread(target=self.monitor_client_connection, daemon=True).start()
+            threading.Thread(target=self.monitor_client_connection, daemon=True).start()
 
             # Only create directories and processes after connection
             subject_id = self.subject_id_input.text()
@@ -198,19 +203,19 @@ class MainWindow(QMainWindow):
             # Start the control window process only after connection
             self.control_process = Process(
                 target=run_control_window_host,
-                args=(5555, self.shared_status, log_queue, base_dir, test_number, True)  # host=True
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True)  # host=True
             )
             self.control_process.start()
         except Exception as e:
             print(f"Host: Server error: {e}")
 
     def connect_to_host(self, host_ip):
-        PORT = 5555
+        PORT = 9999
         try:
-            context = zmq.Context()
-            self.zmq_socket = context.socket(zmq.REQ)
-            self.zmq_socket.connect(f"tcp://{host_ip}:5555")
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((host_ip, PORT))
             print("Client: Connected to host.")
+            self.connection = s  # Save for later use
             return True
         except Exception as e:
             print(f"Client: Connection error: {e}")

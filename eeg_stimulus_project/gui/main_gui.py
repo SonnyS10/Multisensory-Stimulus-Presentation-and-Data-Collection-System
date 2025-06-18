@@ -6,7 +6,6 @@ from PyQt5.QtCore import Qt
 import time
 import json
 import threading
-import zmq
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
@@ -35,17 +34,14 @@ class Tee(object):
                 s.flush()
 
 class GUI(QMainWindow):
-    def __init__(self, host_ip, port, shared_status, base_dir, test_number, client=False):
+    def __init__(self, connection, shared_status, base_dir, test_number, client=False):
         super().__init__()
         self.shared_status = shared_status
+        self.connection = connection
         self.client = client
 
-        self.zmq_context = zmq.Context()
-        self.zmq_socket = self.zmq_context.socket(zmq.REQ)
-        self.zmq_socket.connect(f"tcp://{host_ip}:{port}")
-
-        #if self.zmq_socket is not None:
-        #    self.start_listener()
+        if connection is not None:
+            self.start_listener()
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -108,7 +104,7 @@ class GUI(QMainWindow):
         
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, self.zmq_socket, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
+        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -242,17 +238,11 @@ class GUI(QMainWindow):
         threading.Thread(target=ping_loop, daemon=True).start()
 
     def send_latency_ping(self, single_test=True):
-        if self.zmq_socket:
+        if self.connection:
             self._ping_time = time.time()
             msg = {"action": "latency_ping", "timestamp": self._ping_time}
             try:
-                self.zmq_socket.send_json(msg)
-                reply = self.zmq_socket.recv_json()
-                if reply and reply.get("action") == "latency_pong":
-                    self.handle_latency_pong(reply)
-                elif reply and reply.get("action") == "host_status":
-                    status = reply.get("status", "Unknown")
-                    self.instruction_frame.update_status(status)
+                self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
             except Exception as e:
                 print(f"Error sending ping: {e}")
             if single_test:
@@ -295,7 +285,7 @@ class GUI(QMainWindow):
         threading.Thread(target=listen, daemon=True).start()
         
 class Frame(QFrame):
-    def __init__(self, parent, title, zmq_socket, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
         super().__init__(parent)
 
         self.shared_status = shared_status
@@ -304,7 +294,7 @@ class Frame(QFrame):
         self.labrecorder = None
         self.label_stream = None
         self.eyetracker = None
-        self.zmq_socket = zmq_socket
+        self.connection = connection
         self.client = client
         
         self.layout = QVBoxLayout(self)
@@ -507,13 +497,9 @@ class Frame(QFrame):
         if self.client:
             # If this is a client, send the message to the server
             try:
-                self.zmq_socket.send_json(message_dict)
-                reply = self.zmq_socket.recv_json()
-                print(f"Client received: {reply}")
-                return reply
+                self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
-                print(f"Error sending ZMQ message: {e}")
-                return None
+                print(f"Error sending message: {e}")
 
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):
