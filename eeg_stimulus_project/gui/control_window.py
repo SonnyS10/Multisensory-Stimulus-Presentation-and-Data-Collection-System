@@ -334,7 +334,7 @@ class ControlWindow(QMainWindow):
                     buffer += data
                     while "\n" in buffer:
                         line, buffer = buffer.split("\n", 1)
-                        print(f'Host: Received line: {repr(line)}')
+                        #print(f'Host: Received line: {repr(line)}')
                         if not line.strip():
                             continue
                         try:

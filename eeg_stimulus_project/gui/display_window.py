@@ -11,6 +11,7 @@ import os
 import threading
 import json
 import time
+import random
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -390,20 +391,27 @@ class DisplayWindow(QMainWindow):
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 print(f"Current label: {label}")
                 self.current_label = label
-            self.current_image_index += 1
-            self.image_transition_timer.start(5000)  # Display each image for 5 seconds
+
+            # If this is the last image, finish up
+            if self.current_image_index == len(self.images) - 1:
+                label = "Passive Test Ended"
+                self.send_message({"action": "label", "label": label})  # Send end label to the server
+                self.showing_second_pre = True
+                self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
+                self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
+                self.paused_image_index = 0  # Reset the paused image index
+                self.paused_time = 0  # Reset the paused time
+                self.timer.stop()
+                if self.eyetracker and self.eyetracker.device is not None:
+                    self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
+                #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
+            else:
+                # Show crosshair for a random duration, then show the next image
+                duration_ms = random.randint(2000, 5000)
+                QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive', duration_ms))
         else:
-            label = "Passive Test Ended"
-            self.send_message({"action": "label", "label": label})  # Send end label to the server
-            self.showing_second_pre = True
-            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
-            self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
-            self.paused_image_index = 0  # Reset the paused image index
-            self.paused_time = 0  # Reset the paused time
-            self.timer.stop()
-            if self.eyetracker and self.eyetracker.device is not None:
-                self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
-            #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
+            # Defensive: shouldn't get here
+            pass
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
@@ -435,7 +443,25 @@ class DisplayWindow(QMainWindow):
             if self.eyetracker and self.eyetracker.device is not None:
                 self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
 
+    def show_crosshair_between_images(self, test_type, duration_ms):
+        # Show crosshair
+        self.instructions_label.setText("+")
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_period()
+        if test_type == 'passive':
+            QTimer.singleShot(duration_ms, self._advance_passive_image)
+        else:
+            QTimer.singleShot(duration_ms, self.display_images_stroop)
 
+    def _advance_passive_image(self):
+        self.current_image_index += 1
+        self.display_images_passive()
 
     def poll_label(self):
         # This will print the current label and the current time in ms
@@ -456,6 +482,8 @@ class DisplayWindow(QMainWindow):
                 Qt.SmoothTransformation
             )
             self.image_label.setPixmap(scaled_pixmap)
+            # Switch to experiment view so the image is visible
+            self.stacked_layout.setCurrentIndex(1)
             # Update the mirror
             if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
                 self.mirror_widget.set_pixmap(self.current_pixmap)
