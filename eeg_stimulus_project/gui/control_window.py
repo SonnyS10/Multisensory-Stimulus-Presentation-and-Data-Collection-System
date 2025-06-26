@@ -8,9 +8,27 @@ import time
 import threading
 import json
 import traceback
+import logging 
+from logging.handlers import QueueListener, QueueHandler
+
+class QTextEditLogger(logging.Handler):
+    def __init__(self, text_edit):
+        super().__init__()
+        self.text_edit = text_edit
+
+    def emit(self, record):
+        msg = self.format(record)
+        def append():
+            self.text_edit.moveCursor(self.text_edit.textCursor().End)
+            self.text_edit.insertPlainText(msg + '\n')
+            self.text_edit.moveCursor(self.text_edit.textCursor().End)
+        if self.text_edit.thread() == QApplication.instance().thread():
+            append()
+        else:
+            QMetaObject.invokeMethod(self.text_edit, append, Qt.QueuedConnection)
 
 def excepthook(type, value, tb):
-    print("Uncaught exception:", value)
+    logging.info("Uncaught exception:", value)
     traceback.print_exception(type, value, tb)
 
 sys.excepthook = excepthook
@@ -20,27 +38,9 @@ from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
-class Tee(object):
-    def __init__(self, *streams):
-        # streams can be sys.stdout, ControlWindow, or log_queue
-        self.streams = streams
-
-    def write(self, data):
-        for s in self.streams:
-            if hasattr(s, 'put'):
-                # It's a Queue
-                s.put(data)
-            elif hasattr(s, 'write'):
-                s.write(data)
-                s.flush()
-
-    def flush(self):
-        for s in self.streams:
-            if hasattr(s, 'flush'):
-                s.flush()
 
 class ControlWindow(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue=None, base_dir=None, test_number=None, host=False):
+    def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -57,6 +57,8 @@ class ControlWindow(QMainWindow):
         self.current_test = None
         self.log_queue = log_queue
         self.host = host
+        
+        self.setup_logging(log_queue)
 
         # Set the window title and size (half of the screen width and full height)
         self.setWindowTitle("Control Window")
@@ -191,6 +193,14 @@ class ControlWindow(QMainWindow):
         self.control_layout.addWidget(QLabel("Log Output:", self))
         self.control_layout.addWidget(self.log_text_edit)
 
+        log_handler = QTextEditLogger(self.log_text_edit)
+        log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logging.getLogger().addHandler(log_handler)
+
+        if log_queue is not None:
+            self.queue_listener = QueueListener(log_queue, log_handler)
+            self.queue_listener.start()
+            
         # Process for the applications
         self.actichamp_process = None
         self.labrecorder_process = None
@@ -201,12 +211,9 @@ class ControlWindow(QMainWindow):
         self.olfactory_process = None
 
         # Start a thread to listen to the log queue and print messages in the QTextEdit
-        if self.log_queue is not None:
-            self.log_thread = threading.Thread(target=self.listen_to_log_queue, daemon=True)
-            self.log_thread.start()
-
-        self.original_stdout = sys.stdout
-        sys.stdout = Tee(sys.stdout, self.log_queue)
+        #if self.log_queue is not None:
+        #   self.log_thread = threading.Thread(target=self.listen_to_log_queue, daemon=True)
+        #   self.log_thread.start()
 
         if self.host:
             # If this is the host, start listening for commands from the client
@@ -241,12 +248,12 @@ class ControlWindow(QMainWindow):
         def worker():
             try:
                 self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
-                print("Actichamp started.")
-                print("Attempting Link with the Actichamp Device")
+                logging.info("Actichamp started.")
+                logging.info("Attempting Link with the Actichamp Device")
                 time.sleep(2)  # Wait for the application to start
                 self.link_actichamp()
             except Exception as e:
-                print(f"Failed to start Actichamp: {e}")
+                logging.info(f"Failed to start Actichamp: {e}")
                 traceback.print_exc()
         threading.Thread(target=worker, daemon=True).start()
 
@@ -260,13 +267,13 @@ class ControlWindow(QMainWindow):
             link_button.click_input()
             time.sleep(10)  # Wait for the linking process to complete
             if window_spec.child_window(title="Unlink", control_type="Button").exists():
-                print('Actichamp Linked Successfully')
+                logging.info('Actichamp Linked Successfully')
                 self.actichamp_linked = True
                 self.update_app_status_icon(self.actichamp_linked_icon, True)
             else:
                 raise Exception("Actichamp linking failed")
         except Exception as e:
-            print(f"Failed to link Actichamp: {e}")
+            logging.info(f"Failed to link Actichamp: {e}")
             self.actichamp_linked = False
             self.update_app_status_icon(self.actichamp_linked_icon, False)
 
@@ -275,11 +282,11 @@ class ControlWindow(QMainWindow):
         def worker():
             try:
                 self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
-                print("LabRecorder opened.")
+                logging.info("LabRecorder opened.")
                 time.sleep(5)  # Wait for the application to start
                 self.connect_labrecorder()  # Connect to LabRecorder after it has started
             except Exception as e:
-                print(f"Failed to open LabRecorder: {e}")
+                logging.info(f"Failed to open LabRecorder: {e}")
                 traceback.print_exc()
         threading.Thread(target=worker, daemon=True).start()
 
@@ -289,7 +296,7 @@ class ControlWindow(QMainWindow):
             self.labrecorder = LabRecorder(self.base_dir)
             if self.labrecorder.s is not None:
                 self.shared_status['lab_recorder_connected'] = True
-                print("Connected to LabRecorder.")
+                logging.info("Connected to LabRecorder.")
             else:
                 raise Exception()
         except Exception:
@@ -303,12 +310,12 @@ class ControlWindow(QMainWindow):
             time.sleep(2)  # Wait for the Pupil Labs device to initialize
             if self.eyetracker.device is not None:
                 self.shared_status['eyetracker_connected'] = True
-                print("Connected to Eye Tracker.")
+                logging.info("Connected to Eye Tracker.")
                 self.eyetracker.estimate_time_offset()  # Estimate time offset
             else:
                 raise Exception()
         except Exception:
-            print(f"Failed to connect to Eye Tracker")
+            logging.info(f"Failed to connect to Eye Tracker")
             self.shared_status['eyetracker_connected'] = False
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
@@ -323,7 +330,7 @@ class ControlWindow(QMainWindow):
         pass
 
     def host_command_listener(self):
-        print("Host: Listening for commands...")
+        logging.info("Host: Listening for commands...")
         buffer = ''
         try:
             while True:
@@ -334,7 +341,7 @@ class ControlWindow(QMainWindow):
                     buffer += data
                     while "\n" in buffer:
                         line, buffer = buffer.split("\n", 1)
-                        print(f'Host: Received line: {repr(line)}')
+                        logging.info(f'Host: Received line: {repr(line)}')
                         if not line.strip():
                             continue
                         try:
@@ -349,29 +356,29 @@ class ControlWindow(QMainWindow):
                                 if test_name:
                                     self.current_test = test_name  # Store for use in start_test
                                 self.start_test()
-                                print("Host: Starting test...")
+                                logging.info("Host: Starting test...")
                                 pass
                             elif action == "stop_button":
                                 self.stop_test()
-                                print("Host: Stopping test...")
+                                logging.info("Host: Stopping test...")
                                 pass
                             elif action == "label":
                                 label = message.get("label", None)
                                 self.label_push(label)
-                                print(f"Host: Pushing label: {label}")
+                                logging.info(f"Host: Pushing label: {label}")
                                 pass
                             elif action == "latency_ping":
                                 pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
                                 self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
                             # ...other actions...
                         except Exception as e:
-                            print(f"Host: Error processing command: {e}")
+                            logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
                 except Exception as e:
-                    print(f"Host: Error handling command: {e}")
+                    logging.info(f"Host: Error handling command: {e}")
                     traceback.print_exc()
         except Exception as e:
-            print(f"Host: Listener crashed: {e}")
+            logging.info(f"Host: Listener crashed: {e}")
             traceback.print_exc()
 
     def start_test(self):
@@ -382,14 +389,14 @@ class ControlWindow(QMainWindow):
             test_name = self.current_test if self.current_test else "default_test"
             self.labrecorder.Start_Recorder(test_name)
         else:
-            print("LabRecorder not connected")
+            logging.info("LabRecorder not connected")
 
         #if self.eyetracker is None or self.eyetracker.device is None:
         #    self.eyetracker = PupilLabs()
         if self.eyetracker and self.eyetracker.device is not None:
             self.eyetracker.start_recording()
         else:
-            print("Eyetracker not connected")
+            logging.info("Eyetracker not connected")
 
     def stop_test(self):
         # Stop LabRecorder if connected
@@ -417,6 +424,14 @@ class ControlWindow(QMainWindow):
         #self.connection.sendall((json.dumps(status_msg) + "\n").encode('utf-8'))
 
     # TO MAYBE BE IMPLEMENTED LATER
+
+    def setup_logging(self, log_queue):
+        queue_handler = QueueHandler(log_queue)
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        logger.handlers = []
+        logger.addHandler(queue_handler)
+
     '''
     def init_lsl(self):
         """

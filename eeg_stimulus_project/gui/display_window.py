@@ -11,6 +11,7 @@ import os
 import threading
 import json
 import time
+import logging
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -218,9 +219,9 @@ class DisplayWindow(QMainWindow):
             if self.eyetracker and self.eyetracker.device is not None:
                 self.eyetracker.start_recording()
             else:
-                print("Eyetracker not connected")
+                logging.info("Eyetracker not connected")
         else:
-            print("Eyetracker not connected in Control Window")
+            logging.info("Eyetracker not connected in Control Window")
      
         self.current_label = None
 
@@ -327,7 +328,7 @@ class DisplayWindow(QMainWindow):
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
-        print(f"Current test: {current_test}")
+        logging.info(f"Current test: {current_test}")
         #print(f"Available tests: {list(Display.test_assets.keys())}")
         if current_test:
             try:
@@ -345,7 +346,7 @@ class DisplayWindow(QMainWindow):
                 else:
                     self.display_images_passive()
             except KeyError as e:
-                print(f"KeyError: {e}")
+                logging.info(f"KeyError: {e}")
 
     #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
@@ -356,9 +357,9 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'stroop_transition_timer'):
             self.stroop_transition_timer.stop()  # Stop the Stroop timer
         self.paused_time = self.elapsed_time
-        print(self.paused_time)
+        logging.info(self.paused_time)
         self.paused_image_index = self.current_image_index 
-        print(self.paused_image_index)
+        logging.info(self.paused_image_index)
          # Store the current image index
         self.Paused = True
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -386,9 +387,9 @@ class DisplayWindow(QMainWindow):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
                 self.send_message({"action": "label", "label": label})  # Send label to the server
                 self.label_stream.push_label(label)
+                logging.info(f"Current label: {label}")
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
-                print(f"Current label: {label}")
                 self.current_label = label
             self.current_image_index += 1
             self.image_transition_timer.start(5000)  # Display each image for 5 seconds
@@ -417,7 +418,7 @@ class DisplayWindow(QMainWindow):
                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
                 self.send_message({"action": "label", "label": label})
                 self.label_stream.push_label(label)
-                print(f"Current label: {label}")
+                logging.info(f"Current label: {label}")
                 self.current_label = label
             self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
@@ -439,7 +440,7 @@ class DisplayWindow(QMainWindow):
 
     def poll_label(self):
         # This will print the current label and the current time in ms
-        print(f"Polled at {self.elapsed_time} ms: Current label = {self.current_label}")
+        logging.info(f"Polled at {self.elapsed_time} ms: Current label = {self.current_label}")
 
     #This method is needed to make the image transition timer work, it is called when the image transition timer times out. It is the main way the pause and resume functionality works
     #It is called from the image_transition_timer
@@ -490,7 +491,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(img, 'filename'):
               label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
               self.label_stream.push_label(label)
-              print(f"Current label: {label}")
+              logging.info(f"Current label: {label}")
               self.current_label = label
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
@@ -514,7 +515,7 @@ class DisplayWindow(QMainWindow):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
                                 self.send_message({"action": "label", "label": label})
                                 self.label_stream.push_label(label)
-                                print(f"Current label: {label}")
+                                logging.info(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
                         else:
                             self.user_data['user_inputs'].append('No')  # Store the user input
@@ -522,7 +523,7 @@ class DisplayWindow(QMainWindow):
                                 label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
                                 self.send_message({"action": "label", "label": label})
                                 self.label_stream.push_label(label)
-                                print(f"Current label: {label}")
+                                logging.info(f"Current label: {label}")
                                 self.current_label = label  # Push label to LSL stream
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
@@ -593,7 +594,7 @@ class DisplayWindow(QMainWindow):
     #This method is called to close the event, it stops the timer and closes the mirror widget if it exists
     def closeEvent(self, event):
         if getattr(self, 'stopped', False):
-            print("Closing DisplayWindow...")
+            logging.info("Closing DisplayWindow...")
             # Allow closing and do cleanup
             if hasattr(self, 'timer') and self.timer.isActive():
                 self.timer.stop()
@@ -680,5 +681,5 @@ class DisplayWindow(QMainWindow):
             try:
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
-                print(f"Error sending message: {e}")
+                logging.info(f"Error sending message: {e}")
 

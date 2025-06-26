@@ -5,25 +5,17 @@ import os
 from multiprocessing import Manager, Process, Queue
 import socket
 import threading
+import logging
+from logging.handlers import QueueListener
 
-class Tee(object):
-    def __init__(self, *streams):
-        # streams can be sys.stdout, ControlWindow, or log_queue
-        self.streams = streams
-
-    def write(self, data):
-        for s in self.streams:
-            if hasattr(s, 'put'):
-
-                s.put(data)
-            elif hasattr(s, 'write'):
-                s.write(data)
-                s.flush()
-
-    def flush(self):
-        for s in self.streams:
-            if hasattr(s, 'flush'):
-                s.flush()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
 
 def get_test_lists():
     passive_tests = [
@@ -73,9 +65,8 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
 
 def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client):
     from eeg_stimulus_project.gui.main_gui import GUI
-    sys.stdout = Tee(sys.stdout, log_queue)
     app = QApplication(sys.argv)
-    window = GUI(connection, shared_status, base_dir, test_number, client)
+    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client)
     window.show()
     sys.exit(app.exec_())
 
@@ -142,17 +133,17 @@ class MainWindow(QMainWindow):
         # Networking setup
         if host:
             if not subject_id or test_number not in ['1', '2']:
-                print("Please enter a valid Subject ID and Test Number (1 or 2).")
+                logging.info("Please enter a valid Subject ID and Test Number (1 or 2).")
                 self._reset_buttons()
                 return
             threading.Thread(target=self.start_server, daemon=True).start()
         elif client:
             if not host_ip:
-                print("Please enter the Host IP for client mode.")
+                logging.info("Please enter the Host IP for client mode.")
                 self._reset_buttons()
                 return
             if not self.connect_to_host(host_ip):
-                print("Could not connect to host. Check IP and network.")
+                logging.info("Could not connect to host. Check IP and network.")
                 self._reset_buttons()
                 return
             # Directory and shared resources for client
@@ -163,11 +154,15 @@ class MainWindow(QMainWindow):
         else:
             # Both: local experiment
             if not subject_id or test_number not in ['1', '2']:
-                print("Please enter a valid Subject ID and Test Number (1 or 2).")
+                logging.info("Please enter a valid Subject ID and Test Number (1 or 2).")
                 self._reset_buttons()
                 return
             base_dir = create_data_dirs(subject_id, test_number)
             self.manager, self.shared_status, log_queue = init_shared_resources()
+            # Your GUI log handler, e.g., QTextEditLogger, or just StreamHandler for console
+            gui_log_handler = logging.StreamHandler()  # Or your custom handler
+            listener = QueueListener(log_queue, gui_log_handler)
+            listener.start()
             self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
             self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # client=False
             self.control_process.start()
@@ -185,9 +180,9 @@ class MainWindow(QMainWindow):
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket.bind((HOST, PORT))
             server_socket.listen(1)
-            print(f"Host: Waiting for client on port {PORT}...")
+            logging.info(f"Host: Waiting for client on port {PORT}...")
             conn, addr = server_socket.accept()
-            print(f"Host: Connected by {addr}")
+            logging.info(f"Host: Connected by {addr}")
             self.connection = conn  # Save for later use
             self.client_connected = True
 
@@ -207,23 +202,23 @@ class MainWindow(QMainWindow):
             )
             self.control_process.start()
         except Exception as e:
-            print(f"Host: Server error: {e}")
+            logging.info(f"Host: Server error: {e}")
 
     def connect_to_host(self, host_ip):
         PORT = 9999
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((host_ip, PORT))
-            print("Client: Connected to host.")
+            logging.info("Client: Connected to host.")
             self.connection = s  # Save for later use
             return True
         except Exception as e:
-            print(f"Client: Connection error: {e}")
+            logging.info(f"Client: Connection error: {e}")
             return False
 
     def closeEvent(self, event):
         if getattr(self, "client_connected", False):
-            print("Cannot close host while client is connected. Please close the client first.")
+            logging.info("Cannot close host while client is connected. Please close the client first.")
             event.ignore()
             return
         if self.gui_process is not None:
@@ -242,7 +237,7 @@ class MainWindow(QMainWindow):
                     break
         except Exception:
             pass
-        print("Client disconnected.")
+        logging.info("Client disconnected.")
         self.client_connected = False
 
 if __name__ == "__main__":

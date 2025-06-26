@@ -13,28 +13,12 @@ from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
+import logging
+from logging.handlers import QueueHandler
 
-class Tee(object):
-    def __init__(self, *streams):
-        # streams can be sys.stdout, ControlWindow, or log_queue
-        self.streams = streams
-
-    def write(self, data):
-        for s in self.streams:
-            if hasattr(s, 'put'):
-
-                s.put(data)
-            elif hasattr(s, 'write'):
-                s.write(data)
-                s.flush()
-
-    def flush(self):
-        for s in self.streams:
-            if hasattr(s, 'flush'):
-                s.flush()
 
 class GUI(QMainWindow):
-    def __init__(self, connection, shared_status, base_dir, test_number, client=False):
+    def __init__(self, connection, shared_status, log_queue,  base_dir, test_number, client=False):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -42,6 +26,9 @@ class GUI(QMainWindow):
 
         if connection is not None:
             self.start_listener()
+
+        # Set up logging
+        self.setup_logging(log_queue)
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -164,7 +151,7 @@ class GUI(QMainWindow):
         current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
         if state == Qt.Checked:
             if any_display_widget_open():
-                print("A display widget is already open in another frame. Not creating a new one.")
+                logging.info("A display widget is already open in another frame. Not creating a new one.")
                 return
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
@@ -180,7 +167,7 @@ class GUI(QMainWindow):
                 # Show the main display as a window
                 current_frame.display_widget.show()
             else:
-                print("Display widget already exists, not creating a new one.")
+                logging.info("Display widget already exists, not creating a new one.")
         else:
             #Remove/hide the widgets when the stop button is pressed
             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
@@ -244,7 +231,7 @@ class GUI(QMainWindow):
             try:
                 self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
             except Exception as e:
-                print(f"Error sending ping: {e}")
+                logging.info(f"Error sending ping: {e}")
             if single_test:
                 self._latency_test_active = False  # For single ping
 
@@ -280,9 +267,16 @@ class GUI(QMainWindow):
                             status = msg.get("status", "Unknown")
                             self.instruction_frame.update_status(status)
                 except Exception as e:
-                    print(f"Listener error: {e}")
+                    logging.info(f"Listener error: {e}")
                     break
         threading.Thread(target=listen, daemon=True).start()
+
+    def setup_logging(self, log_queue):
+        queue_handler = QueueHandler(log_queue)
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        logger.handlers = []  # Remove other handlers
+        logger.addHandler(queue_handler)
         
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
@@ -407,9 +401,9 @@ class Frame(QFrame):
                     if self.labrecorder and self.labrecorder.s is not None:
                         self.labrecorder.Start_Recorder(self.parent.get_current_test())
                     else:
-                        print("LabRecorder not connected")
+                        logging.info("LabRecorder not connected")
                 else:
-                    print("LabRecorder not connected in Control Window")
+                    logging.info("LabRecorder not connected in Control Window")
 
                 #if self.shared_status.get('eyetracker_connected', False):
                 #    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -438,9 +432,9 @@ class Frame(QFrame):
                     self.display_widget.user_data['elapsed_time']
                 )
             else:
-                print("No display_widget found for saving data.")        
+                logging.info("No display_widget found for saving data.")        
         except Exception as e:
-            print(f"Error saving data: {e}")
+            logging.info(f"Error saving data: {e}")
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
@@ -463,9 +457,9 @@ class Frame(QFrame):
             if hasattr(self, 'display_widget') and self.display_widget is not None:
                 save_data.save_data_passive(self.parent.get_current_test())
             else:
-                print("No display_widget found for saving data.")
+                logging.info("No display_widget found for saving data.")
         except Exception as e:
-            print(f"Error saving data: {e}")
+            logging.info(f"Error saving data: {e}")
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
@@ -499,7 +493,7 @@ class Frame(QFrame):
             try:
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
-                print(f"Error sending message: {e}")
+                logging.info(f"Error sending message: {e}")
 
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):

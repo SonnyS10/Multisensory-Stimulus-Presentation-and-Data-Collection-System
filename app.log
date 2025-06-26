@@ -1,0 +1,15 @@
+2025-06-26 10:48:18,172 INFO Please enter a valid Subject ID and Test Number (1 or 2).
+2025-06-26 10:48:34,746 INFO Failed to start Actichamp: [WinError 2] The system cannot find the file specified
+2025-06-26 10:48:39,331 INFO LabRecorder opened.
+2025-06-26 10:49:11,646 INFO Failed to connect to Eye Tracker
+2025-06-26 10:49:24,087 INFO LabRecorder not connected in Control Window
+2025-06-26 10:51:11,828 INFO Eyetracker not connected in Control Window
+2025-06-26 10:51:11,845 INFO LabRecorder not connected in Control Window
+2025-06-26 10:51:26,536 INFO Current test: Unisensory Neutral Visual
+2025-06-26 10:51:26,548 INFO Current label: Corona Image
+2025-06-26 10:51:31,552 INFO Current label: Miller Image
+2025-06-26 10:51:34,036 INFO LabRecorder opened.
+2025-06-26 10:51:36,553 INFO Current label: Beer Image
+2025-06-26 10:51:41,554 INFO Current label: Stella Image
+2025-06-26 10:51:48,418 INFO Closing DisplayWindow...
+2025-06-26 10:51:50,425 INFO No display_widget found for saving data.
