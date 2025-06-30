@@ -23,7 +23,8 @@ class GUI(QMainWindow):
         self.shared_status = shared_status
         self.connection = connection
         self.client = client
-
+        self.log_queue = log_queue
+        
         if connection is not None:
             self.start_listener()
 
@@ -91,7 +92,7 @@ class GUI(QMainWindow):
         
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number)
+        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue)
     
     def show_unisensory_neutral_visual(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -131,7 +132,7 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state, label_stream, eyetracker=None, shared_status=None):
+    def open_secondary_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None):
         def any_display_widget_open():
             # Check all frames for an open display_widget
             frames = [
@@ -156,7 +157,7 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(self.connection, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status, client=self.client)
+                current_frame.display_widget = DisplayWindow(self.connection, log_queue, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status, client=self.client)
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -279,7 +280,7 @@ class GUI(QMainWindow):
         logger.addHandler(queue_handler)
         
 class Frame(QFrame):
-    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None):
         super().__init__(parent)
 
         self.shared_status = shared_status
@@ -290,6 +291,7 @@ class Frame(QFrame):
         self.eyetracker = None
         self.connection = connection
         self.client = client
+        self.log_queue = log_queue
         
         self.layout = QVBoxLayout(self)
         
@@ -392,7 +394,7 @@ class Frame(QFrame):
                 self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
                 if self.label_stream is None:                
                     self.label_stream = LSLLabelStream()
-                    self.parent.open_secondary_gui(Qt.Checked, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
+                    self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
                     self.start_button.setEnabled(False)  # Disable the start button after starting the stream
                 if self.shared_status.get('lab_recorder_connected', False):
                     # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
@@ -445,7 +447,7 @@ class Frame(QFrame):
             self.display_widget.stopped = True
             self.display_widget.close()  # Close the display widget
         time.sleep(2)  # Give some time for the display widget to stop
-        self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
+        self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
@@ -470,7 +472,7 @@ class Frame(QFrame):
             self.display_widget.stopped = True
             self.display_widget.close()
         time.sleep(2)
-        self.parent.open_secondary_gui(Qt.Unchecked, label_stream=None)
+        self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
 
     #Pauses the display window and the mirror display window
     def pause_display_window(self):

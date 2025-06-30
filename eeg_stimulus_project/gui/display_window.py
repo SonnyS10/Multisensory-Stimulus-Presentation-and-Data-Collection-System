@@ -13,6 +13,7 @@ import json
 import time
 import logging
 import random
+from logging.handlers import QueueHandler
 
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
@@ -205,7 +206,7 @@ class MirroredDisplayWindow(QWidget):
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
 
-    def __init__(self, connection, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False):
+    def __init__(self, connection, log_queue, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False):
         super().__init__(parent)
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -300,6 +301,8 @@ class DisplayWindow(QMainWindow):
         self.stroop_transition_timer = QTimer(self)
         self.stroop_transition_timer.setSingleShot(True)
         self.stroop_transition_timer.timeout.connect(self.hide_image)
+
+        self.setup_logging(log_queue)
 
         #LSL Label Polling Timer - good for debugging 
         #self.label_poll_timer = QTimer(self)
@@ -711,3 +714,11 @@ class DisplayWindow(QMainWindow):
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
 
+    def setup_logging(self, log_queue):
+        queue_handler = QueueHandler(log_queue)
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        logger.handlers = []
+        logger.addHandler(queue_handler)
+        
+        
