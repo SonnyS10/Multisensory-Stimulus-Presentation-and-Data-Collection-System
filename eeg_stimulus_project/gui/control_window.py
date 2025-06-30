@@ -9,7 +9,7 @@ import threading
 import json
 import traceback
 import logging 
-from logging.handlers import QueueListener, QueueHandler
+from logging.handlers import QueueListener #QueueHandler
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, text_edit):
@@ -58,7 +58,7 @@ class ControlWindow(QMainWindow):
         self.log_queue = log_queue
         self.host = host
         
-        self.setup_logging(log_queue)
+        #self.setup_logging(log_queue)
 
         # Set the window title and size (half of the screen width and full height)
         self.setWindowTitle("Control Window")
@@ -425,12 +425,12 @@ class ControlWindow(QMainWindow):
 
     # TO MAYBE BE IMPLEMENTED LATER
 
-    def setup_logging(self, log_queue):
-        queue_handler = QueueHandler(log_queue)
-        logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
-        logger.handlers = []
-        logger.addHandler(queue_handler)
+    #def setup_logging(self, log_queue):
+    #    queue_handler = QueueHandler(log_queue)
+    #    logger = logging.getLogger()
+    #    logger.setLevel(logging.INFO)
+    #    logger.handlers = []
+    #    logger.addHandler(queue_handler)
 
     '''
     def init_lsl(self):

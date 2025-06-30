@@ -160,9 +160,9 @@ class MainWindow(QMainWindow):
             base_dir = create_data_dirs(subject_id, test_number)
             self.manager, self.shared_status, log_queue = init_shared_resources()
             # Your GUI log handler, e.g., QTextEditLogger, or just StreamHandler for console
-            gui_log_handler = logging.StreamHandler()  # Or your custom handler
-            listener = QueueListener(log_queue, gui_log_handler)
-            listener.start()
+            #gui_log_handler = logging.StreamHandler()  # Or your custom handler
+            #listener = QueueListener(log_queue, gui_log_handler)
+            #listener.start()
             self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
             self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # client=False
             self.control_process.start()
