@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer, QMetaObject
+from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
 import subprocess
 from pywinauto import Application
@@ -11,21 +11,23 @@ import traceback
 import logging 
 from logging.handlers import QueueListener, QueueHandler
 
-class QTextEditLogger(logging.Handler):
+class QTextEditLogger(logging.Handler, QObject):
+    append_text = pyqtSignal(str)
+
     def __init__(self, text_edit):
-        super().__init__()
+        logging.Handler.__init__(self)
+        QObject.__init__(self)
         self.text_edit = text_edit
+        self.append_text.connect(self._append)
 
     def emit(self, record):
         msg = self.format(record)
-        def append():
-            self.text_edit.moveCursor(self.text_edit.textCursor().End)
-            self.text_edit.insertPlainText(msg + '\n')
-            self.text_edit.moveCursor(self.text_edit.textCursor().End)
-        if self.text_edit.thread() == QApplication.instance().thread():
-            append()
-        else:
-            QMetaObject.invokeMethod(self.text_edit, append, Qt.QueuedConnection)
+        self.append_text.emit(msg)
+
+    def _append(self, msg):
+        self.text_edit.moveCursor(self.text_edit.textCursor().End)
+        self.text_edit.insertPlainText(msg + '\n')
+        self.text_edit.moveCursor(self.text_edit.textCursor().End)
 
 def excepthook(type, value, tb):
     logging.info("Uncaught exception:", value)
@@ -265,7 +267,7 @@ class ControlWindow(QMainWindow):
             link_button = window_spec.child_window(title="Link", control_type="Button")
             link_button.wait('enabled', timeout=5)
             link_button.click_input()
-            time.sleep(10)  # Wait for the linking process to complete
+            time.sleep(5)  # Wait for the linking process to complete
             if window_spec.child_window(title="Unlink", control_type="Button").exists():
                 logging.info('Actichamp Linked Successfully')
                 self.actichamp_linked = True

@@ -8,11 +8,12 @@ from pupil_labs.realtime_api.simple import discover_one_device
 
 from pupil_labs.realtime_api.simple import Device
 import threading
+import logging
 
-class PupilLabs(threading.Thread):
+class PupilLabs():
     def __init__(self):
         super().__init__()
-        print("Attempting to connect to Pupil Labs device...")
+        logging.info("Attempting to connect to Pupil Labs device...")
         #self.device = discover_one_device(max_search_duration_seconds=5)
 
         #ip = "172.20.10.2"
