@@ -12,6 +12,7 @@ import logging
 import os
 from logging.handlers import QueueListener #QueueHandler
 import socket
+from multiprocessing import Process, Manager
 
 class QTextEditLogger(logging.Handler, QObject):
     append_text = pyqtSignal(str)
@@ -231,6 +232,10 @@ class ControlWindow(QMainWindow):
                 self.connection_thread = threading.Thread(target=self.host_command_listener, daemon=True)
                 self.connection_thread.start()
 
+        # Start label listener for receiving labels
+        #self.start_label_listener = start_label_listener.__get__(self)
+        self.start_tactile_listener()
+
     # Redirect terminal outputs to the log queue
     def listen_to_log_queue(self):
         while True:
@@ -330,12 +335,22 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     def open_tactile_box(self):
-        # Path to your tactile_setup.py
-        script_path = os.path.join(
-            "c:/Users/srs1520/Documents/Paid Research/Software-for-Paid-Research-/eeg_stimulus_project/stimulus/tactile_box_code/tactile_setup.py"
-        )
-        # Use sys.executable to ensure the same Python interpreter is used
-        subprocess.Popen([sys.executable, script_path])
+        ## Path to your tactile_setup.py
+        #script_path = os.path.join(
+        #    "c:/Users/cpl4168/Documents/Paid Research/Software-for-Paid-Research-/eeg_stimulus_project/stimulus/tactile_box_code/tactile_setup.py"
+        #)
+        ## Use sys.executable to ensure the same Python interpreter is used
+        #subprocess.Popen([sys.executable, script_path])
+
+        #self.shared_status['lsl_enabled'] = True
+
+        #from eeg_stimulus_project.stimulus.tactile_box_code.tactile_setup import RemoteScriptGUI
+        from eeg_stimulus_project.stimulus.tactile_box_code import tactile_setup
+        self.tactile_process = Process(target=tactile_setup.run_tactile_setup, args=(self.shared_status, self.connection))
+        self.tactile_process.start()
+
+        #self.tactile_window = RemoteScriptGUI(self.shared_status, self.connection)
+        #self.tactile_window.show()
 
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
@@ -390,7 +405,8 @@ class ControlWindow(QMainWindow):
                                 self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
                             elif action == "touchbox_lsl_true":
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
-                                self.send_lsl_control("touchbox_lsl_true")
+                                self.shared_status['lsl_enabled'] = True
+                                #self.send_lsl_control("touchbox_lsl_true")
                             elif action == "touchbox_lsl_false":
                                 self.update_app_status_icon(self.lsl_touch_icon, False)
                                 self.send_lsl_control("touchbox_lsl_false")
@@ -404,6 +420,35 @@ class ControlWindow(QMainWindow):
         except Exception as e:
             logging.info(f"Host: Listener crashed: {e}")
             traceback.print_exc()
+
+    def start_tactile_listener(self):
+        def tactile_listener():
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(('localhost', 9999))
+            sock.listen(5)
+            print("Label listener started on port 9999")
+            while True:
+                conn, addr = sock.accept()
+                with conn:
+                    data = b""
+                    while True:
+                        chunk = conn.recv(4096)
+                        if not chunk:
+                            break
+                        data += chunk
+                    try:
+                        msg = json.loads(data.decode('utf-8').strip())
+                        if msg.get("action") == "label":
+                            label = msg.get("label")
+                            print(f"Received label: {label}")
+                            self.label_push(label)
+                            logging.info(f"Host: Pushing label: {label}")
+                            if label == "touch":
+                                self.connection.sendall((json.dumps({"action": "object_touched"}) + "\n").encode('utf-8'))
+                    except Exception as e:
+                        print(f"Error handling label message: {e}")
+        threading.Thread(target=tactile_listener, daemon=True).start()
 
     def start_test(self):
         if self.label_stream is None:

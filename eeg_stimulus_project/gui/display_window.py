@@ -466,8 +466,11 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text("You may now touch the object.", QFont("Arial", 32, QFont.Bold))
-        #self.send_message({"action": "touchbox_lsl_true"})
-        QTimer.singleShot(2000, self._advance_image)
+        self.send_message({"action": "touchbox_lsl_true"})
+        #QTimer.singleShot(2000, self._advance_image)
+
+    def end_touch_instruction_and_advance(self):
+        self._advance_image()
 
     @pyqtSlot()
     def proceed_from_next_button(self):

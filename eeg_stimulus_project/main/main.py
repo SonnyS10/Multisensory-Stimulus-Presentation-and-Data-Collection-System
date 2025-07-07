@@ -53,6 +53,7 @@ def init_shared_resources():
     shared_status = manager.dict()
     shared_status['lab_recorder_connected'] = False
     shared_status['eyetracker_connected'] = False
+    shared_status['lsl_enabled'] = False
     log_queue = Queue()
     return manager, shared_status, log_queue
 

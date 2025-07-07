@@ -16,7 +16,7 @@ ssh_user = 'benja'
 ssh_password = 'neuro'
 remote_venv_activate = 'source ~/Desktop/bin/activate'
 remote_script = 'python ~/forcereadwithzero.py'
-local_script = ['python', '\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\stimulus\\tactile_box_code\\import_socket.py']
+local_script = ['python', '\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\stimulus\\tactile_box_code\\import_socket.py']
 
 ssh_client = None
 remote_channel = None
@@ -62,8 +62,10 @@ def start_local_script():
     subprocess.Popen(local_script)
 
 class RemoteScriptGUI(QMainWindow):
-    def __init__(self):
+    def __init__(self, shared_status, connection):
         super().__init__()
+        self.shared_status = shared_status
+        self.connection = connection
         self.setWindowTitle("Remote Script Controller")
 
         # Get screen geometry and set to top right quarter
@@ -82,7 +84,12 @@ class RemoteScriptGUI(QMainWindow):
         self.rezero_threshold = 50  # force units
         self.last_rezero_time = time.time()
 
-        self.lsl_enabled = False  # Example variable to control
+        self.lsl_enabled = self.shared_status['lsl_enabled']
+
+        # Timer to sync lsl_enabled with shared_status
+        self.sync_timer = QTimer()
+        self.sync_timer.timeout.connect(self.sync_lsl_enabled)
+        self.sync_timer.start(200)  # Check every 200 ms
 
         # Persistent socket for label sending
         self.label_sock = None
@@ -90,10 +97,10 @@ class RemoteScriptGUI(QMainWindow):
         self.last_touch_state = False  # For edge detection
 
         # Connect to control window for label sending
-        threading.Thread(target=self.connect_label_socket, daemon=True).start()
+        #threading.Thread(target=self.connect_label_socket, daemon=True).start()
 
         # Start a thread to listen for control messages
-        threading.Thread(target=self.listen_for_control, daemon=True).start()
+        #threading.Thread(target=self.listen_for_control, daemon=True).start()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -129,17 +136,19 @@ class RemoteScriptGUI(QMainWindow):
         self.timer.timeout.connect(self.update_output)
         self.timer.start(300)
 
-    def connect_label_socket(self):
-        """Establish a persistent connection to the control window for label sending."""
-        while self.label_sock is None:
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect(('localhost', 9999))  # Use the correct port for control_window
-                self.label_sock = sock
-                print("Connected to control window for label sending.")
-            except Exception as e:
-                print(f"Label socket connection failed, retrying: {e}")
-                time.sleep(0.5)
+        self.send_label_to_control("hello")
+
+    #def connect_label_socket(self):
+    #    """Establish a persistent connection to the control window for label sending."""
+    #    while self.label_sock is None:
+    #        try:
+    #            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #            sock.connect(('localhost', 9999))  # Use the correct port for control_window
+    #            self.label_sock = sock
+    #            print("Connected to control window for label sending.")
+    #        except Exception as e:
+    #            print(f"Label socket connection failed, retrying: {e}")
+    #            time.sleep(0.5)
 
     def set_threshold(self, value):
         self.threshold = value
@@ -173,8 +182,8 @@ class RemoteScriptGUI(QMainWindow):
                             touched = adjusted_force > self.threshold
                             # Only send label on rising edge
                             if self.lsl_enabled and touched and not self.last_touch_state:
-                                event_time = datetime.datetime.now().isoformat()
-                                self.send_label_to_control("touch", event_time)
+                                #event_time = datetime.datetime.now().isoformat()
+                                self.send_label_to_control("touch")
                                 self.status_label.setText("Status: Force exceeds threshold!")
                             elif not touched:
                                 self.status_label.setText("Status: Waiting for touch...")
@@ -194,44 +203,74 @@ class RemoteScriptGUI(QMainWindow):
                     except Exception:
                         pass
 
-    def listen_for_control(self):
-        # Listen on a local port for control messages
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('localhost', 9999))  # Pick a free port
-        sock.listen(1)
-        while True:
-            conn, addr = sock.accept()
-            with conn:
-                data = conn.recv(1024).decode()
-                try:
-                    msg = json.loads(data)
-                    action = msg.get("action")
-                    if action == "set_lsl_enabled":
-                        self.lsl_enabled = msg.get("enabled", True)
-                        self.status_label.setText(f"LSL enabled: {self.lsl_enabled}")
-                    elif action == "touchbox_lsl_true":
-                        self.lsl_enabled = True
-                        self.status_label.setText("LSL enabled: True")
-                except Exception as e:
-                    print("Error parsing control message:", e)
+    #def listen_for_control(self):
+    #    # Listen on a local port for control messages
+    #    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #    sock.bind(('localhost', 9999))  # Pick a free port
+    #    sock.listen(1)
+    #    while True:
+    #        conn, addr = sock.accept()
+    #        with conn:
+    #            data = conn.recv(1024).decode()
+    #            try:
+    #                msg = json.loads(data)
+    #                action = msg.get("action")
+    #                if action == "set_lsl_enabled":
+    #                    self.lsl_enabled = msg.get("enabled", True)
+    #                    self.status_label.setText(f"LSL enabled: {self.lsl_enabled}")
+    #                elif action == "touchbox_lsl_true":
+    #                    self.lsl_enabled = True
+    #                    self.status_label.setText("LSL enabled: True")
+    #                    print("LSL enabled from control window.")
+    #            except Exception as e:
+    #                print("Error parsing control message:", e)
 
-    def send_label_to_control(self, label="touch", timestamp=None):
-        """Send a label with timestamp to the control window using the persistent socket."""
-        if self.label_sock is None:
-            print("Label socket not connected.")
-            return
+    def send_label_to_control(self, label):
+        """Send a label with timestamp to the control window using a new socket connection."""
         msg = {"action": "label", "label": label}
         try:
-            with self.label_sock_lock:
-                self.label_sock.sendall((json.dumps(msg) + "\n").encode())
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('localhost', 9999))  # Use the correct port for the Control Window
+            sock.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+            sock.close()
+            print(f"Sending label to control window: {msg}")
         except Exception as e:
             print(f"Could not send label to control window: {e}")
-            # Try to reconnect
-            self.label_sock = None
-            threading.Thread(target=self.connect_label_socket, daemon=True).start()
+
+        #"""Send a label with timestamp to the control window using the persistent socket."""
+        #if self.connection is None:
+        #    print("Label socket not connected.")
+        #    return
+        #msg = {"action": "label", "label": label}
+        #try:
+        #    #with self.label_sock_lock:
+        #    print(f"Sending label to control window: {msg}")
+        #    self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+        #except Exception as e:
+        #    print(f"Could not send label to control window: {e}")
+        #    # Try to reconnect
+        #    #self.label_sock = None
+        #    #threading.Thread(target=self.connect_label_socket, daemon=True).start()
+
+    def sync_lsl_enabled(self):
+        # Update local variable from shared dict
+        new_val = self.shared_status.get('lsl_enabled', False)
+        if self.lsl_enabled != new_val:
+            self.lsl_enabled = new_val
+            self.status_label.setText(f"LSL enabled: {self.lsl_enabled}")
+
+def run_tactile_setup(shared_status, connection):
+    app = QApplication(sys.argv)
+    window = RemoteScriptGUI(shared_status, connection)
+    window.show()
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
+    from multiprocessing import Manager
     app = QApplication(sys.argv)
-    window = RemoteScriptGUI()
+    manager = Manager()
+    shared_status = manager.dict()
+    shared_status['lsl_enabled'] = False
+    window = RemoteScriptGUI(shared_status)
     window.show()
     sys.exit(app.exec_())

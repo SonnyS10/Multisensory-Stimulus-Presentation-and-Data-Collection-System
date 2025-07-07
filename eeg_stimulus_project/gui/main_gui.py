@@ -267,6 +267,10 @@ class GUI(QMainWindow):
                         elif msg.get("action") == "host_status":
                             status = msg.get("status", "Unknown")
                             self.instruction_frame.update_status(status)
+                        elif msg.get("action") == "object_touched":
+                            current_frame = self.stacked_widget.currentWidget()
+                            if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
+                                current_frame.display_widget.end_touch_instruction_and_advance()
                 except Exception as e:
                     logging.info(f"Listener error: {e}")
                     break

@@ -2,7 +2,7 @@ import socket
 
 PI_IP = '10.115.12.225'  # Raspberry Pi's IP
 PORT = 5006
-OUTPUT_FILENAME = r"C:\Users\srs1520\Documents\Paid Research\Software-for-Paid-Research-\eeg_stimulus_project\stimulus\tactile_box_code\received_data.txt"
+OUTPUT_FILENAME = r"C:\Users\cpl4168\Documents\Paid Research\Software-for-Paid-Research-\eeg_stimulus_project\stimulus\tactile_box_code\received_data.txt"
 
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
