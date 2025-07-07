@@ -342,6 +342,11 @@ class Frame(QFrame):
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
 
+            self.next_button = QPushButton("Next", self)
+            self.next_button.setEnabled(False)  # Initially disabled
+            self.next_button.clicked.connect(self.on_next_button_clicked)
+            button_layout.addWidget(self.next_button)
+
             self.display_button = QCheckBox("Display", self)
             button_layout.addWidget(self.display_button)
 
@@ -372,6 +377,11 @@ class Frame(QFrame):
             self.resume_button.setEnabled(False)
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
+
+            self.next_button = QPushButton("Next", self)
+            self.next_button.setEnabled(False)  # Initially disabled
+            self.next_button.clicked.connect(self.on_next_button_clicked)
+            button_layout.addWidget(self.next_button)
 
             vr_button = QCheckBox("VR", self)
             button_layout.addWidget(vr_button)
@@ -496,6 +506,10 @@ class Frame(QFrame):
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
+
+    def on_next_button_clicked(self):
+        if hasattr(self, 'display_widget') and self.display_widget is not None:
+            self.display_widget.proceed_after_crosshair.emit()
 
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):

@@ -2,7 +2,7 @@ import sys
 sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
 from eeg_stimulus_project.stimulus.Display import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
@@ -205,6 +205,7 @@ class MirroredDisplayWindow(QWidget):
 #It is the main window that the subject sees and interacts with
 class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
+    proceed_after_crosshair = pyqtSignal()  # Add this at class level
 
     def __init__(self, connection, log_queue, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False):
         super().__init__(parent)
@@ -329,6 +330,11 @@ class DisplayWindow(QMainWindow):
 
         self.stopped = False  # Flag to indicate if the trial has been stopped
 
+        self.waiting_for_next = False
+        self.proceed_after_crosshair.connect(self.show_touch_instruction)
+
+        self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
+
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -396,23 +402,8 @@ class DisplayWindow(QMainWindow):
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 self.current_label = label
 
-            # If this is the last image, finish up
-            if self.current_image_index == len(self.images) - 1:
-                label = "Passive Test Ended"
-                self.send_message({"action": "label", "label": label})  # Send end label to the server
-                self.showing_second_pre = True
-                self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
-                self.label_stream.push_label("Test Ended")  # Push end label to LSL stream
-                self.paused_image_index = 0  # Reset the paused image index
-                self.paused_time = 0  # Reset the paused time
-                self.timer.stop()
-                if self.eyetracker and self.eyetracker.device is not None:
-                    self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
-                #self.label_poll_timer.stop()  # Stop the label polling timer (Good for debugging)
-            else:
-                # Show crosshair for a random duration, then show the next image
-                duration_ms = random.randint(2000, 5000)
-                QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive', duration_ms))
+            # Always show crosshair after image, even for last image
+            QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive'))
         else:
             # Defensive: shouldn't get here
             pass
@@ -431,23 +422,13 @@ class DisplayWindow(QMainWindow):
                 self.label_stream.push_label(label)
                 logging.info(f"Current label: {label}")
                 self.current_label = label
-            self.current_image_index += 1
             self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
         else:
-            label = "Stroop Test Ended"
-            self.send_message({"action": "label", "label": label})  # Send end label to the server
-            self.showing_second_pre = True
-            self.show_crosshair_instructions()  # Show crosshair for 2 min and end screen after all images are displayed
-            self.label_stream.push_label("Test Ended")
-            self.current_image_index = 0 # Reset for the next trial  # Push end label to LSL stream
-            self.timer.stop()
-            #self.label_poll_timer.stop()  # Stop the label polling timer(Good for debugging)
-            save_data = Save_Data(self.base_dir, self.test_number)
-            save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
-            if self.eyetracker and self.eyetracker.device is not None:
-                self.eyetracker.stop_recording()  # Stop the eyetracker recording if it exists
+            # Defensive: shouldn't get here
+            pass
 
-    def show_crosshair_between_images(self, test_type, duration_ms):
+    def show_crosshair_between_images(self, test_type):
+        duration_ms = random.randint(2000, 5000)  # Random duration between 2 and 5 seconds
         # Show crosshair
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
@@ -459,13 +440,69 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         if test_type == 'passive':
-            QTimer.singleShot(duration_ms, self._advance_passive_image)
-        else:
-            QTimer.singleShot(duration_ms, self.display_images_stroop)
+            if "Tactile" in self.current_test:
+                self.waiting_for_next = True
+                # Enable next button
+                if hasattr(self.parent(), 'next_button'):
+                    self.parent().next_button.setEnabled(True)
+                # Do NOT start a timer; wait for signal
+            else:
+                QTimer.singleShot(duration_ms, self._advance_image)
+        elif test_type == 'stroop':
+            if "Tactile" in self.current_test:
+                self.waiting_for_next = True
+                if hasattr(self.parent(), 'next_button'):
+                    self.parent().next_button.setEnabled(True)
+            else:
+                QTimer.singleShot(duration_ms, self._advance_image)
+    
+    def show_touch_instruction(self):
+        self.instructions_label.setText("You may now touch the object.")
+        self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.set_instruction_text("You may now touch the object.", QFont("Arial", 32, QFont.Bold))
+        #self.send_message({"action": "touchbox_lsl_true"})
+        QTimer.singleShot(2000, self._advance_image)
 
-    def _advance_passive_image(self):
+    @pyqtSlot()
+    def proceed_from_next_button(self):
+        if self.waiting_for_next:
+            self.waiting_for_next = False
+            self.show_touch_instruction()
+
+    def _advance_image(self):
+        # Disable next button as soon as advancing
+        if hasattr(self.parent(), 'next_button'):
+            self.parent().next_button.setEnabled(False)
         self.current_image_index += 1
-        self.display_images_passive()
+        if self.current_image_index < len(self.images):
+            if "Stroop" in self.current_test:
+                self.display_images_stroop()
+            else:
+                self.display_images_passive()
+        else:
+            # End Logic
+            if "Stroop" in self.current_test:
+                label = "Stroop Test Ended"
+                save_data = Save_Data(self.base_dir, self.test_number)
+                save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
+            else:
+                label = "Passive Test Ended"
+
+            self.send_message({"action": "label", "label": label})
+            self.showing_second_pre = True
+            self.show_crosshair_instructions()
+            self.label_stream.push_label("Test Ended")
+            self.paused_image_index = 0
+            self.paused_time = 0
+            self.timer.stop()
+            #if self.eyetracker and self.eyetracker.device is not None:
+            #    self.eyetracker.stop_recording()
 
     def poll_label(self):
         # This will print the current label and the current time in ms
@@ -508,7 +545,7 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
-        img = self.images[self.current_image_index - 1]
+        img = self.images[self.current_image_index]
         text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -528,7 +565,8 @@ class DisplayWindow(QMainWindow):
     def hide_image(self):
         self.image_label.clear()  # Clear the image
         self.set_instruction_text()
-        self.wait_for_input()  # Wait for input before displaying the next image
+        self.wait_for_input()
+        #self.current_image_index += 1  # <-- Increment here, after the image and input are handled
 
     #This method is called to wait for the user input, it installs an event filter to capture the key press events
     def wait_for_input(self):
@@ -536,7 +574,7 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
-            img = self.images[self.current_image_index - 1]
+            img = self.images[self.current_image_index]
             if self.Paused == False:
                 if event.type() == QEvent.KeyPress:
                     if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
@@ -558,13 +596,9 @@ class DisplayWindow(QMainWindow):
                                 self.current_label = label  # Push label to LSL stream
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
-                        self.display_next_image()
+                        self.show_crosshair_between_images('stroop')  # Show crosshair after input
                         return True
             return super().eventFilter(source, event)
-
-    #This method is called to display the next image, it calls the display_images_stroop method to display the next image
-    def display_next_image(self):
-        self.display_images_stroop()  # Display the next image
 
     #This method is called to update the timer label, it updates the elapsed time and formats the timer text
     def update_timer(self):
@@ -578,7 +612,7 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the overlay widget is visible and if the space bar is pressed, it starts the countdown    
     def keyPressEvent(self, event):
-        if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space:
+        if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space and self.ready_for_space:
             self.start_countdown()
         else:
             super().keyPressEvent(event)
@@ -706,6 +740,7 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_main_instructions()
+        self.ready_for_space = True
 
     def send_message(self, message_dict):
         if self.client:
@@ -720,5 +755,4 @@ class DisplayWindow(QMainWindow):
         logger.setLevel(logging.INFO)
         logger.handlers = []
         logger.addHandler(queue_handler)
-        
-        
+
