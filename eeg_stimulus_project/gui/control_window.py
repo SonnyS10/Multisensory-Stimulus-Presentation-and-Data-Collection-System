@@ -9,7 +9,9 @@ import threading
 import json
 import traceback
 import logging 
+import os
 from logging.handlers import QueueListener #QueueHandler
+import socket
 
 class QTextEditLogger(logging.Handler, QObject):
     append_text = pyqtSignal(str)
@@ -122,7 +124,7 @@ class ControlWindow(QMainWindow):
         # Touch Box status row (button + icons + labels)
         touchbox_row = QHBoxLayout()
         self.touchbox_button = QPushButton("Touchbox", self)
-        #self.touchbox_button.clicked.connect() # Connect to the touchbox
+        self.touchbox_button.clicked.connect(self.open_tactile_box)  # Connect to the touchbox
         touchbox_row.addWidget(self.touchbox_button)
         
         self.touchbox_connected_text = QLabel("Connection Status:", self)
@@ -130,7 +132,13 @@ class ControlWindow(QMainWindow):
         self.touchbox_connected_icon = QLabel(self)
         self.update_app_status_icon(self.touchbox_connected_icon, False)
         touchbox_row.addWidget(self.touchbox_connected_icon)
-        
+
+        self.lsl_touch_label = QLabel("LSL stream ready for Touch:", self)
+        touchbox_row.addWidget(self.lsl_touch_label)
+        self.lsl_touch_icon = QLabel(self)
+        self.update_app_status_icon(self.lsl_touch_icon, False)  # Start as red
+        touchbox_row.addWidget(self.lsl_touch_icon)
+
         self.device_frame_layout.addLayout(touchbox_row)
 
         # VR status row (button + icons + labels)
@@ -321,6 +329,14 @@ class ControlWindow(QMainWindow):
             self.shared_status['eyetracker_connected'] = False
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
+    def open_tactile_box(self):
+        # Path to your tactile_setup.py
+        script_path = os.path.join(
+            "c:/Users/srs1520/Documents/Paid Research/Software-for-Paid-Research-/eeg_stimulus_project/stimulus/tactile_box_code/tactile_setup.py"
+        )
+        # Use sys.executable to ensure the same Python interpreter is used
+        subprocess.Popen([sys.executable, script_path])
+
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
         pixmap = QPixmap(20, 20)
@@ -372,6 +388,12 @@ class ControlWindow(QMainWindow):
                             elif action == "latency_ping":
                                 pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
                                 self.connection.sendall((json.dumps(pong) + "\n").encode('utf-8'))
+                            elif action == "touchbox_lsl_true":
+                                self.update_app_status_icon(self.lsl_touch_icon, True)
+                                self.send_lsl_control("touchbox_lsl_true")
+                            elif action == "touchbox_lsl_false":
+                                self.update_app_status_icon(self.lsl_touch_icon, False)
+                                self.send_lsl_control("touchbox_lsl_false")
                             # ...other actions...
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
@@ -417,6 +439,16 @@ class ControlWindow(QMainWindow):
         self.label_stream.push_label(label)
         #print(f"Label pushed: {label}")
 
+    def send_lsl_control(self, action):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('localhost', 9999))
+            msg = {"action": action}
+            sock.sendall(json.dumps(msg).encode())
+            sock.close()
+        except Exception as e:
+            logging.info(f"Could not send LSL control message: {e}")
+        
     # To send status updates, periodically or on change:
         #status_msg = {
         #    "action": "host_status",

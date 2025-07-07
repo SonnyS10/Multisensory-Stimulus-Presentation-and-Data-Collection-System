@@ -342,6 +342,10 @@ class Frame(QFrame):
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
 
+            self.next_button = QPushButton("Next", self)
+            self.next_button.setEnabled(False)  # Initially disabled
+            button_layout.addWidget(self.next_button)
+
             self.display_button = QCheckBox("Display", self)
             button_layout.addWidget(self.display_button)
 
@@ -372,6 +376,10 @@ class Frame(QFrame):
             self.resume_button.setEnabled(False)
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
+
+            self.next_button = QPushButton("Next", self)
+            self.next_button.setEnabled(False)  # Initially disabled
+            button_layout.addWidget(self.next_button)
 
             vr_button = QCheckBox("VR", self)
             button_layout.addWidget(vr_button)
