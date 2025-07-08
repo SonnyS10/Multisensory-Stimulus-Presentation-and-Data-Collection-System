@@ -3,7 +3,7 @@ sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
-from eeg_stimulus_project.stimulus.Display import Display
+from eeg_stimulus_project.stimulus.asset_handler import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
@@ -330,10 +330,10 @@ class DisplayWindow(QMainWindow):
 
         self.stopped = False  # Flag to indicate if the trial has been stopped
 
+        #self.proceed_after_crosshair.connect(self.show_touch_instruction)
         self.waiting_for_next = False
-        self.proceed_after_crosshair.connect(self.show_touch_instruction)
-
         self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
+        self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
@@ -387,49 +387,60 @@ class DisplayWindow(QMainWindow):
 
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
-        if self.current_image_index < len(self.images):
-            img = self.images[self.current_image_index]
-            pixmap = QPixmap(img.filename)
-            self.current_pixmap = pixmap
-            self.update_image_label()
-            # Push the filename (without extension) as label
-            if hasattr(img, 'filename'):
-                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-                self.send_message({"action": "label", "label": label})  # Send label to the server
-                self.label_stream.push_label(label)
-                logging.info(f"Current label: {label}")
-                if self.eyetracker is not None:
-                    self.eyetracker.send_marker(label)  # Send label to Pupil Labs
-                self.current_label = label
-
-            # Always show crosshair after image, even for last image
-            QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive'))
+        img = self.images[self.current_image_index]
+        pixmap = QPixmap(img.filename)
+        self.current_pixmap = pixmap
+        self.update_image_label()
+        # Push the filename (without extension) as label
+        if hasattr(img, 'filename'):
+            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+            self.send_message({"action": "label", "label": label})  # Send label to the server
+            self.label_stream.push_label(label)
+            logging.info(f"Current label: {label}")
+            if self.eyetracker is not None:
+                self.eyetracker.send_marker(label)  # Send label to Pupil Labs
+            self.current_label = label
+        if "Tactile" in self.current_test:
+            # For tactile, show image for 5 seconds, then show crosshair and wait for touch
+            QTimer.singleShot(5000, lambda: self.show_crosshair_and_wait_tactile())
         else:
-            # Defensive: shouldn't get here
-            pass
+            QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive'))
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
-        if self.current_image_index < len(self.images):
-            img = self.images[self.current_image_index]
-            pixmap = QPixmap(img.filename)
-            self.current_pixmap = pixmap
-            self.update_image_label()
-            if hasattr(img, 'filename'):
-                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-                self.send_message({"action": "label", "label": label})
-                self.label_stream.push_label(label)
-                logging.info(f"Current label: {label}")
-                self.current_label = label
-            self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
+        img = self.images[self.current_image_index]
+        pixmap = QPixmap(img.filename)
+        self.current_pixmap = pixmap
+        self.update_image_label()
+        if hasattr(img, 'filename'):
+            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+            self.send_message({"action": "label", "label": label})
+            self.label_stream.push_label(label)
+            logging.info(f"Current label: {label}")
+            self.current_label = label
+        if "Tactile" in self.current_test:
+            # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
+            QTimer.singleShot(2000, self.hide_image)
         else:
-            # Defensive: shouldn't get here
-            pass
+            self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
+
+    #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
+    def hide_image(self):
+        self.image_label.clear()
+        self.set_instruction_text()
+        self.wait_for_input()
+
+    def show_crosshair_and_wait_tactile(self, stroop=False):
+        # Show crosshair for random duration, then enable next button
+        self.show_crosshair_between_images('stroop' if stroop else 'passive')
+        if self.current_image_index < (len(self.images) - 1):
+            self.waiting_for_next = True
+            if hasattr(self.parent(), 'next_button'):
+                self.parent().next_button.setEnabled(True)
 
     def show_crosshair_between_images(self, test_type):
-        duration_ms = random.randint(2000, 5000)  # Random duration between 2 and 5 seconds
-        # Show crosshair
+        duration_ms = random.randint(2000, 5000)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -441,21 +452,29 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.show_crosshair_period()
         if test_type == 'passive':
             if "Tactile" in self.current_test:
-                self.waiting_for_next = True
-                # Enable next button
-                if hasattr(self.parent(), 'next_button'):
-                    self.parent().next_button.setEnabled(True)
-                # Do NOT start a timer; wait for signal
+                if self.current_image_index == (len(self.images) - 1):
+                    QTimer.singleShot(duration_ms, self._advance_image)
+                else:
+                    pass  # Wait for next button
             else:
                 QTimer.singleShot(duration_ms, self._advance_image)
         elif test_type == 'stroop':
             if "Tactile" in self.current_test:
-                self.waiting_for_next = True
-                if hasattr(self.parent(), 'next_button'):
-                    self.parent().next_button.setEnabled(True)
+                if self.current_image_index == (len(self.images) - 1):
+                    QTimer.singleShot(duration_ms, self._advance_image)
+                else:
+                    pass  # Wait for next button
             else:
                 QTimer.singleShot(duration_ms, self._advance_image)
-    
+
+    @pyqtSlot()
+    def proceed_from_next_button(self):
+        if self.waiting_for_next:
+            self.waiting_for_next = False
+            if hasattr(self.parent(), 'next_button'):
+                self.parent().next_button.setEnabled(False)
+            self.show_touch_instruction()
+
     def show_touch_instruction(self):
         self.instructions_label.setText("You may now touch the object.")
         self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
@@ -467,21 +486,17 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text("You may now touch the object.", QFont("Arial", 32, QFont.Bold))
         self.send_message({"action": "touchbox_lsl_true"})
-        #QTimer.singleShot(2000, self._advance_image)
-
-    def end_touch_instruction_and_advance(self):
-        self._advance_image()
+        self.showing_touch_instruction = True
 
     @pyqtSlot()
-    def proceed_from_next_button(self):
-        if self.waiting_for_next:
-            self.waiting_for_next = False
-            self.show_touch_instruction()
+    def end_touch_instruction_and_advance(self):
+        if not self.showing_touch_instruction:
+            print("Touch advance ignored: not showing touch instruction.")
+            return
+        self.showing_touch_instruction = False
+        self._advance_image()
 
     def _advance_image(self):
-        # Disable next button as soon as advancing
-        if hasattr(self.parent(), 'next_button'):
-            self.parent().next_button.setEnabled(False)
         self.current_image_index += 1
         if self.current_image_index < len(self.images):
             if "Stroop" in self.current_test:
@@ -492,8 +507,8 @@ class DisplayWindow(QMainWindow):
             # End Logic
             if "Stroop" in self.current_test:
                 label = "Stroop Test Ended"
-                save_data = Save_Data(self.base_dir, self.test_number)
-                save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
+                #save_data = Save_Data(self.base_dir, self.test_number)
+                #save_data.save_data_stroop(self.current_test, self.user_data['user_inputs'], self.user_data['elapsed_time'])
             else:
                 label = "Passive Test Ended"
 
@@ -564,12 +579,6 @@ class DisplayWindow(QMainWindow):
               self.label_stream.push_label(label)
               logging.info(f"Current label: {label}")
               self.current_label = label
-    #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
-    def hide_image(self):
-        self.image_label.clear()  # Clear the image
-        self.set_instruction_text()
-        self.wait_for_input()
-        #self.current_image_index += 1  # <-- Increment here, after the image and input are handled
 
     #This method is called to wait for the user input, it installs an event filter to capture the key press events
     def wait_for_input(self):
@@ -599,7 +608,11 @@ class DisplayWindow(QMainWindow):
                                 self.current_label = label  # Push label to LSL stream
                         self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                         self.removeEventFilter(self)
-                        self.show_crosshair_between_images('stroop')  # Show crosshair after input
+                        if "Tactile" in self.current_test:
+                            # For tactile Stroop, show crosshair after keypress
+                            self.show_crosshair_and_wait_tactile(stroop=True)
+                        else:
+                            self.show_crosshair_between_images('stroop')
                         return True
             return super().eventFilter(source, event)
 
