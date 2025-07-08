@@ -2,7 +2,7 @@ import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QMetaObject, Qt
 import time
 import json
 import threading
@@ -270,7 +270,7 @@ class GUI(QMainWindow):
                         elif msg.get("action") == "object_touched":
                             current_frame = self.stacked_widget.currentWidget()
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
-                                current_frame.display_widget.end_touch_instruction_and_advance()
+                                QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
                 except Exception as e:
                     logging.info(f"Listener error: {e}")
                     break
@@ -513,7 +513,7 @@ class Frame(QFrame):
 
     def on_next_button_clicked(self):
         if hasattr(self, 'display_widget') and self.display_widget is not None:
-            self.display_widget.proceed_after_crosshair.emit()
+            QMetaObject.invokeMethod(self.display_widget, "proceed_from_next_button", Qt.QueuedConnection)
 
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):
