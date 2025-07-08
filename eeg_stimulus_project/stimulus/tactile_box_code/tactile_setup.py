@@ -62,18 +62,18 @@ def start_local_script():
     subprocess.Popen(local_script)
 
 class RemoteScriptGUI(QMainWindow):
-    def __init__(self, shared_status, connection):
+    def __init__(self, shared_status, connection=None):
         super().__init__()
         self.shared_status = shared_status
-        self.connection = connection
+        #self.connection = connection
         self.setWindowTitle("Remote Script Controller")
 
         # Get screen geometry and set to top right quarter
         screen = QDesktopWidget().screenGeometry()
         width = screen.width() // 2
         height = screen.height() // 2
-        x = screen.width() - width
-        y = 0
+        x = 0
+        y = screen.height() - height
         self.setGeometry(x, y, width, height)
 
         self.threshold = 500

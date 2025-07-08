@@ -446,3 +446,1115 @@
 2025-07-07 15:51:49,311 INFO Cannot close host while client is connected. Please close the client first.
 2025-07-07 15:51:59,761 INFO Client disconnected.
 2025-07-07 15:51:59,761 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 09:39:52,682 INFO Host: Waiting for client on port 9999...
+2025-07-08 09:39:52,799 INFO Host: Connected by ('169.254.185.196', 58440)
+2025-07-08 09:39:54,360 INFO Host: Listening for commands...
+2025-07-08 09:40:24,455 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 09:40:31,043 INFO Client disconnected.
+2025-07-08 09:40:31,043 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 09:40:37,561 INFO Host: Waiting for client on port 9999...
+2025-07-08 09:40:37,813 INFO Host: Connected by ('169.254.185.196', 58458)
+2025-07-08 09:40:39,309 INFO Host: Listening for commands...
+2025-07-08 09:40:42,429 INFO Host: Pushing label: hello
+2025-07-08 09:40:47,290 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 09:40:47,844 INFO Authentication (publickey) failed.
+2025-07-08 09:40:47,904 INFO Authentication (password) successful!
+2025-07-08 09:40:54,819 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 09:40:54,820 INFO LabRecorder not connected
+2025-07-08 09:40:54,820 INFO Eyetracker not connected
+2025-07-08 09:40:54,820 INFO Host: Starting test...
+2025-07-08 09:40:54,927 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 09:40:54,928 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 09:40:59,945 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 09:40:59,946 INFO Host: Pushing label: showing crosshair period
+2025-07-08 09:41:04,968 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 09:41:04,968 INFO Host: Pushing label: showing main instructions
+2025-07-08 09:41:06,931 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 09:41:06,931 INFO Host: Pushing label: Starting countdown
+2025-07-08 09:41:09,957 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 09:41:09,957 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 09:41:10,970 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 09:41:10,970 INFO Host: Pushing label: Beer Image
+2025-07-08 09:41:23,443 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 09:41:35,311 INFO Host: Pushing label: touch
+2025-07-08 09:41:35,322 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 09:41:35,322 INFO Host: Pushing label: Miller Image
+2025-07-08 09:42:06,754 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 09:42:06,755 INFO Host: Stopping test...
+2025-07-08 09:42:11,196 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 09:42:11,196 INFO Client disconnected.
+2025-07-08 09:47:45,155 INFO Host: Waiting for client on port 9999...
+2025-07-08 09:47:46,842 INFO Host: Connected by ('169.254.185.196', 58943)
+2025-07-08 09:47:48,352 INFO Host: Listening for commands...
+2025-07-08 09:47:50,939 INFO Host: Pushing label: hello
+2025-07-08 09:47:52,593 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 09:47:52,593 INFO LabRecorder not connected
+2025-07-08 09:47:52,595 INFO Eyetracker not connected
+2025-07-08 09:47:52,596 INFO Host: Starting test...
+2025-07-08 09:47:52,695 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 09:47:52,696 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 09:47:52,809 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 09:47:52,989 INFO Authentication (publickey) failed.
+2025-07-08 09:47:53,047 INFO Authentication (password) successful!
+2025-07-08 09:47:57,710 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 09:47:57,711 INFO Host: Pushing label: showing crosshair period
+2025-07-08 09:48:02,710 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 09:48:02,711 INFO Host: Pushing label: showing main instructions
+2025-07-08 09:48:04,512 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 09:48:04,514 INFO Host: Pushing label: Starting countdown
+2025-07-08 09:48:07,543 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 09:48:07,544 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 09:48:08,553 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 09:48:08,553 INFO Host: Pushing label: Miller Image
+2025-07-08 09:48:14,474 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 09:48:19,719 INFO Host: Pushing label: touch
+2025-07-08 09:48:19,732 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 09:48:19,732 INFO Host: Pushing label: Beer Image
+2025-07-08 09:48:59,009 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 09:48:59,009 INFO Host: Stopping test...
+2025-07-08 09:49:01,462 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 09:49:02,654 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 09:49:03,118 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 09:49:03,503 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 09:49:03,777 INFO Client disconnected.
+2025-07-08 09:49:03,777 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 09:54:30,611 INFO Host: Waiting for client on port 9999...
+2025-07-08 09:54:32,415 INFO Host: Connected by ('169.254.185.196', 59134)
+2025-07-08 09:54:33,963 INFO Host: Listening for commands...
+2025-07-08 09:54:36,556 INFO Host: Pushing label: hello
+2025-07-08 09:54:38,143 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 09:54:38,144 INFO LabRecorder not connected
+2025-07-08 09:54:38,144 INFO Eyetracker not connected
+2025-07-08 09:54:38,145 INFO Host: Starting test...
+2025-07-08 09:54:38,246 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 09:54:38,246 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 09:54:43,262 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 09:54:43,262 INFO Host: Pushing label: showing crosshair period
+2025-07-08 09:54:45,109 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 09:54:48,261 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 09:54:48,262 INFO Host: Pushing label: showing main instructions
+2025-07-08 09:54:48,382 INFO Authentication (publickey) failed.
+2025-07-08 09:54:48,442 INFO Authentication (password) successful!
+2025-07-08 09:54:49,255 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 09:54:49,255 INFO Host: Pushing label: Starting countdown
+2025-07-08 09:54:52,283 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 09:54:52,284 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 09:54:53,300 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 09:54:53,300 INFO Host: Pushing label: Beer Image
+2025-07-08 09:55:00,095 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 09:55:04,469 INFO Host: Pushing label: touch
+2025-07-08 09:55:04,488 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 09:55:04,488 INFO Host: Pushing label: Miller Image
+2025-07-08 09:55:26,824 INFO Client disconnected.
+2025-07-08 09:55:26,824 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:13:03,779 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:13:03,941 INFO Host: Connected by ('169.254.185.196', 59696)
+2025-07-08 10:13:05,482 INFO Host: Listening for commands...
+2025-07-08 10:13:07,196 INFO Host: Pushing label: hello
+2025-07-08 10:13:09,346 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:13:09,347 INFO LabRecorder not connected
+2025-07-08 10:13:09,348 INFO Eyetracker not connected
+2025-07-08 10:13:09,348 INFO Host: Starting test...
+2025-07-08 10:13:09,443 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:13:09,444 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:13:10,609 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:13:11,036 INFO Authentication (publickey) failed.
+2025-07-08 10:13:11,099 INFO Authentication (password) successful!
+2025-07-08 10:13:14,438 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:13:14,439 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:13:19,444 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:13:19,444 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:13:19,803 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:13:19,803 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:13:22,806 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:13:22,806 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:13:23,819 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:13:23,819 INFO Host: Pushing label: Corona Image
+2025-07-08 10:13:29,203 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:13:38,502 INFO Host: Pushing label: touch
+2025-07-08 10:13:38,516 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:13:38,516 INFO Host: Pushing label: Miller Image
+2025-07-08 10:14:01,233 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:14:01,234 INFO Host: Stopping test...
+2025-07-08 10:14:02,044 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:14:02,044 INFO Client disconnected.
+2025-07-08 10:16:58,674 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:16:59,678 INFO Host: Connected by ('169.254.185.196', 59805)
+2025-07-08 10:17:01,180 INFO Host: Listening for commands...
+2025-07-08 10:17:04,291 INFO Host: Pushing label: hello
+2025-07-08 10:17:05,265 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:17:05,266 INFO LabRecorder not connected
+2025-07-08 10:17:05,268 INFO Eyetracker not connected
+2025-07-08 10:17:05,269 INFO Host: Starting test...
+2025-07-08 10:17:05,372 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:17:05,372 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:17:06,229 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:17:07,091 INFO Authentication (publickey) failed.
+2025-07-08 10:17:07,156 INFO Authentication (password) successful!
+2025-07-08 10:17:10,375 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:17:10,376 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:17:15,371 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:17:15,372 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:17:15,729 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:17:15,730 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:17:18,744 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:17:18,744 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:17:19,756 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:17:19,756 INFO Host: Pushing label: Corona Image
+2025-07-08 10:17:36,858 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:17:36,859 INFO Host: Stopping test...
+2025-07-08 10:17:43,703 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 10:17:44,282 INFO Client disconnected.
+2025-07-08 10:17:44,282 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:20:47,546 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:20:52,018 INFO Host: Connected by ('169.254.185.196', 59899)
+2025-07-08 10:20:53,533 INFO Host: Listening for commands...
+2025-07-08 10:20:55,391 INFO Host: Pushing label: hello
+2025-07-08 10:20:56,972 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:20:57,101 INFO Authentication (publickey) failed.
+2025-07-08 10:20:57,165 INFO Authentication (password) successful!
+2025-07-08 10:20:59,952 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:20:59,952 INFO LabRecorder not connected
+2025-07-08 10:20:59,952 INFO Eyetracker not connected
+2025-07-08 10:20:59,953 INFO Host: Starting test...
+2025-07-08 10:21:00,057 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:21:00,057 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:21:05,072 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:21:05,072 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:21:10,083 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:21:10,084 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:21:10,544 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:21:10,544 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:21:13,582 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:21:13,584 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:21:14,593 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:21:14,594 INFO Host: Pushing label: Beer Image
+2025-07-08 10:21:21,416 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:21:27,617 INFO Host: Pushing label: touch
+2025-07-08 10:21:27,627 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:21:27,627 INFO Host: Pushing label: Miller Image
+2025-07-08 10:21:42,184 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:21:47,670 INFO Host: Pushing label: touch
+2025-07-08 10:21:47,688 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:21:47,688 INFO Host: Pushing label: Corona Image
+2025-07-08 10:21:57,818 INFO Client disconnected.
+: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:30:46,663 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:30:49,680 INFO Host: Connected by ('169.254.185.196', 60148)
+2025-07-08 10:30:51,187 INFO Host: Listening for commands...
+2025-07-08 10:30:54,078 INFO Host: Pushing label: hello
+2025-07-08 10:30:55,777 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:30:55,920 INFO Authentication (publickey) failed.
+2025-07-08 10:30:55,987 INFO Authentication (password) successful!
+2025-07-08 10:31:00,470 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:31:00,470 INFO LabRecorder not connected
+2025-07-08 10:31:00,470 INFO Eyetracker not connected
+2025-07-08 10:31:00,471 INFO Host: Starting test...
+2025-07-08 10:31:00,575 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:31:00,575 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:31:05,573 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:31:05,573 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:31:10,576 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:31:10,576 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:31:12,046 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:31:12,047 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:31:15,077 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:31:15,078 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:31:16,089 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:31:16,089 INFO Host: Pushing label: Miller Image
+2025-07-08 10:31:24,494 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:31:27,291 INFO Host: Pushing label: touch
+2025-07-08 10:31:27,302 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:31:27,302 INFO Host: Pushing label: Beer Image
+2025-07-08 10:31:40,687 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 10:31:44,314 INFO Client disconnected.
+2025-07-08 10:31:44,314 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:32:33,436 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:32:34,538 INFO Host: Connected by ('169.254.185.196', 60190)
+2025-07-08 10:32:36,050 INFO Host: Listening for commands...
+2025-07-08 10:32:37,836 INFO Host: Pushing label: hello
+2025-07-08 10:32:39,781 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:32:39,782 INFO LabRecorder not connected
+2025-07-08 10:32:39,783 INFO Eyetracker not connected
+2025-07-08 10:32:39,783 INFO Host: Starting test...
+2025-07-08 10:32:39,824 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:32:39,885 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:32:39,885 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:32:40,092 INFO Authentication (publickey) failed.
+2025-07-08 10:32:40,153 INFO Authentication (password) successful!
+2025-07-08 10:32:44,907 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:32:44,907 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:32:49,909 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:32:49,909 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:32:50,381 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:32:50,381 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:32:53,400 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:32:53,402 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:32:54,411 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:32:54,411 INFO Host: Pushing label: Miller Image
+2025-07-08 10:33:02,557 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:33:11,424 INFO Host: Pushing label: touch
+2025-07-08 10:33:11,442 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:33:11,442 INFO Host: Pushing label: Beer Image
+2025-07-08 10:33:29,426 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 10:33:34,548 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:33:34,549 INFO Host: Stopping test...
+2025-07-08 10:33:34,992 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 10:33:37,958 INFO Client disconnected.
+2025-07-08 10:33:37,958 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:36:02,784 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:36:06,434 INFO Host: Connected by ('169.254.185.196', 60257)
+2025-07-08 10:36:07,952 INFO Host: Listening for commands...
+2025-07-08 10:36:09,904 INFO Host: Pushing label: hello
+2025-07-08 10:36:10,980 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:36:11,133 INFO Authentication (publickey) failed.
+2025-07-08 10:36:11,194 INFO Authentication (password) successful!
+2025-07-08 10:36:15,788 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:36:15,788 INFO LabRecorder not connected
+2025-07-08 10:36:15,789 INFO Eyetracker not connected
+2025-07-08 10:36:15,789 INFO Host: Starting test...
+2025-07-08 10:36:15,892 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:36:15,893 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:36:20,897 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:36:20,898 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:36:25,917 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:36:25,917 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:36:27,269 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:36:27,269 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:36:30,280 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:36:30,281 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:36:31,292 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:36:31,293 INFO Host: Pushing label: Miller Image
+2025-07-08 10:36:37,565 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:36:59,002 INFO Host: Pushing label: touch
+2025-07-08 10:36:59,014 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:36:59,014 INFO Host: Pushing label: Corona Image
+2025-07-08 10:37:11,651 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:37:11,652 INFO Host: Stopping test...
+2025-07-08 10:37:14,792 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:37:14,792 INFO Client disconnected.
+2025-07-08 10:37:50,419 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:37:52,958 INFO Host: Connected by ('169.254.185.196', 60297)
+2025-07-08 10:37:54,479 INFO Host: Listening for commands...
+2025-07-08 10:37:58,388 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:37:58,436 INFO LabRecorder not connected
+2025-07-08 10:37:58,436 INFO Eyetracker not connected
+2025-07-08 10:37:58,437 INFO Host: Starting test...
+2025-07-08 10:37:58,487 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:37:58,488 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:38:01,152 INFO Host: Pushing label: hello
+2025-07-08 10:38:02,673 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:38:03,304 INFO Authentication (publickey) failed.
+2025-07-08 10:38:03,372 INFO Authentication (password) successful!
+2025-07-08 10:38:03,513 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:38:03,514 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:38:08,506 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:38:08,507 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:38:12,684 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:38:12,684 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:38:15,710 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:38:15,711 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:38:16,723 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:38:16,723 INFO Host: Pushing label: Corona Image
+2025-07-08 10:38:22,115 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:38:31,274 INFO Host: Pushing label: touch
+2025-07-08 10:38:31,283 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:38:31,284 INFO Host: Pushing label: Miller Image
+2025-07-08 10:38:47,115 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:38:47,116 INFO Host: Stopping test...
+2025-07-08 10:38:50,149 INFO Client disconnected.
+2025-07-08 10:38:50,149 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:48:53,786 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:48:57,418 INFO Host: Connected by ('169.254.185.196', 60568)
+2025-07-08 10:48:58,958 INFO Host: Listening for commands...
+2025-07-08 10:49:02,256 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:49:02,295 INFO LabRecorder not connected
+2025-07-08 10:49:02,295 INFO Eyetracker not connected
+2025-07-08 10:49:02,296 INFO Host: Starting test...
+2025-07-08 10:49:02,361 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:49:02,362 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:49:03,731 INFO Host: Pushing label: hello
+2025-07-08 10:49:05,029 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:49:05,172 INFO Authentication (publickey) failed.
+2025-07-08 10:49:05,235 INFO Authentication (password) successful!
+2025-07-08 10:49:07,359 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:49:07,359 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:49:12,391 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:49:12,391 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:49:13,960 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:49:13,960 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:49:16,985 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:49:16,985 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:49:17,997 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:49:17,997 INFO Host: Pushing label: Beer Image
+2025-07-08 10:49:25,168 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:49:29,114 INFO Host: Pushing label: touch
+2025-07-08 10:49:29,128 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:49:29,128 INFO Host: Pushing label: Miller Image
+2025-07-08 10:50:15,264 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-08 10:55:03,345 INFO Client disconnected.
+2025-07-08 10:55:52,066 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:55:54,873 INFO Host: Connected by ('169.254.185.196', 60751)
+2025-07-08 10:55:56,403 INFO Host: Listening for commands...
+2025-07-08 10:55:58,599 INFO Host: Pushing label: hello
+2025-07-08 10:55:59,738 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:55:59,886 INFO Authentication (publickey) failed.
+2025-07-08 10:55:59,943 INFO Authentication (password) successful!
+2025-07-08 10:56:02,799 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:56:02,799 INFO LabRecorder not connected
+2025-07-08 10:56:02,799 INFO Eyetracker not connected
+2025-07-08 10:56:02,800 INFO Host: Starting test...
+2025-07-08 10:56:02,907 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:56:02,908 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:56:07,922 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:56:07,922 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:56:12,925 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:56:12,927 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:56:14,190 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:56:14,191 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:56:17,244 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:56:17,244 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:56:18,255 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:56:18,256 INFO Host: Pushing label: Beer Image
+2025-07-08 10:56:23,727 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:56:41,504 INFO Host: Pushing label: touch
+2025-07-08 10:56:55,654 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:56:55,654 INFO Client disconnected.
+2025-07-08 10:57:27,152 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:57:27,409 INFO Host: Connected by ('169.254.185.196', 60787)
+2025-07-08 10:57:28,941 INFO Host: Listening for commands...
+2025-07-08 10:57:31,753 INFO Host: Pushing label: hello
+2025-07-08 10:57:32,477 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:57:32,477 INFO LabRecorder not connected
+2025-07-08 10:57:32,478 INFO Eyetracker not connected
+2025-07-08 10:57:32,478 INFO Host: Starting test...
+2025-07-08 10:57:32,580 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:57:32,581 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:57:33,116 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:57:33,222 INFO Authentication (publickey) failed.
+2025-07-08 10:57:33,280 INFO Authentication (password) successful!
+2025-07-08 10:57:37,601 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:57:37,602 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:57:42,591 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:57:42,591 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:57:43,406 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:57:43,406 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:57:46,404 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:57:46,405 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:57:47,417 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:57:47,417 INFO Host: Pushing label: Beer Image
+2025-07-08 10:57:54,999 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:57:57,440 INFO Host: Pushing label: touch
+2025-07-08 10:58:10,127 INFO Client disconnected.
+: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 10:59:07,049 INFO Host: Waiting for client on port 9999...
+2025-07-08 10:59:09,151 INFO Host: Connected by ('169.254.185.196', 60832)
+2025-07-08 10:59:10,673 INFO Host: Listening for commands...
+2025-07-08 10:59:12,449 INFO Host: Pushing label: hello
+2025-07-08 10:59:13,720 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 10:59:13,865 INFO Authentication (publickey) failed.
+2025-07-08 10:59:13,925 INFO Authentication (password) successful!
+2025-07-08 10:59:15,005 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 10:59:15,005 INFO LabRecorder not connected
+2025-07-08 10:59:15,006 INFO Eyetracker not connected
+2025-07-08 10:59:15,006 INFO Host: Starting test...
+2025-07-08 10:59:15,106 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 10:59:15,107 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 10:59:20,109 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 10:59:20,110 INFO Host: Pushing label: showing crosshair period
+2025-07-08 10:59:25,119 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 10:59:25,120 INFO Host: Pushing label: showing main instructions
+2025-07-08 10:59:25,557 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 10:59:25,557 INFO Host: Pushing label: Starting countdown
+2025-07-08 10:59:28,567 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 10:59:28,568 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 10:59:29,580 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 10:59:29,581 INFO Host: Pushing label: Miller Image
+2025-07-08 10:59:35,094 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:59:38,854 INFO Host: Pushing label: touch
+2025-07-08 10:59:38,870 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 10:59:38,870 INFO Host: Pushing label: Beer Image
+2025-07-08 10:59:49,837 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 10:59:59,467 INFO Host: Pushing label: touch
+2025-07-08 10:59:59,476 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 10:59:59,476 INFO Host: Pushing label: Corona Image
+2025-07-08 11:00:11,348 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 11:00:11,349 INFO Host: Stopping test...
+2025-07-08 11:00:12,542 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 11:00:12,542 INFO Client disconnected.
+2025-07-08 11:02:17,347 INFO Host: Waiting for client on port 9999...
+2025-07-08 11:02:18,307 INFO Host: Connected by ('169.254.185.196', 60930)
+2025-07-08 11:02:19,818 INFO Host: Listening for commands...
+2025-07-08 11:02:22,070 INFO Host: Pushing label: hello
+2025-07-08 11:02:23,292 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 11:02:23,293 INFO LabRecorder not connected
+2025-07-08 11:02:23,293 INFO Eyetracker not connected
+2025-07-08 11:02:23,294 INFO Host: Starting test...
+2025-07-08 11:02:23,395 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 11:02:23,395 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 11:02:23,834 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 11:02:24,034 INFO Authentication (publickey) failed.
+2025-07-08 11:02:24,094 INFO Authentication (password) successful!
+2025-07-08 11:02:28,401 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 11:02:28,402 INFO Host: Pushing label: showing crosshair period
+2025-07-08 11:02:33,402 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 11:02:33,403 INFO Host: Pushing label: showing main instructions
+2025-07-08 11:02:33,956 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 11:02:33,957 INFO Host: Pushing label: Starting countdown
+2025-07-08 11:02:36,956 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 11:02:36,957 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 11:02:37,967 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 11:02:37,968 INFO Host: Pushing label: Corona Image
+2025-07-08 11:02:43,380 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 11:02:50,566 INFO Host: Pushing label: touch
+2025-07-08 11:02:50,574 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 11:02:50,575 INFO Host: Pushing label: Miller Image
+2025-07-08 11:03:08,651 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 11:03:08,652 INFO Host: Stopping test...
+2025-07-08 11:03:11,773 INFO Client disconnected.
+2025-07-08 11:03:11,773 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 13:14:26,666 INFO Host: Waiting for client on port 9999...
+2025-07-08 13:14:29,389 INFO Host: Connected by ('169.254.185.196', 63829)
+2025-07-08 13:14:30,932 INFO Host: Listening for commands...
+2025-07-08 13:14:40,139 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Alcohol Visual, Tactile & Olfactory"}'
+2025-07-08 13:14:40,200 INFO LabRecorder not connected
+2025-07-08 13:14:40,200 INFO Eyetracker not connected
+2025-07-08 13:14:40,200 INFO Host: Starting test...
+2025-07-08 13:14:40,243 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:14:40,244 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:14:42,726 INFO Host: Pushing label: hello
+2025-07-08 13:14:44,159 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 13:14:44,314 INFO Authentication (publickey) failed.
+2025-07-08 13:14:44,353 INFO Authentication (password) successful!
+2025-07-08 13:14:45,230 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:14:45,231 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:14:50,243 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:14:50,244 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:14:51,706 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:14:51,707 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:14:54,745 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:14:54,746 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:14:55,765 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 13:14:55,766 INFO Host: Pushing label: Corona Image
+2025-07-08 13:15:41,394 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:15:44,451 INFO Host: Pushing label: touch
+2025-07-08 13:15:44,467 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 13:15:44,467 INFO Host: Pushing label: Beer Image
+2025-07-08 13:15:53,073 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:15:54,814 INFO Host: Pushing label: touch
+2025-07-08 13:15:54,820 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:15:54,821 INFO Host: Pushing label: Miller Image
+2025-07-08 13:16:06,081 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:16:07,617 INFO Host: Pushing label: touch
+2025-07-08 13:16:07,619 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 13:16:07,619 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 13:16:07,665 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:16:07,665 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:16:12,617 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:16:12,618 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:16:17,918 INFO Host: Pushing label: touch
+2025-07-08 13:16:17,921 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 13:16:17,921 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 13:16:17,966 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:16:17,967 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:16:22,936 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:16:22,936 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:16:23,289 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Alcohol Visual, Tactile & Olfactory"}'
+2025-07-08 13:16:23,290 INFO Host: Stopping test...
+2025-07-08 13:16:29,826 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:16:29,826 INFO LabRecorder not connected
+2025-07-08 13:16:29,826 INFO Eyetracker not connected
+2025-07-08 13:16:29,826 INFO Host: Starting test...
+2025-07-08 13:16:29,873 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:16:29,873 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:16:34,884 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:16:34,884 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:16:39,885 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:16:39,887 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:16:41,137 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:16:41,137 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:16:44,173 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:16:44,174 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:16:45,181 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 13:16:45,181 INFO Host: Pushing label: Corona Image
+2025-07-08 13:16:48,873 INFO Host: Pushing label: touch
+2025-07-08 13:16:48,880 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:16:48,880 INFO Host: Pushing label: Miller Image
+2025-07-08 13:16:54,905 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:16:57,020 INFO Host: Pushing label: touch
+2025-07-08 13:16:57,032 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 13:16:57,033 INFO Host: Pushing label: Beer Image
+2025-07-08 13:17:04,064 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:17:05,510 INFO Host: Pushing label: touch
+2025-07-08 13:17:05,511 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 13:17:05,511 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 13:17:05,556 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:17:05,556 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:17:10,520 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:17:10,521 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:17:18,496 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:17:18,497 INFO Host: Stopping test...
+2025-07-08 13:17:22,261 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 13:22:21,267 INFO Host: Waiting for client on port 9999...
+2025-07-08 13:22:25,284 INFO Host: Connected by ('169.254.185.196', 64012)
+2025-07-08 13:22:26,867 INFO Host: Listening for commands...
+2025-07-08 13:22:32,016 INFO Host: Pushing label: hello
+2025-07-08 13:22:36,144 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:22:36,145 INFO LabRecorder not connected
+2025-07-08 13:22:36,146 INFO Eyetracker not connected
+2025-07-08 13:22:36,147 INFO Host: Starting test...
+2025-07-08 13:22:36,243 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:22:36,243 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:22:38,656 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 13:22:38,799 INFO Authentication (publickey) failed.
+2025-07-08 13:22:38,832 INFO Authentication (password) successful!
+2025-07-08 13:22:41,253 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:22:41,253 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:22:46,271 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:22:46,272 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:22:48,160 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:22:48,161 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:22:51,200 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:22:51,201 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:22:52,216 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 13:22:52,216 INFO Host: Pushing label: Beer Image
+2025-07-08 13:23:01,664 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:23:06,778 INFO Host: Pushing label: touch
+2025-07-08 13:23:06,786 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:23:06,787 INFO Host: Pushing label: Miller Image
+2025-07-08 13:23:17,391 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:23:19,645 INFO Host: Pushing label: touch
+2025-07-08 13:23:19,653 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 13:23:19,653 INFO Host: Pushing label: Corona Image
+2025-07-08 13:23:30,265 INFO Host: Pushing label: touch
+2025-07-08 13:23:30,267 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 13:23:30,267 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 13:23:30,311 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:23:30,312 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:23:35,262 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:23:35,263 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:23:37,615 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:23:37,616 INFO Host: Stopping test...
+2025-07-08 13:23:47,735 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Neutral (Visual & Tactile)"}'
+2025-07-08 13:23:47,735 INFO LabRecorder not connected
+2025-07-08 13:23:47,736 INFO Eyetracker not connected
+2025-07-08 13:23:47,736 INFO Host: Starting test...
+2025-07-08 13:23:47,790 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:23:47,790 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:23:52,759 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:23:52,760 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:23:57,778 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:23:57,778 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:23:58,415 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:23:58,416 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:24:01,455 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:24:01,455 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:24:02,460 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:24:02,461 INFO Host: Pushing label: Miller Image
+2025-07-08 13:24:06,207 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 13:24:06,207 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 13:24:08,975 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:24:10,966 INFO Host: Pushing label: touch
+2025-07-08 13:24:10,974 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 13:24:10,974 INFO Host: Pushing label: Corona Image
+2025-07-08 13:24:23,343 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Neutral (Visual & Tactile)"}'
+2025-07-08 13:24:23,344 INFO Host: Stopping test...
+2025-07-08 13:24:30,009 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 13:24:30,009 INFO Client disconnected.
+2025-07-08 13:28:23,546 INFO Host: Waiting for client on port 9999...
+2025-07-08 13:28:30,923 INFO Host: Connected by ('169.254.185.196', 64163)
+2025-07-08 13:28:32,523 INFO Host: Listening for commands...
+2025-07-08 13:28:41,494 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:28:41,545 INFO LabRecorder not connected
+2025-07-08 13:28:41,546 INFO Eyetracker not connected
+2025-07-08 13:28:41,546 INFO Host: Starting test...
+2025-07-08 13:28:41,598 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:28:41,599 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:28:46,605 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:28:46,607 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:28:51,613 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:28:51,613 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:28:51,973 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:28:51,974 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:28:54,985 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:28:54,986 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:28:55,995 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:28:55,995 INFO Host: Pushing label: Miller Image
+2025-07-08 13:29:02,529 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:29:08,077 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:29:08,078 INFO Host: Stopping test...
+2025-07-08 13:29:10,954 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 13:38:37,915 INFO Host: Waiting for client on port 9999...
+2025-07-08 13:38:41,319 INFO Host: Connected by ('169.254.185.196', 64418)
+2025-07-08 13:38:42,942 INFO Host: Listening for commands...
+2025-07-08 13:38:46,683 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:38:46,728 INFO LabRecorder not connected
+2025-07-08 13:38:46,729 INFO Eyetracker not connected
+2025-07-08 13:38:46,729 INFO Host: Starting test...
+2025-07-08 13:38:46,786 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 13:38:46,787 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 13:38:49,959 INFO Host: Pushing label: hello
+2025-07-08 13:38:51,569 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 13:38:51,701 INFO Authentication (publickey) failed.
+2025-07-08 13:38:51,757 INFO Authentication (password) successful!
+2025-07-08 13:38:51,792 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 13:38:51,792 INFO Host: Pushing label: showing crosshair period
+2025-07-08 13:38:56,814 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 13:38:56,815 INFO Host: Pushing label: showing main instructions
+2025-07-08 13:38:57,340 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 13:38:57,340 INFO Host: Pushing label: Starting countdown
+2025-07-08 13:39:00,355 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 13:39:00,356 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 13:39:01,366 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 13:39:01,367 INFO Host: Pushing label: Corona Image
+2025-07-08 13:39:11,891 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:39:13,204 INFO Host: Pushing label: touch
+2025-07-08 13:39:13,212 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 13:39:13,213 INFO Host: Pushing label: Beer Image
+2025-07-08 13:39:15,535 INFO Host: Pushing label: touch
+2025-07-08 13:39:22,245 INFO Host: Pushing label: touch
+2025-07-08 13:39:23,827 INFO Host: Pushing label: touch
+2025-07-08 13:39:25,366 INFO Host: Pushing label: touch
+2025-07-08 13:39:26,026 INFO Host: Pushing label: touch
+2025-07-08 13:39:27,507 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 13:39:28,213 INFO Host: Pushing label: touch
+2025-07-08 13:39:28,220 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 13:39:28,221 INFO Host: Pushing label: Miller Image
+2025-07-08 13:39:34,163 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 13:39:34,163 INFO Host: Stopping test...
+2025-07-08 13:39:37,037 INFO Client disconnected.
+2025-07-08 13:39:37,038 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 14:04:24,443 INFO Host: Waiting for client on port 9999...
+2025-07-08 14:04:27,105 INFO Host: Connected by ('169.254.185.196', 65064)
+2025-07-08 14:04:28,738 INFO Host: Listening for commands...
+2025-07-08 14:04:36,926 INFO Host: Pushing label: hello
+2025-07-08 14:04:38,441 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 14:04:38,580 INFO Authentication (publickey) failed.
+2025-07-08 14:04:38,613 INFO Authentication (password) successful!
+2025-07-08 14:04:44,231 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:04:44,232 INFO LabRecorder not connected
+2025-07-08 14:04:44,233 INFO Eyetracker not connected
+2025-07-08 14:04:44,233 INFO Host: Starting test...
+2025-07-08 14:04:44,334 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:04:44,334 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:04:49,355 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:04:49,355 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:04:54,372 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:04:54,372 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:04:55,838 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:04:55,838 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:04:58,861 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:04:58,861 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:04:59,873 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:04:59,873 INFO Host: Pushing label: Corona Image
+2025-07-08 14:05:12,088 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:05:13,542 INFO Host: Pushing label: touch
+2025-07-08 14:05:13,550 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:05:13,551 INFO Host: Pushing label: Beer Image
+2025-07-08 14:05:20,199 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:05:22,941 INFO Host: Pushing label: touch
+2025-07-08 14:05:22,946 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:05:22,947 INFO Host: Pushing label: Miller Image
+2025-07-08 14:05:36,606 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:05:36,606 INFO Host: Stopping test...
+2025-07-08 14:05:40,006 INFO Client disconnected.
+2025-07-08 14:05:40,006 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 14:12:20,496 INFO Host: Waiting for client on port 9999...
+2025-07-08 14:12:32,511 INFO Host: Connected by ('169.254.185.196', 65258)
+2025-07-08 14:12:34,017 INFO Host: Listening for commands...
+2025-07-08 14:12:36,684 INFO Host: Pushing label: hello
+2025-07-08 14:12:37,957 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 14:12:38,060 INFO Authentication (publickey) failed.
+2025-07-08 14:12:38,093 INFO Authentication (password) successful!
+2025-07-08 14:12:45,133 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:12:45,133 INFO LabRecorder not connected
+2025-07-08 14:12:45,134 INFO Eyetracker not connected
+2025-07-08 14:12:45,134 INFO Host: Starting test...
+2025-07-08 14:12:45,237 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:12:45,238 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:12:50,249 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:12:50,250 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:12:55,266 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:12:55,267 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:12:55,741 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:12:55,741 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:12:58,771 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:12:58,771 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:12:59,782 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:12:59,782 INFO Host: Pushing label: Corona Image
+2025-07-08 14:13:03,499 INFO Host: Received line: '"action": "label", "label": "Corona Image: Yes"}'
+2025-07-08 14:13:03,499 INFO Host: Pushing label: Corona Image: Yes
+2025-07-08 14:13:06,772 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:13:09,248 INFO Host: Pushing label: touch
+2025-07-08 14:13:09,255 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:13:09,255 INFO Host: Pushing label: Beer Image
+2025-07-08 14:13:15,123 INFO Host: Received line: '{"action": "label", "label": "Beer Image: Yes"}'
+2025-07-08 14:13:15,124 INFO Host: Pushing label: Beer Image: Yes
+2025-07-08 14:13:16,693 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:13:18,308 INFO Host: Pushing label: touch
+2025-07-08 14:13:18,313 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:13:18,313 INFO Host: Pushing label: Miller Image
+2025-07-08 14:13:24,963 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 14:13:24,964 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 14:13:26,701 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:13:28,271 INFO Host: Pushing label: touch
+2025-07-08 14:13:47,951 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 14:13:47,952 INFO Client disconnected.
+2025-07-08 14:31:36,283 INFO Host: Waiting for client on port 9999...
+2025-07-08 14:31:37,659 INFO Host: Connected by ('169.254.185.196', 49347)
+2025-07-08 14:31:39,199 INFO Host: Listening for commands...
+2025-07-08 14:31:44,130 INFO Host: Pushing label: hello
+2025-07-08 14:31:45,579 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 14:31:45,685 INFO Authentication (publickey) failed.
+2025-07-08 14:31:45,717 INFO Authentication (password) successful!
+2025-07-08 14:31:59,432 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:31:59,433 INFO LabRecorder not connected
+2025-07-08 14:31:59,433 INFO Eyetracker not connected
+2025-07-08 14:31:59,433 INFO Host: Starting test...
+2025-07-08 14:31:59,534 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:31:59,534 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:32:04,547 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:32:04,547 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:32:09,543 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:32:09,544 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:32:10,530 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:32:10,530 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:32:13,554 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:32:13,554 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:32:14,567 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:32:14,568 INFO Host: Pushing label: Corona Image
+2025-07-08 14:32:20,703 INFO Host: Received line: '"action": "label", "label": "Corona Image: Yes"}'
+2025-07-08 14:32:20,704 INFO Host: Pushing label: Corona Image: Yes
+2025-07-08 14:32:21,617 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:32:22,992 INFO Host: Pushing label: touch
+2025-07-08 14:32:23,000 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:32:23,000 INFO Host: Pushing label: Miller Image
+2025-07-08 14:32:25,296 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 14:32:25,296 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 14:32:26,144 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:32:27,045 INFO Host: Pushing label: touch
+2025-07-08 14:32:27,051 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:32:27,052 INFO Host: Pushing label: Beer Image
+2025-07-08 14:32:29,559 INFO Host: Received line: '"action": "label", "label": "Beer Image: Yes"}'
+2025-07-08 14:32:29,560 INFO Host: Pushing label: Beer Image: Yes
+2025-07-08 14:32:30,704 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:32:32,014 INFO Host: Pushing label: touch
+2025-07-08 14:32:32,016 INFO Host: Received line: '"action": "label", "label": "Stroop Test Ended"}'
+2025-07-08 14:32:32,016 INFO Host: Pushing label: Stroop Test Ended
+2025-07-08 14:32:32,061 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:32:32,061 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:32:37,039 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:32:37,040 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:32:46,098 INFO Host: Pushing label: touch
+2025-07-08 14:32:47,087 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:32:47,087 INFO Host: Stopping test...
+2025-07-08 14:32:54,543 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Olfactory)"}'
+2025-07-08 14:32:54,544 INFO LabRecorder not connected
+2025-07-08 14:32:54,544 INFO Eyetracker not connected
+2025-07-08 14:32:54,544 INFO Host: Starting test...
+2025-07-08 14:32:54,586 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:32:54,586 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:32:59,591 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:32:59,592 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:33:04,597 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:33:04,597 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:33:05,039 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:33:05,040 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:33:08,063 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:33:08,064 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:33:09,068 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:33:09,068 INFO Host: Pushing label: Beer Image
+2025-07-08 14:33:11,983 INFO Host: Received line: '"action": "label", "label": "Beer Image: Yes"}'
+2025-07-08 14:33:11,983 INFO Host: Pushing label: Beer Image: Yes
+2025-07-08 14:33:16,077 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:33:16,077 INFO Host: Pushing label: Miller Image
+2025-07-08 14:33:17,477 INFO Host: Pushing label: touch
+2025-07-08 14:33:18,215 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 14:33:18,215 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 14:33:22,984 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:33:22,985 INFO Host: Pushing label: Corona Image
+2025-07-08 14:33:26,526 INFO Host: Pushing label: touch
+2025-07-08 14:33:27,799 INFO Host: Received line: '"action": "label", "label": "Corona Image: Yes"}'
+2025-07-08 14:33:27,800 INFO Host: Pushing label: Corona Image: Yes
+2025-07-08 14:33:29,058 INFO Host: Pushing label: touch
+2025-07-08 14:33:32,088 INFO Host: Received line: '"action": "label", "label": "Stroop Test Ended"}'
+2025-07-08 14:33:32,088 INFO Host: Pushing label: Stroop Test Ended
+2025-07-08 14:33:32,135 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:33:32,136 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:33:37,111 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:33:37,111 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:33:49,679 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Alcohol (Visual & Olfactory)"}'
+2025-07-08 14:33:49,679 INFO Host: Stopping test...
+2025-07-08 14:34:01,736 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 14:34:01,736 INFO LabRecorder not connected
+2025-07-08 14:34:01,736 INFO Eyetracker not connected
+2025-07-08 14:34:01,737 INFO Host: Starting test...
+2025-07-08 14:34:01,782 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:34:01,782 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:34:06,767 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:34:06,768 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:34:11,773 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:34:11,773 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:34:13,071 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:34:13,071 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:34:16,100 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:34:16,100 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:34:17,106 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:34:17,106 INFO Host: Pushing label: Miller Image
+2025-07-08 14:34:24,442 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:34:25,133 INFO Host: Pushing label: touch
+2025-07-08 14:34:25,140 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:34:25,141 INFO Host: Pushing label: Beer Image
+2025-07-08 14:34:30,560 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:34:32,896 INFO Host: Pushing label: touch
+2025-07-08 14:34:32,904 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:34:32,906 INFO Host: Pushing label: Corona Image
+2025-07-08 14:34:38,391 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:34:39,226 INFO Host: Pushing label: touch
+2025-07-08 14:34:39,227 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 14:34:39,228 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 14:34:39,273 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:34:39,273 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:34:44,214 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:34:44,216 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:34:53,231 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 14:34:53,231 INFO Host: Stopping test...
+2025-07-08 14:34:57,591 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual & Olfactory"}'
+2025-07-08 14:34:57,592 INFO LabRecorder not connected
+2025-07-08 14:34:57,593 INFO Eyetracker not connected
+2025-07-08 14:34:57,593 INFO Host: Starting test...
+2025-07-08 14:34:57,641 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:34:57,642 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:35:02,647 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:35:02,647 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:35:07,656 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:35:07,656 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:35:07,919 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:35:07,920 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:35:10,968 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:35:10,969 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:35:11,974 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:35:11,974 INFO Host: Pushing label: Miller Image
+2025-07-08 14:35:20,687 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:35:20,688 INFO Host: Pushing label: Corona Image
+2025-07-08 14:35:29,055 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 14:35:29,056 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 14:35:29,105 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:35:29,107 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:35:34,070 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:35:34,071 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:36:05,798 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual & Olfactory"}'
+2025-07-08 14:36:05,798 INFO Host: Stopping test...
+2025-07-08 14:36:10,166 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Alcohol Visual & Olfactory"}'
+2025-07-08 14:36:10,167 INFO LabRecorder not connected
+2025-07-08 14:36:10,168 INFO Eyetracker not connected
+2025-07-08 14:36:10,168 INFO Host: Starting test...
+2025-07-08 14:36:10,207 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:36:10,208 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:36:15,198 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:36:15,198 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:36:20,223 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:36:20,224 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:36:20,319 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:36:20,319 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:36:23,358 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:36:23,358 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:36:24,365 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:36:24,366 INFO Host: Pushing label: Miller Image
+2025-07-08 14:36:32,077 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:36:32,079 INFO Host: Pushing label: Beer Image
+2025-07-08 14:36:39,968 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:36:39,969 INFO Host: Pushing label: Corona Image
+2025-07-08 14:36:47,806 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 14:36:47,806 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 14:36:47,850 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:36:47,852 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:36:52,824 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:36:52,824 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:36:59,553 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Alcohol Visual & Olfactory"}'
+2025-07-08 14:36:59,553 INFO Host: Stopping test...
+2025-07-08 14:37:03,121 INFO Client disconnected.
+2025-07-08 14:37:03,121 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 14:47:24,737 INFO Host: Waiting for client on port 9999...
+2025-07-08 14:47:27,543 INFO Host: Connected by ('169.254.185.196', 50021)
+2025-07-08 14:47:29,090 INFO Host: Listening for commands...
+2025-07-08 14:47:33,572 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:47:33,624 INFO LabRecorder not connected
+2025-07-08 14:47:33,624 INFO Eyetracker not connected
+2025-07-08 14:47:33,624 INFO Host: Starting test...
+2025-07-08 14:47:33,671 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:47:33,672 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:47:36,531 INFO Host: Pushing label: hello
+2025-07-08 14:47:38,008 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 14:47:38,111 INFO Authentication (publickey) failed.
+2025-07-08 14:47:38,145 INFO Authentication (password) successful!
+2025-07-08 14:47:38,689 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:47:38,690 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:47:43,679 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:47:43,680 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:47:45,132 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:47:45,132 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:47:48,155 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:47:48,155 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:47:49,167 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:47:49,168 INFO Host: Pushing label: Corona Image
+2025-07-08 14:47:52,251 INFO Host: Received line: '"action": "label", "label": "Corona Image: Yes"}'
+2025-07-08 14:47:52,251 INFO Host: Pushing label: Corona Image: Yes
+2025-07-08 14:47:53,772 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:47:55,076 INFO Host: Pushing label: touch
+2025-07-08 14:47:55,083 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 14:47:55,083 INFO Host: Pushing label: Miller Image
+2025-07-08 14:47:58,555 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 14:47:58,555 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 14:48:00,181 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:48:00,981 INFO Host: Pushing label: touch
+2025-07-08 14:48:00,988 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 14:48:00,989 INFO Host: Pushing label: Beer Image
+2025-07-08 14:48:04,764 INFO Host: Received line: '"action": "label", "label": "Beer Image: Yes"}'
+2025-07-08 14:48:04,764 INFO Host: Pushing label: Beer Image: Yes
+2025-07-08 14:48:06,445 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 14:48:07,208 INFO Host: Pushing label: touch
+2025-07-08 14:48:09,209 INFO Host: Received line: '"action": "label", "label": "Stroop Test Ended"}'
+2025-07-08 14:48:09,210 INFO Host: Pushing label: Stroop Test Ended
+2025-07-08 14:48:09,252 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:48:09,253 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:48:14,217 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:48:14,218 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:48:15,523 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:48:15,524 INFO Host: Stopping test...
+2025-07-08 14:59:05,595 INFO Client disconnected.
+2025-07-08 14:59:05,595 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 14:59:19,186 INFO Host: Waiting for client on port 9999...
+2025-07-08 14:59:21,468 INFO Host: Connected by ('169.254.185.196', 50324)
+2025-07-08 14:59:23,007 INFO Host: Listening for commands...
+2025-07-08 14:59:26,809 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 14:59:26,866 INFO LabRecorder not connected
+2025-07-08 14:59:26,866 INFO Eyetracker not connected
+2025-07-08 14:59:26,866 INFO Host: Starting test...
+2025-07-08 14:59:26,908 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 14:59:26,909 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 14:59:30,145 INFO Host: Pushing label: hello
+2025-07-08 14:59:31,636 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 14:59:31,741 INFO Authentication (publickey) failed.
+2025-07-08 14:59:31,775 INFO Authentication (password) successful!
+2025-07-08 14:59:31,925 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 14:59:31,925 INFO Host: Pushing label: showing crosshair period
+2025-07-08 14:59:36,913 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 14:59:36,913 INFO Host: Pushing label: showing main instructions
+2025-07-08 14:59:41,034 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 14:59:41,034 INFO Host: Pushing label: Starting countdown
+2025-07-08 14:59:44,046 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 14:59:44,047 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 14:59:45,059 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 14:59:45,060 INFO Host: Pushing label: Corona Image
+2025-07-08 14:59:58,411 INFO Client disconnected.
+2025-07-08 14:59:58,411 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 15:01:02,377 INFO Host: Waiting for client on port 9999...
+2025-07-08 15:01:05,597 INFO Host: Connected by ('169.254.185.196', 50381)
+2025-07-08 15:01:07,223 INFO Host: Listening for commands...
+2025-07-08 15:01:10,753 INFO Host: Received line: '"action": "start_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 15:01:10,798 INFO LabRecorder not connected
+2025-07-08 15:01:10,799 INFO Eyetracker not connected
+2025-07-08 15:01:10,799 INFO Host: Starting test...
+2025-07-08 15:01:10,854 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:01:10,855 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:01:13,541 INFO Host: Pushing label: hello
+2025-07-08 15:01:14,854 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-08 15:01:14,990 INFO Authentication (publickey) failed.
+2025-07-08 15:01:15,023 INFO Authentication (password) successful!
+2025-07-08 15:01:15,857 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 15:01:15,857 INFO Host: Pushing label: showing crosshair period
+2025-07-08 15:01:20,864 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 15:01:20,864 INFO Host: Pushing label: showing main instructions
+2025-07-08 15:01:22,480 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 15:01:22,481 INFO Host: Pushing label: Starting countdown
+2025-07-08 15:01:25,511 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 15:01:25,512 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 15:01:26,522 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 15:01:26,522 INFO Host: Pushing label: Beer Image
+2025-07-08 15:01:30,207 INFO Host: Received line: '"action": "label", "label": "Beer Image: Yes"}'
+2025-07-08 15:01:30,209 INFO Host: Pushing label: Beer Image: Yes
+2025-07-08 15:01:31,594 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:01:32,710 INFO Host: Pushing label: touch
+2025-07-08 15:01:32,717 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 15:01:32,718 INFO Host: Pushing label: Corona Image
+2025-07-08 15:01:39,440 INFO Host: Received line: '"action": "label", "label": "Corona Image: Yes"}'
+2025-07-08 15:01:39,442 INFO Host: Pushing label: Corona Image: Yes
+2025-07-08 15:01:40,641 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:01:41,750 INFO Host: Pushing label: touch
+2025-07-08 15:01:41,757 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 15:01:41,757 INFO Host: Pushing label: Miller Image
+2025-07-08 15:01:45,640 INFO Host: Received line: '"action": "label", "label": "Miller Image: Yes"}'
+2025-07-08 15:01:45,640 INFO Host: Pushing label: Miller Image: Yes
+2025-07-08 15:01:48,378 INFO Host: Received line: '"action": "label", "label": "Stroop Test Ended"}'
+2025-07-08 15:01:48,379 INFO Host: Pushing label: Stroop Test Ended
+2025-07-08 15:01:48,433 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:01:48,434 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:01:53,390 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 15:01:53,391 INFO Host: Pushing label: showing crosshair period
+2025-07-08 15:01:58,017 INFO Host: Received line: '"action": "stop_button", "test": "Stroop Multisensory Alcohol (Visual & Tactile)"}'
+2025-07-08 15:01:58,018 INFO Host: Stopping test...
+2025-07-08 15:02:02,105 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 15:02:02,105 INFO LabRecorder not connected
+2025-07-08 15:02:02,106 INFO Eyetracker not connected
+2025-07-08 15:02:02,106 INFO Host: Starting test...
+2025-07-08 15:02:02,157 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:02:02,157 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:02:07,134 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 15:02:07,134 INFO Host: Pushing label: showing crosshair period
+2025-07-08 15:02:12,135 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 15:02:12,136 INFO Host: Pushing label: showing main instructions
+2025-07-08 15:02:13,304 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 15:02:13,305 INFO Host: Pushing label: Starting countdown
+2025-07-08 15:02:16,352 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 15:02:16,353 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 15:02:17,358 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 15:02:17,358 INFO Host: Pushing label: Beer Image
+2025-07-08 15:02:25,505 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:02:29,983 INFO Host: Pushing label: touch
+2025-07-08 15:02:29,990 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 15:02:29,991 INFO Host: Pushing label: Corona Image
+2025-07-08 15:02:49,272 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:02:50,071 INFO Host: Pushing label: touch
+2025-07-08 15:02:50,077 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 15:02:50,077 INFO Host: Pushing label: Miller Image
+2025-07-08 15:02:58,957 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 15:02:58,957 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 15:02:59,010 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:02:59,011 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:03:03,904 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-08 15:03:03,904 INFO Host: Stopping test...
+2025-07-08 15:03:08,152 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Alcohol Visual, Tactile & Olfactory"}'
+2025-07-08 15:03:08,152 INFO LabRecorder not connected
+2025-07-08 15:03:08,153 INFO Eyetracker not connected
+2025-07-08 15:03:08,153 INFO Host: Starting test...
+2025-07-08 15:03:08,193 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:03:08,194 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:03:13,189 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 15:03:13,190 INFO Host: Pushing label: showing crosshair period
+2025-07-08 15:03:18,178 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-08 15:03:18,179 INFO Host: Pushing label: showing main instructions
+2025-07-08 15:03:18,559 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-08 15:03:18,560 INFO Host: Pushing label: Starting countdown
+2025-07-08 15:03:21,575 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-08 15:03:21,576 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-08 15:03:22,581 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-08 15:03:22,581 INFO Host: Pushing label: Beer Image
+2025-07-08 15:03:27,961 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:03:28,583 INFO Host: Pushing label: touch
+2025-07-08 15:03:28,589 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-08 15:03:28,589 INFO Host: Pushing label: Miller Image
+2025-07-08 15:03:34,001 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-08 15:03:34,506 INFO Host: Pushing label: touch
+2025-07-08 15:03:34,513 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-08 15:03:34,513 INFO Host: Pushing label: Corona Image
+2025-07-08 15:03:44,409 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-08 15:03:44,411 INFO Host: Pushing label: Passive Test Ended
+2025-07-08 15:03:44,450 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-08 15:03:44,451 INFO Host: Pushing label: showing crosshair instructions
+2025-07-08 15:03:49,409 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-08 15:03:49,409 INFO Host: Pushing label: showing crosshair period
+2025-07-08 15:03:56,519 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Alcohol Visual, Tactile & Olfactory"}'
+2025-07-08 15:03:56,520 INFO Host: Stopping test...
+2025-07-08 15:03:59,882 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-08 15:03:59,882 INFO Client disconnected.
