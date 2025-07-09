@@ -16,38 +16,41 @@ ssh_user = 'benja'
 ssh_password = 'neuro'
 remote_venv_activate = 'source ~/Desktop/bin/activate'
 remote_script = 'python ~/forcereadwithzero.py'
-local_script = ['python', '\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-\\eeg_stimulus_project\\stimulus\\tactile_box_code\\import_socket.py']
 
 ssh_client = None
 remote_channel = None
 output_queue = queue.Queue()
 
-def start_remote_script():
+def start_remote_script(local_script_callback): 
     def task():
         global ssh_client, remote_channel
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(ssh_host, username=ssh_user, password=ssh_password)
+        try:
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(ssh_host, username=ssh_user, password=ssh_password)
 
-        remote_command = f"{remote_venv_activate} && {remote_script}"
-        remote_channel = ssh_client.get_transport().open_session()
-        remote_channel.get_pty()
-        remote_channel.exec_command(remote_command)
+            remote_command = f"{remote_venv_activate} && {remote_script}"
+            remote_channel = ssh_client.get_transport().open_session()
+            remote_channel.get_pty()
+            remote_channel.exec_command(remote_command)
 
-        while True:
-            if remote_channel.recv_ready():
-                data = remote_channel.recv(1024).decode()
-                output_queue.put(data)
-            if remote_channel.exit_status_ready():
-                break
 
-        ssh_client.close()
-        output_queue.put("[INFO] Remote script ended.\n")
+            while True:
+                if remote_channel.recv_ready():
+                    data = remote_channel.recv(1024).decode()
+                    output_queue.put(data)
+                if remote_channel.exit_status_ready():
+                    break
+
+            ssh_client.close()
+            output_queue.put("[INFO] Remote script ended.\n")
+        except Exception as e:
+            output_queue.put(f"[ERROR] Failed to start remote script: {e}\n")
 
     threading.Thread(target=task, daemon=True).start()
     print("Attempting to remote in to the Raspberry Pi...")
     time.sleep(5)  # Allow time for the thread to start
-    start_local_script()
+    local_script_callback()
 
 def stop_remote_script():
     global remote_channel
@@ -57,9 +60,6 @@ def stop_remote_script():
         except Exception:
             pass  # Ignore errors if already closed
         output_queue.put("[INFO] Remote script manually stopped.\n")
-
-def start_local_script():
-    subprocess.Popen(local_script)
 
 class RemoteScriptGUI(QMainWindow):
     def __init__(self, shared_status, connection=None):
@@ -136,7 +136,7 @@ class RemoteScriptGUI(QMainWindow):
         self.timer.timeout.connect(self.update_output)
         self.timer.start(300)
 
-        self.send_label_to_control("hello")
+        self.connected = False
 
     #def connect_label_socket(self):
     #    """Establish a persistent connection to the control window for label sending."""
@@ -159,7 +159,28 @@ class RemoteScriptGUI(QMainWindow):
 
     def start_script(self):
         self.status_label.setText("Status: Starting remote script...")
-        threading.Thread(target=start_remote_script, daemon=True).start()
+        threading.Thread(target=lambda: start_remote_script(self.start_local_script), daemon=True).start()
+        #start_remote_script(on_success=lambda: self.send_label_to_control("tactile_started"))
+
+    def start_local_script(self):
+        PI_IP = '10.115.12.225'  # Raspberry Pi's IP
+        PORT = 5006
+        OUTPUT_FILENAME = r"C:\Users\cpl4168\Documents\Paid Research\Software-for-Paid-Research-\eeg_stimulus_project\stimulus\tactile_box_code\received_data.txt"
+        
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((PI_IP, PORT))
+                with open(OUTPUT_FILENAME, "wb") as f:
+                    print(f"Connected to {PI_IP}:{PORT}. Receiving data...")
+                    self.send_label_to_control("tactile_connected")
+                    while True:
+                        data = s.recv(1024)
+                        if not data:
+                            break
+                        f.write(data)
+            print(f"All data saved to {OUTPUT_FILENAME}")
+        except KeyboardInterrupt:
+            print("Connection terminated by user.")  
 
     def stop_script(self):
         self.status_label.setText("Status: Stopping remote script...")
@@ -183,7 +204,7 @@ class RemoteScriptGUI(QMainWindow):
                             # Only send label on rising edge
                             if self.lsl_enabled and touched and not self.last_touch_state:
                                 #event_time = datetime.datetime.now().isoformat()
-                                self.send_label_to_control("touch")
+                                self.send_label_to_control("tactile_touch")
                                 self.status_label.setText("Status: Force exceeds threshold!")
                             elif not touched:
                                 self.status_label.setText("Status: Waiting for touch...")
@@ -227,7 +248,7 @@ class RemoteScriptGUI(QMainWindow):
 
     def send_label_to_control(self, label):
         """Send a label with timestamp to the control window using a new socket connection."""
-        msg = {"action": "label", "label": label}
+        msg = {"action": label}
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(('localhost', 9999))  # Use the correct port for the Control Window

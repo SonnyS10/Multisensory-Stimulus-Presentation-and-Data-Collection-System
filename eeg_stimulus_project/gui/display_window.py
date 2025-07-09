@@ -334,7 +334,7 @@ class DisplayWindow(QMainWindow):
         self.waiting_for_next = False
         self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
         self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
-
+        self.waiting_for_initial_touch = False
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -475,8 +475,12 @@ class DisplayWindow(QMainWindow):
                 self.parent().next_button.setEnabled(False)
             self.show_touch_instruction()
 
-    def show_touch_instruction(self):
-        self.instructions_label.setText("You may now touch the object.")
+    def show_touch_instruction(self, initial=False):
+        if initial:
+            self.instructions_label.setText("Please touch the object to begin.")
+            self.waiting_for_initial_touch = True
+        else:
+            self.instructions_label.setText("You may now touch the object.")
         self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
@@ -484,12 +488,17 @@ class DisplayWindow(QMainWindow):
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.set_instruction_text("You may now touch the object.", QFont("Arial", 32, QFont.Bold))
+            self.mirror_widget.set_instruction_text(self.instructions_label.text(), QFont("Arial", 32, QFont.Bold))
         self.send_message({"action": "touchbox_lsl_true"})
         self.showing_touch_instruction = True
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
+        if self.waiting_for_initial_touch:
+            self.waiting_for_initial_touch = False
+            self.showing_touch_instruction = False
+            self.begin_experiment()  # This will show the first image
+            return
         if not self.showing_touch_instruction:
             print("Touch advance ignored: not showing touch instruction.")
             return
@@ -658,7 +667,13 @@ class DisplayWindow(QMainWindow):
             self.countdown_label.setText("Go!")
             label = "Countdown Finished, starting experiment"
             self.send_message({"action": "label", "label": label})  # Send label to the server
-            QTimer.singleShot(1000, self.begin_experiment)
+            QTimer.singleShot(1000, self.after_countdown)
+
+    def after_countdown(self):
+        if "Tactile" in self.current_test:
+            self.show_touch_instruction(initial=True)
+        else:
+            self.begin_experiment()
 
     #This method is called to begin the experiment, it sets the stacked layout to the experiment widget and starts the experiment
     def begin_experiment(self):

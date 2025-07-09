@@ -335,22 +335,9 @@ class ControlWindow(QMainWindow):
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     def open_tactile_box(self):
-        ## Path to your tactile_setup.py
-        #script_path = os.path.join(
-        #    "c:/Users/cpl4168/Documents/Paid Research/Software-for-Paid-Research-/eeg_stimulus_project/stimulus/tactile_box_code/tactile_setup.py"
-        #)
-        ## Use sys.executable to ensure the same Python interpreter is used
-        #subprocess.Popen([sys.executable, script_path])
-
-        #self.shared_status['lsl_enabled'] = True
-
-        #from eeg_stimulus_project.stimulus.tactile_box_code.tactile_setup import RemoteScriptGUI
         from eeg_stimulus_project.stimulus.tactile_box_code import tactile_setup
         self.tactile_process = Process(target=tactile_setup.run_tactile_setup, args=(self.shared_status, self.connection))
         self.tactile_process.start()
-
-        #self.tactile_window = RemoteScriptGUI(self.shared_status, self.connection)
-        #self.tactile_window.show()
 
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, icon_label, is_green):
@@ -439,13 +426,19 @@ class ControlWindow(QMainWindow):
                         data += chunk
                     try:
                         msg = json.loads(data.decode('utf-8').strip())
-                        if msg.get("action") == "label":
-                            label = msg.get("label")
-                            print(f"Received label: {label}")
+                        if msg.get("action") == "tactile_connected":
+                            label = "tactile_connected"
+                            logging.info(f"Received label: {label}")
                             self.label_push(label)
                             logging.info(f"Host: Pushing label: {label}")
-                            if label == "touch":
-                                self.connection.sendall((json.dumps({"action": "object_touched"}) + "\n").encode('utf-8'))
+                            self.update_app_status_icon(self.touchbox_connected_icon, True)
+                        if msg.get("action") == "tactile_touch":
+                            label = "tactile_touch"
+                            logging.info(f"Received label: {label}")
+                            self.label_push(label)
+                            logging.info(f"Host: Pushing label: {label}")
+                            self.connection.sendall((json.dumps({"action": "object_touched"}) + "\n").encode('utf-8'))
+                            self.update_app_status_icon(self.lsl_touch_icon, False)
                     except Exception as e:
                         print(f"Error handling label message: {e}")
         threading.Thread(target=tactile_listener, daemon=True).start()
