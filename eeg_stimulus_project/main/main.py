@@ -243,14 +243,14 @@ class MainWindow(QMainWindow):
         host_ip = self.host_ip_input.text().strip() if client else None
 
         # Host or local mode: require subject info
-        if host or (not host and not client):
+        if host:
             if not subject_id or test_number not in ['1', '2']:
                 QMessageBox.critical(self, "Error", "Please enter a valid Subject ID and Test Number (1 or 2).")
                 self._reset_buttons()
                 return
-
+            threading.Thread(target=self.start_server, daemon=True).start()  # Start server in background thread
         # Client mode: require host IP and connect
-        if client:
+        elif client:
             if not host_ip:
                 QMessageBox.critical(self, "Error", "Please enter the Host IP for client mode.")
                 self._reset_buttons()

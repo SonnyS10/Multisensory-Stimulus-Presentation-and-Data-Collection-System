@@ -177,7 +177,7 @@ class MirroredDisplayWindow(QWidget):
 
     def show_crosshair_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
-        self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
+        self.instructions_label.setText("Instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
