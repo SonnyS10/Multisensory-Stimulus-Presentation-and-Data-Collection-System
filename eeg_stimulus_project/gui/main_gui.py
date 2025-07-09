@@ -303,109 +303,169 @@ class Frame(QFrame):
         self.connection = connection
         self.client = client
         self.log_queue = log_queue
-        
-        self.layout = QVBoxLayout(self)
-        
-        top_frame = QFrame(self)
-        top_frame.setStyleSheet(f"background-color: rgb(146, 63, 179);")
-        top_frame.setMaximumHeight(140)
-        self.layout.addWidget(top_frame)
-        
-        top_layout = QVBoxLayout(top_frame)
-        
-        header = QLabel(title, self)
-        header.setFont(QFont("Helvetica", 17, QFont.Bold))
-        header.setAlignment(Qt.AlignCenter)
-        header.setStyleSheet(f"background-color: rgb(146, 63, 179);")
-        top_layout.addWidget(header)
-        
-        # Middle frame with the EEG graph or display windows
-        self.middle_frame = QFrame(self)
-        self.middle_frame.setStyleSheet(f"background-color: #CBC3E3;")
-        self.middle_frame.setMinimumHeight(490)
-        self.layout.addWidget(self.middle_frame)
-
-        self.middle_frame.setLayout(QHBoxLayout())
-        
-        # Save parent reference for later use
         self.parent = parent
+
+        # --- Aesthetic Styles ---
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #999999;
+                border-radius: 16px;
+                border: 1.5px solid #bc85fa;
+            }
+        """)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.setSpacing(18)
+
+        # Top frame/header
+        top_frame = QFrame(self)
+        top_frame.setStyleSheet("""
+            QFrame {
+                background-color: #7E57C2;
+                border-radius: 12px;
+            }
+        """)
+        top_frame.setMaximumHeight(150)
+        self.layout.addWidget(top_frame)
+
+        top_layout = QVBoxLayout(top_frame)
+        top_layout.setContentsMargins(15, 15, 15, 15)
+        top_layout.setSpacing(8)
+
+        header = QLabel(title, self)
+        header.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        header.setAlignment(Qt.AlignCenter)
+        header.setStyleSheet("color: white;")
+        top_layout.addWidget(header)
+
+        # Middle frame for EEG graph or display windows
+        self.middle_frame = QFrame(self)
+        self.middle_frame.setStyleSheet("""
+            QFrame {
+                background-color: #ede7f6;
+                border-radius: 10px;
+            }
+        """)
+        self.middle_frame.setMinimumHeight(420)
+        self.layout.addWidget(self.middle_frame)
+        self.middle_frame.setLayout(QHBoxLayout())
+        self.layout.addSpacing(10)
+
+        # Button style for all buttons
+        button_style = """
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+                font-size: 15px;
+            }
+            QPushButton:disabled {
+                background-color: #bdbdbd;
+                color: #eee;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+            QCheckBox {
+                font-size: 15px;
+                padding: 2px 8px;
+            }
+        """
 
         #If the test is a stroop test, add these buttons and checkboxes
         if is_stroop_test:
             button_layout = QHBoxLayout()
+            button_layout.setSpacing(14)
             top_layout.addLayout(button_layout)
 
             self.start_button = QPushButton("Start", self)
+            self.start_button.setStyleSheet(button_style)
             self.start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(self.start_button)
 
             stop_button = QPushButton("Stop", self)
-            stop_button.clicked.connect(self.stop_button_clicked_stroop)  # <-- update this line
+            stop_button.setStyleSheet(button_style)
+            stop_button.clicked.connect(self.stop_button_clicked_stroop)
             button_layout.addWidget(stop_button)
 
             self.pause_button = QPushButton("Pause", self)
+            self.pause_button.setStyleSheet(button_style)
             self.pause_button.setEnabled(False)
             self.pause_button.clicked.connect(self.pause_display_window)
             button_layout.addWidget(self.pause_button)
 
             self.resume_button = QPushButton("Resume", self)
+            self.resume_button.setStyleSheet(button_style)
             self.resume_button.setEnabled(False)
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
 
             self.next_button = QPushButton("Next", self)
-            self.next_button.setEnabled(False)  # Initially disabled
+            self.next_button.setStyleSheet(button_style)
+            self.next_button.setEnabled(False)
             self.next_button.clicked.connect(self.on_next_button_clicked)
             button_layout.addWidget(self.next_button)
 
             self.display_button = QCheckBox("Display", self)
+            self.display_button.setStyleSheet(button_style)
             button_layout.addWidget(self.display_button)
 
             bottom_frame = QFrame(self)
-            bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
-            bottom_frame.setMaximumHeight(70)
+            bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
+            bottom_frame.setMaximumHeight(50)
             self.layout.addWidget(bottom_frame)
 
-        #I the test is NOT a stroop test(Passive Test), add these buttons and checkboxes
+        # If the test is NOT a stroop test (Passive Test), add these buttons and checkboxes
         if not is_stroop_test:
             button_layout = QHBoxLayout()
+            button_layout.setSpacing(14)
             top_layout.addLayout(button_layout)
 
             self.start_button = QPushButton("Start", self)
+            self.start_button.setStyleSheet(button_style)
             self.start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(self.start_button)
 
             stop_button = QPushButton("Stop", self)
+            stop_button.setStyleSheet(button_style)
             stop_button.clicked.connect(self.stop_button_clicked_passive)
             button_layout.addWidget(stop_button)
 
-            self.pause_button = QPushButton("Pause", self)  # <-- FIXED
+            self.pause_button = QPushButton("Pause", self)
+            self.pause_button.setStyleSheet(button_style)
             self.pause_button.setEnabled(False)
             self.pause_button.clicked.connect(self.pause_display_window)
             button_layout.addWidget(self.pause_button)
 
-            self.resume_button = QPushButton("Resume", self)  # <-- FIXED
+            self.resume_button = QPushButton("Resume", self)
+            self.resume_button.setStyleSheet(button_style)
             self.resume_button.setEnabled(False)
             self.resume_button.clicked.connect(self.resume_display_window)
             button_layout.addWidget(self.resume_button)
 
             self.next_button = QPushButton("Next", self)
-            self.next_button.setEnabled(False)  # Initially disabled
+            self.next_button.setStyleSheet(button_style)
+            self.next_button.setEnabled(False)
             self.next_button.clicked.connect(self.on_next_button_clicked)
             button_layout.addWidget(self.next_button)
 
-            vr_button = QCheckBox("VR", self)
-            button_layout.addWidget(vr_button)
-                
+            self.vr_button = QCheckBox("VR", self)
+            self.vr_button.setStyleSheet(button_style)
+            button_layout.addWidget(self.vr_button)
+
             self.display_button = QCheckBox("Display", self)
+            self.display_button.setStyleSheet(button_style)
             button_layout.addWidget(self.display_button)
-                
-            viewing_booth_button = QCheckBox("Viewing Booth", self)
-            button_layout.addWidget(viewing_booth_button)
+
+            self.viewing_booth_button = QCheckBox("Viewing Booth", self)
+            self.viewing_booth_button.setStyleSheet(button_style)
+            button_layout.addWidget(self.viewing_booth_button)
 
             bottom_frame = QFrame(self)
-            bottom_frame.setStyleSheet(f"background-color: #bc85fa;")
-            bottom_frame.setMaximumHeight(70)
+            bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
+            bottom_frame.setMaximumHeight(50)
             self.layout.addWidget(bottom_frame)
 
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
@@ -529,42 +589,71 @@ class InstructionFrame(QWidget):
         self.parent = parent
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 32, 32, 32)
+        layout.setSpacing(18)
+
         label = QLabel("Welcome!\n\nPlease read the instructions carefully before starting.\n\n[Your instructions here]")
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignCenter)
-        label.setFont(QFont("Arial", 16))
+        label.setFont(QFont("Segoe UI", 16))
         layout.addWidget(label)
 
         # Latency check
         self.latency_label = QLabel("Latency: Not checked")
         self.latency_label.setAlignment(Qt.AlignCenter)
+        self.latency_label.setFont(QFont("Segoe UI", 12))
         layout.addWidget(self.latency_label)
 
         latency_button = QPushButton("Check Latency")
-        latency_button.setFont(QFont("Arial", 12))
+        latency_button.setFont(QFont("Segoe UI", 12))
+        latency_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+                font-size: 15px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
         latency_button.clicked.connect(self.send_latency_ping)
         layout.addWidget(latency_button, alignment=Qt.AlignCenter)
 
         # Host status
         self.status_label = QLabel("Host Status: Unknown")
         self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setFont(QFont("Segoe UI", 12))
         layout.addWidget(self.status_label)
 
         continue_button = QPushButton("Continue")
-        continue_button.setFont(QFont("Arial", 14))
+        continue_button.setFont(QFont("Segoe UI", 14))
+        continue_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7E57C2;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #512da8;
+            }
+        """)
         continue_button.clicked.connect(parent.show_first_test_frame)
         layout.addWidget(continue_button, alignment=Qt.AlignCenter)
 
     def send_latency_ping(self):
         if hasattr(self.parent, "start_latency_test"):
             self.parent.start_latency_test()
-            
+
     def update_latency(self, latency_ms, count=None, avg=None):
         if avg is not None:
             self.latency_label.setText(f"Average Latency: {avg:.2f} ms ({count} samples)")
         else:
             self.latency_label.setText(f"Latency: {latency_ms:.2f} ms")
-    
+
     def update_status(self, status_text):
         self.status_label.setText(f"Host Status: {status_text}")
 

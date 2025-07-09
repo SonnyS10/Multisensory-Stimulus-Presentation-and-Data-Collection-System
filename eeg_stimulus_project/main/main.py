@@ -248,8 +248,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", "Please enter a valid Subject ID and Test Number (1 or 2).")
                 self._reset_buttons()
                 return
-            threading.Thread(target=self.start_server, daemon=True).start()  # Start server in a separate thread
-
+            threading.Thread(target=self.start_server, daemon=True).start()  # Start server in background thread
         # Client mode: require host IP and connect
         elif client:
             if not host_ip:

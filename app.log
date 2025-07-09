@@ -1847,6 +1847,7 @@
 2025-07-09 13:05:00,132 INFO Client: Connected to host.
 2025-07-09 13:06:49,047 INFO Client: Connected to host.
 >>>>>>> 55a3dd581d2190edf769adf421bc22616e223ce6
+<<<<<<< HEAD
 2025-07-09 13:30:35,436 INFO Host: Waiting for client on port 9999...
 2025-07-09 13:30:36,352 INFO Host: Connected by ('169.254.185.196', 53273)
 2025-07-09 13:30:37,839 INFO Host: Listening for commands...
@@ -1900,3 +1901,7 @@
 2025-07-09 13:32:30,163 INFO Client disconnected.
 : [WinError 10054] An existing connection was forcibly closed by the remote host
 2025-07-09 13:58:39,131 INFO Host: Waiting for client on port 9999...
+=======
+2025-07-09 13:30:36,398 INFO Client: Connected to host.
+2025-07-09 13:31:19,530 INFO Client: Connected to host.
+>>>>>>> 489b08cafec0ce18d19dd7d002eb046c5853aaa5
