@@ -156,24 +156,17 @@ class MirroredDisplayWindow(QWidget):
         self.paused = False
         
     def end_screen(self):
-        # Create a new widget for the end screen
-        end_widget = QWidget()
-        end_widget.setStyleSheet("background-color: white;")
-        end_layout = QVBoxLayout(end_widget)
-        end_layout.setAlignment(Qt.AlignCenter)  # Center contents
-
-        # Add a label with the end message
-        end_label = QLabel("Test has ended.\n Please wait for the experimenter to close the test.", end_widget)
-        end_label.setFont(QFont("Arial", 22))
-        end_label.setAlignment(Qt.AlignCenter)
-        end_layout.addWidget(end_label, alignment=Qt.AlignCenter)
-
-        # Make the end_widget fill the mirrored window
-        end_widget.setMinimumSize(self.size())
-        end_widget.setMaximumSize(self.size())
-
-        self.stacked_layout.addWidget(end_widget)
-        self.stacked_layout.setCurrentWidget(end_widget)
+        self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
+        self.instructions_label.setFont(QFont("Arial", 22))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setStyleSheet("background-color: white;")
+        self.overlay_widget.setMinimumSize(0, 0)
+        self.overlay_widget.setMaximumSize(16777215, 16777215)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.end_screen()
 
     def show_crosshair_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
@@ -248,8 +241,11 @@ class DisplayWindow(QMainWindow):
         #This is the overlay that shows the instructions for the experiment that the subject sees
         #IN THE FUTURE THIS SHOULD BE DIFFERENT FOR EACH TEST
         self.instructions_label = QLabel("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.", self.overlay_widget)
-        self.instructions_label.setFont(QFont("Arial", 18))
+        #self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.instructions_label.setMaximumHeight(120)
+        self.instructions_label.setWordWrap(True)
         self.overlay_layout.addWidget(self.instructions_label)
 
         self.countdown_label = QLabel("", self.overlay_widget)
@@ -484,7 +480,7 @@ class DisplayWindow(QMainWindow):
             self.waiting_for_initial_touch = True
         else:
             self.instructions_label.setText("You may now touch the object.")
-        self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
+        #self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -566,12 +562,15 @@ class DisplayWindow(QMainWindow):
     #This method is called when the window is resized, it updates the image label and the instruction text
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Example: scale font size for instructions_label
-        label_height = self.instructions_label.height()
-        font_size = max(8, int(label_height * 0.03))  # Adjust multiplier as needed
+        # Set instructions_label height to about half the window height
+        half_height = int(self.height() * 0.5)
+        self.instructions_label.setMinimumHeight(half_height)
+        self.instructions_label.setMaximumHeight(half_height)
+        self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # Dynamically scale font size based on label height
+        font_size = max(18, min(int(half_height * 0.25), 40))
         font = QFont("Arial", font_size, QFont.Bold)
         self.instructions_label.setFont(font)
-        # You can do similar scaling for other labels if needed
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
@@ -641,6 +640,7 @@ class DisplayWindow(QMainWindow):
     #This method is called to handle the key press events, it checks if the overlay widget is visible and if the space bar is pressed, it starts the countdown    
     def keyPressEvent(self, event):
         if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space and self.ready_for_space:
+            self.ready_for_space = False
             self.start_countdown()
         else:
             super().keyPressEvent(event)
@@ -709,21 +709,15 @@ class DisplayWindow(QMainWindow):
             event.ignore()
 
     def end_screen(self):
-        # Create a new widget for the end screen
-        end_widget = QWidget()
-        end_layout = QVBoxLayout(end_widget)
-
-        # Add a label with the end message
-        end_label = QLabel("Test has ended. \n Please wait for the experimenter to close the test.", end_widget)
-        end_label.setFont(QFont("Arial", 18))
-        end_label.setAlignment(Qt.AlignCenter)
-        end_layout.addWidget(end_label)
-
-        # Set the end_widget as the only widget in the stacked layout
-        self.stacked_layout.addWidget(end_widget)
-        self.stacked_layout.setCurrentWidget(end_widget)
-
-        # Show end screen in the mirror as well
+        self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
+        #self.instructions_label.setFont(QFont("Arial", 22))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setStyleSheet("background-color: white;")
+        self.overlay_widget.setMinimumSize(0, 0)
+        self.overlay_widget.setMaximumSize(16777215, 16777215)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.end_screen()
 
@@ -766,7 +760,7 @@ class DisplayWindow(QMainWindow):
         # Restore your original instructions and allow the experiment to proceed
         label = "showing main instructions"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        self.instructions_label.setFont(QFont("Arial", 18))
+        #self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)

@@ -1847,3 +1847,56 @@
 2025-07-09 13:05:00,132 INFO Client: Connected to host.
 2025-07-09 13:06:49,047 INFO Client: Connected to host.
 >>>>>>> 55a3dd581d2190edf769adf421bc22616e223ce6
+2025-07-09 13:30:35,436 INFO Host: Waiting for client on port 9999...
+2025-07-09 13:30:36,352 INFO Host: Connected by ('169.254.185.196', 53273)
+2025-07-09 13:30:37,839 INFO Host: Listening for commands...
+2025-07-09 13:30:51,203 INFO Client disconnected.
+: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-09 13:31:18,788 INFO Host: Waiting for client on port 9999...
+2025-07-09 13:31:19,483 INFO Host: Connected by ('169.254.185.196', 53299)
+2025-07-09 13:31:20,998 INFO Host: Listening for commands...
+2025-07-09 13:31:27,487 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-09 13:31:27,804 INFO Authentication (publickey) failed.
+2025-07-09 13:31:27,838 INFO Authentication (password) successful!
+2025-07-09 13:31:28,743 INFO Host: Received line: '"action": "start_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-09 13:31:28,784 INFO LabRecorder not connected
+2025-07-09 13:31:28,784 INFO Eyetracker not connected
+2025-07-09 13:31:28,785 INFO Host: Starting test...
+2025-07-09 13:31:28,846 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-09 13:31:28,846 INFO Host: Pushing label: showing crosshair instructions
+2025-07-09 13:31:32,524 INFO Received label: tactile_connected
+2025-07-09 13:31:32,525 INFO Host: Pushing label: tactile_connected
+2025-07-09 13:31:33,842 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-09 13:31:33,843 INFO Host: Pushing label: showing crosshair period
+2025-07-09 13:31:38,843 INFO Host: Received line: '"action": "label", "label": "showing main instructions"}'
+2025-07-09 13:31:38,843 INFO Host: Pushing label: showing main instructions
+2025-07-09 13:31:40,319 INFO Host: Received line: '"action": "label", "label": "Starting countdown"}'
+2025-07-09 13:31:40,319 INFO Host: Pushing label: Starting countdown
+2025-07-09 13:31:43,328 INFO Host: Received line: '"action": "label", "label": "Countdown Finished, starting experiment"}'
+2025-07-09 13:31:43,328 INFO Host: Pushing label: Countdown Finished, starting experiment
+2025-07-09 13:31:44,334 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-09 13:31:48,636 INFO Received label: tactile_touch
+2025-07-09 13:31:48,636 INFO Host: Pushing label: tactile_touch
+2025-07-09 13:31:48,648 INFO Host: Received line: '"action": "label", "label": "Miller Image"}'
+2025-07-09 13:31:48,648 INFO Host: Pushing label: Miller Image
+2025-07-09 13:31:54,304 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-09 13:31:55,906 INFO Received label: tactile_touch
+2025-07-09 13:31:55,906 INFO Host: Pushing label: tactile_touch
+2025-07-09 13:31:55,914 INFO Host: Received line: '"action": "label", "label": "Beer Image"}'
+2025-07-09 13:31:55,914 INFO Host: Pushing label: Beer Image
+2025-07-09 13:32:01,607 INFO Host: Received line: '"action": "touchbox_lsl_true"}'
+2025-07-09 13:32:02,827 INFO Received label: tactile_touch
+2025-07-09 13:32:02,827 INFO Host: Pushing label: tactile_touch
+2025-07-09 13:32:02,835 INFO Host: Received line: '"action": "label", "label": "Corona Image"}'
+2025-07-09 13:32:02,835 INFO Host: Pushing label: Corona Image
+2025-07-09 13:32:11,528 INFO Host: Received line: '"action": "label", "label": "Passive Test Ended"}'
+2025-07-09 13:32:11,529 INFO Host: Pushing label: Passive Test Ended
+2025-07-09 13:32:11,571 INFO Host: Received line: '"action": "label", "label": "showing crosshair instructions"}'
+2025-07-09 13:32:11,572 INFO Host: Pushing label: showing crosshair instructions
+2025-07-09 13:32:16,551 INFO Host: Received line: '"action": "label", "label": "showing crosshair period"}'
+2025-07-09 13:32:16,551 INFO Host: Pushing label: showing crosshair period
+2025-07-09 13:32:23,759 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
+2025-07-09 13:32:23,759 INFO Host: Stopping test...
+2025-07-09 13:32:30,163 INFO Client disconnected.
+: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-07-09 13:58:39,131 INFO Host: Waiting for client on port 9999...
