@@ -3,7 +3,7 @@ sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
-from eeg_stimulus_project.stimulus.asset_handler import Display
+from eeg_stimulus_project.assets.asset_handler import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
@@ -207,7 +207,7 @@ class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
     proceed_after_crosshair = pyqtSignal()  # Add this at class level
 
-    def __init__(self, connection, log_queue, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False):
+    def __init__(self, connection, log_queue, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None):
         super().__init__(parent)
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -335,6 +335,9 @@ class DisplayWindow(QMainWindow):
         self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
         self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
         self.waiting_for_initial_touch = False
+        # Step 4: Load assets using user folders if provided
+        Display.test_assets = Display.get_assets(alcohol_folder, non_alcohol_folder)
+
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -711,7 +714,7 @@ class DisplayWindow(QMainWindow):
         end_layout = QVBoxLayout(end_widget)
 
         # Add a label with the end message
-        end_label = QLabel("Test has ended. Please wait for the experimenter to close the test.", end_widget)
+        end_label = QLabel("Test has ended. \n Please wait for the experimenter to close the test.", end_widget)
         end_label.setFont(QFont("Arial", 18))
         end_label.setAlignment(Qt.AlignCenter)
         end_layout.addWidget(end_label)
@@ -728,7 +731,7 @@ class DisplayWindow(QMainWindow):
         # Show your pre-instructions
         label = "showing crosshair instructions"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        self.instructions_label.setText("Pre-instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
+        self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)

@@ -1588,6 +1588,7 @@
 2025-07-08 14:59:21,526 INFO Client: Connected to host.
 2025-07-08 15:01:05,656 INFO Client: Connected to host.
 >>>>>>> bca4a3a255f81180c7b17b7e62ba538ba991b939
+<<<<<<< HEAD
 2025-07-09 11:02:55,163 INFO Host: Waiting for client on port 9999...
 2025-07-09 11:02:58,084 INFO Host: Connected by ('169.254.185.196', 64067)
 2025-07-09 11:03:00,469 INFO Host: Listening for commands...
@@ -1838,3 +1839,11 @@
 2025-07-09 13:07:37,094 INFO Host: Received line: '"action": "stop_button", "test": "Multisensory Neutral Visual, Tactile & Olfactory"}'
 2025-07-09 13:07:37,095 INFO Host: Stopping test...
 2025-07-09 13:07:40,594 INFO Host: Listener crashed: [WinError 10054] An existing connection was forcibly closed by the remote host
+=======
+2025-07-09 11:02:58,121 INFO Client: Connected to host.
+2025-07-09 11:05:09,668 INFO Client: Connected to host.
+2025-07-09 11:10:39,832 INFO Please enter a valid Subject ID and Test Number (1 or 2).
+2025-07-09 12:59:32,848 INFO Client: Connected to host.
+2025-07-09 13:05:00,132 INFO Client: Connected to host.
+2025-07-09 13:06:49,047 INFO Client: Connected to host.
+>>>>>>> 55a3dd581d2190edf769adf421bc22616e223ce6
