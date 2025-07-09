@@ -1,6 +1,6 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
@@ -18,12 +18,14 @@ from logging.handlers import QueueHandler
 
 
 class GUI(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue,  base_dir, test_number, client=False):
+    def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False, alcohol_folder=None, non_alcohol_folder=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
         self.client = client
         self.log_queue = log_queue
+        self.alcohol_folder = alcohol_folder
+        self.non_alcohol_folder = non_alcohol_folder
         
         if connection is not None:
             self.start_listener()
@@ -157,7 +159,12 @@ class GUI(QMainWindow):
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
                 # Create both widgets
-                current_frame.display_widget = DisplayWindow(self.connection, log_queue, label_stream, current_frame, current_test, self.base_dir, self.test_number, eyetracker = eyetracker, shared_status=shared_status, client=self.client)
+                current_frame.display_widget = DisplayWindow(
+                    self.connection, log_queue, label_stream, current_frame, current_test,
+                    self.base_dir, self.test_number, eyetracker=eyetracker, shared_status=shared_status, client=self.client,
+                    alcohol_folder=self.alcohol_folder,
+                    non_alcohol_folder=self.non_alcohol_folder
+                )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
@@ -404,35 +411,36 @@ class Frame(QFrame):
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
-            if self.display_button.isChecked():
-                self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
-                if self.label_stream is None:                
-                    self.label_stream = LSLLabelStream()
-                    self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
-                    self.start_button.setEnabled(False)  # Disable the start button after starting the stream
-                if self.shared_status.get('lab_recorder_connected', False):
-                    # LabRecorder is connected, uses same instance of labrecorder or creates a new one if needed
-                    if self.labrecorder is None or self.labrecorder.s is None:
-                        self.labrecorder = LabRecorder(self.base_dir)
-                    if self.labrecorder and self.labrecorder.s is not None:
-                        self.labrecorder.Start_Recorder(self.parent.get_current_test())
-                    else:
-                        logging.info("LabRecorder not connected")
-                else:
-                    logging.info("LabRecorder not connected in Control Window")
+        # Check if at least one of the checkboxes is checked
+        checked = False
+        # Defensive: check if the attributes exist (they may not in all test types)
+        for attr in ['display_button', 'vr_button', 'viewing_booth_button']:
+            btn = getattr(self, attr, None)
+            if btn is not None and btn.isChecked():
+                checked = True
+                break
 
-                #if self.shared_status.get('eyetracker_connected', False):
-                #    # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
-                #    if self.eyetracker is None or self.eyetracker.device is None:
-                #        self.eyetracker = PupilLabs()
-                #    if self.eyetracker and self.eyetracker.device is not None:
-                #        self.eyetracker.start_recording()
-                #    else:
-                #        print("eyetracker not connected")
-                #else:
-                #    print("eyetracker not connected")
+        if not checked:
+            QMessageBox.critical(self, "Error", "Please select at least one display mode (VR, Display, or Viewing Booth) before starting.")
+            return
+
+        if hasattr(self, 'display_button') and self.display_button.isChecked():
+            self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
+            if self.label_stream is None:                
+                self.label_stream = LSLLabelStream()
+                self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
+                self.start_button.setEnabled(False)  # Disable the start button after starting the stream
+            if self.shared_status.get('lab_recorder_connected', False):
+                if self.labrecorder is None or self.labrecorder.s is None:
+                    self.labrecorder = LabRecorder(self.base_dir)
+                if self.labrecorder and self.labrecorder.s is not None:
+                    self.labrecorder.Start_Recorder(self.parent.get_current_test())
+                else:
+                    logging.info("LabRecorder not connected")
             else:
-                self.parent.open_secondary_gui(Qt.Unchecked)
+                logging.info("LabRecorder not connected in Control Window")
+        else:
+            self.parent.open_secondary_gui(Qt.Unchecked)
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
