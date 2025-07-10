@@ -1,6 +1,6 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
@@ -69,8 +69,9 @@ class GUI(QMainWindow):
         self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Stroop Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
         self.multisensory_neutral_visual_olfactory2 = self.create_frame("Stroop Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
 
-        # Instructions Frame
+        # Instructions and Latency Checker Frame
         self.instruction_frame = InstructionFrame(self)
+        self.latency_checker = LatencyChecker(self)
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
@@ -85,13 +86,14 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory2)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         self.stacked_widget.addWidget(self.instruction_frame)
+        self.stacked_widget.addWidget(self.latency_checker)
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
 
         self._latency_test_active = False
         self._latency_rtts = []
         self._latency_test_count = 0
-        
+
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue)
@@ -128,6 +130,9 @@ class GUI(QMainWindow):
 
     def show_instruction_frame(self):
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
+
+    def show_latency_checker(self):
+        self.stacked_widget.setCurrentWidget(self.latency_checker)
 
     def show_first_test_frame(self):
         self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
@@ -217,7 +222,7 @@ class GUI(QMainWindow):
         self._latency_test_active = True
         self._latency_rtts = []
         self._latency_test_count = 0
-        self.instruction_frame.latency_label.setText("Measuring latency...")
+        self.latency_checker.latency_label.setText("Measuring latency...")
         def ping_loop():
             start_time = time.time()
             while time.time() - start_time < 5.0:
@@ -227,9 +232,9 @@ class GUI(QMainWindow):
             self._latency_test_active = False
             if self._latency_rtts:
                 avg = sum(self._latency_rtts) / len(self._latency_rtts)
-                self.instruction_frame.update_latency(0, count=len(self._latency_rtts), avg=avg)
+                self.latency_checker.update_latency(0, count=len(self._latency_rtts), avg=avg)
             else:
-                self.instruction_frame.latency_label.setText("No latency samples received.")
+                self.latency_checker.latency_label.setText("No latency samples received.")
         threading.Thread(target=ping_loop, daemon=True).start()
 
     def send_latency_ping(self, single_test=True):
@@ -253,7 +258,7 @@ class GUI(QMainWindow):
                 self._latency_rtts.append(latency_ms)
                 self._latency_test_count += 1
             else:
-                self.instruction_frame.update_latency(latency_ms)
+                self.latency_checker.update_latency(latency_ms)
 
     def start_listener(self):
         def listen():
@@ -273,7 +278,7 @@ class GUI(QMainWindow):
                             self.handle_latency_pong(msg)
                         elif msg.get("action") == "host_status":
                             status = msg.get("status", "Unknown")
-                            self.instruction_frame.update_status(status)
+                            self.latency_checker.update_status(status)
                         elif msg.get("action") == "object_touched":
                             current_frame = self.stacked_widget.currentWidget()
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
@@ -289,7 +294,7 @@ class GUI(QMainWindow):
         logger.setLevel(logging.INFO)
         logger.handlers = []  # Remove other handlers
         logger.addHandler(queue_handler)
-        
+
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None):
         super().__init__(parent)
@@ -484,6 +489,19 @@ class Frame(QFrame):
             QMessageBox.critical(self, "Error", "Please select at least one display mode (VR, Display, or Viewing Booth) before starting.")
             return
 
+        # --- Tactile connection warning ---
+        is_tactile = "Tactile" in self.parent.get_current_test()
+        if is_tactile and not self.shared_status.get('tactile_connected', False):
+            reply = QMessageBox.question(
+                self,
+                "Tactile Box Not Connected",
+                "The tactile box is not connected, are you sure you want to proceed?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+
         if hasattr(self, 'display_button') and self.display_button.isChecked():
             self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
             if self.label_stream is None:                
@@ -499,6 +517,7 @@ class Frame(QFrame):
                     logging.info("LabRecorder not connected")
             else:
                 logging.info("LabRecorder not connected in Control Window")
+            
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
 
@@ -592,40 +611,63 @@ class InstructionFrame(QWidget):
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(18)
 
-        label = QLabel("Welcome!\n\nPlease read the instructions carefully before starting.\n\n[Your instructions here]")
-        label.setWordWrap(True)
-        label.setAlignment(Qt.AlignCenter)
-        label.setFont(QFont("Segoe UI", 16))
-        layout.addWidget(label)
+        # --- Multi-page instructions ---
+        self.stacked = QStackedWidget(self)
+        layout.addWidget(self.stacked)
 
-        # Latency check
-        self.latency_label = QLabel("Latency: Not checked")
-        self.latency_label.setAlignment(Qt.AlignCenter)
-        self.latency_label.setFont(QFont("Segoe UI", 12))
-        layout.addWidget(self.latency_label)
+        self.pages = []
+        self.add_instruction_page(
+            "Welcome to the Experiment Control Panel!\n\n"
+            "This guide will walk you through the process of running an experiment using the main GUI.\n\n"
+            "Click 'Next' to continue."
+        )
+        self.add_instruction_page(
+            "Navigation Overview:\n\n"
+            "- The sidebar on the left lets you select different experiment types.\n"
+            "- The main area displays controls and status for the selected experiment.\n"
+            "- Use the 'Start', 'Stop', 'Pause', and 'Resume' buttons to control the experiment flow."
+        )
+        self.add_instruction_page(
+            "Button Functions:\n\n"
+            "- Start: Begins the selected test.\n"
+            "- Stop: Ends the current test and saves data.\n"
+            "- Pause: Temporarily halts the test (if supported).\n"
+            "- Resume: Continues a paused test.\n"
+            "- Next: Advances to the next trial or image (if enabled).\n"
+            "- Display/VR/Viewing Booth: Select the output mode for the experiment."
+        )
+        self.add_instruction_page(
+            "Running a Test:\n\n"
+            "1. Select the desired test from the sidebar.\n"
+            "2. Choose the display mode (Display, VR, or Viewing Booth).\n"
+            "3. Click 'Start' to begin.\n"
+            "4. Follow on-screen prompts and monitor the status indicators.\n"
+            "5. Use 'Stop' to end and save the test.\n\n"
+            "For tactile tests, ensure the tactile box is connected before starting."
+        )
+        self.add_instruction_page(
+            "Troubleshooting & Tips:\n\n"
+            "- If a warning appears about the tactile box, check the connection and try again.\n"
+            "- Use the latency check to verify network responsiveness.\n"
+            "- For further help, consult the experiment protocol document or contact the lead researcher.\n\n"
+            "Click 'Continue' to proceed to the latency check and main controls."
+        )
 
-        latency_button = QPushButton("Check Latency")
-        latency_button.setFont(QFont("Segoe UI", 12))
-        latency_button.setStyleSheet("""
-            QPushButton {
-                background-color: #42A5F5;
-                color: white;
-                border-radius: 8px;
-                padding: 8px 22px;
-                font-size: 15px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
-        latency_button.clicked.connect(self.send_latency_ping)
-        layout.addWidget(latency_button, alignment=Qt.AlignCenter)
+        # --- Navigation Buttons ---
+        nav_layout = QHBoxLayout()
+        self.prev_button = QPushButton("Previous")
+        self.prev_button.clicked.connect(self.prev_page)
+        nav_layout.addWidget(self.prev_button)
 
-        # Host status
-        self.status_label = QLabel("Host Status: Unknown")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setFont(QFont("Segoe UI", 12))
-        layout.addWidget(self.status_label)
+        self.page_label = QLabel()
+        self.page_label.setAlignment(Qt.AlignCenter)
+        nav_layout.addWidget(self.page_label, stretch=1)
+
+        self.next_button = QPushButton("Next")
+        self.next_button.clicked.connect(self.next_page)
+        nav_layout.addWidget(self.next_button)
+
+        layout.addLayout(nav_layout)
 
         continue_button = QPushButton("Continue")
         continue_button.setFont(QFont("Segoe UI", 14))
@@ -643,6 +685,84 @@ class InstructionFrame(QWidget):
         """)
         continue_button.clicked.connect(parent.show_first_test_frame)
         layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+        continue_button.setVisible(False)
+        self.continue_button = continue_button
+        self.update_nav_buttons()
+
+    def add_instruction_page(self, text):
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignTop)
+        label.setFont(QFont("Segoe UI", 15))
+        label.setMargin(20)
+        self.stacked.addWidget(label)
+        self.pages.append(label)
+
+    def next_page(self):
+        idx = self.stacked.currentIndex()
+        if idx < self.stacked.count() - 1:
+            self.stacked.setCurrentIndex(idx + 1)
+        self.update_nav_buttons()
+
+    def prev_page(self):
+        idx = self.stacked.currentIndex()
+        if idx > 0:
+            self.stacked.setCurrentIndex(idx - 1)
+        self.update_nav_buttons()
+
+    def update_nav_buttons(self):
+        idx = self.stacked.currentIndex()
+        total = self.stacked.count()
+        self.prev_button.setEnabled(idx > 0)
+        if idx == total - 1:
+            self.next_button.setVisible(False)
+            self.continue_button.setVisible(True)
+        else:
+            self.next_button.setVisible(True)
+            self.continue_button.setVisible(False)
+        self.page_label.setText(f"Page {idx + 1} of {total}")
+
+class LatencyChecker(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 32, 32, 32)
+        layout.setSpacing(18)
+
+        title = QLabel("Latency Checker")
+        title.setFont(QFont("Segoe UI", 18, QFont.Bold))
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        self.latency_label = QLabel("Latency: Not checked")
+        self.latency_label.setAlignment(Qt.AlignCenter)
+        self.latency_label.setFont(QFont("Segoe UI", 12))
+        layout.addWidget(self.latency_label)
+
+        self.status_label = QLabel("Host Status: Unknown")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setFont(QFont("Segoe UI", 12))
+        layout.addWidget(self.status_label)
+
+        latency_button = QPushButton("Check Latency")
+        latency_button.setFont(QFont("Segoe UI", 12))
+        latency_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+                font-size: 15px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        latency_button.clicked.connect(self.send_latency_ping)
+        layout.addWidget(latency_button, alignment=Qt.AlignCenter)
+        self.latency_button = latency_button
 
     def send_latency_ping(self):
         if hasattr(self.parent, "start_latency_test"):

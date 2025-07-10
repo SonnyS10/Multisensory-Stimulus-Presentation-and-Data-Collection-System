@@ -394,9 +394,6 @@ class ControlWindow(QMainWindow):
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
                                 self.shared_status['lsl_enabled'] = True
                                 #self.send_lsl_control("touchbox_lsl_true")
-                            elif action == "touchbox_lsl_false":
-                                self.update_app_status_icon(self.lsl_touch_icon, False)
-                                self.send_lsl_control("touchbox_lsl_false")
                             # ...other actions...
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
@@ -414,7 +411,7 @@ class ControlWindow(QMainWindow):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind(('localhost', 9999))
             sock.listen(5)
-            print("Label listener started on port 9999")
+            #print("Label listener started on port 9999")
             while True:
                 conn, addr = sock.accept()
                 with conn:
@@ -432,6 +429,7 @@ class ControlWindow(QMainWindow):
                             self.label_push(label)
                             logging.info(f"Host: Pushing label: {label}")
                             self.update_app_status_icon(self.touchbox_connected_icon, True)
+                            self.shared_status['tactile_connected'] = True
                         if msg.get("action") == "tactile_touch":
                             label = "tactile_touch"
                             logging.info(f"Received label: {label}")
@@ -476,16 +474,6 @@ class ControlWindow(QMainWindow):
             self.label_stream = LSLLabelStream()
         self.label_stream.push_label(label)
         #print(f"Label pushed: {label}")
-
-    def send_lsl_control(self, action):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(('localhost', 9999))
-            msg = {"action": action}
-            sock.sendall(json.dumps(msg).encode())
-            sock.close()
-        except Exception as e:
-            logging.info(f"Could not send LSL control message: {e}")
         
     # To send status updates, periodically or on change:
         #status_msg = {

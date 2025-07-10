@@ -401,9 +401,9 @@ class DisplayWindow(QMainWindow):
             self.current_label = label
         if "Tactile" in self.current_test:
             # For tactile, show image for 5 seconds, then show crosshair and wait for touch
-            QTimer.singleShot(5000, lambda: self.show_crosshair_and_wait_tactile())
+            QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
         else:
-            QTimer.singleShot(5000, lambda: self.show_crosshair_between_images('passive'))
+            QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
@@ -439,6 +439,8 @@ class DisplayWindow(QMainWindow):
                 self.parent().next_button.setEnabled(True)
 
     def show_crosshair_between_images(self, test_type):
+        label = "Crosshair Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         duration_ms = random.randint(2000, 5000)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
@@ -475,6 +477,8 @@ class DisplayWindow(QMainWindow):
             self.show_touch_instruction()
 
     def show_touch_instruction(self, initial=False):
+        label = "Touch Instruction Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         if initial:
             self.instructions_label.setText("Please touch the object to begin.")
             self.waiting_for_initial_touch = True
@@ -574,6 +578,8 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
+        label = "Response Instructions Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         img = self.images[self.current_image_index]
         text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.setText(text)
@@ -709,7 +715,10 @@ class DisplayWindow(QMainWindow):
             event.ignore()
 
     def end_screen(self):
+        label = "End Screen Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
+        logging.info("Test has ended, please press the stop button to close the test.")
         #self.instructions_label.setFont(QFont("Arial", 22))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
@@ -723,7 +732,7 @@ class DisplayWindow(QMainWindow):
 
     def show_crosshair_instructions(self):
         # Show your pre-instructions
-        label = "showing crosshair instructions"
+        label = "Crosshair Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
         self.instructions_label.setVisible(True)
@@ -737,7 +746,7 @@ class DisplayWindow(QMainWindow):
         
     def show_crosshair_period(self):
         # Show a crosshair for 2 minutes
-        label = "showing crosshair period"
+        label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
@@ -758,7 +767,7 @@ class DisplayWindow(QMainWindow):
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
-        label = "showing main instructions"
+        label = "Main Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         #self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
