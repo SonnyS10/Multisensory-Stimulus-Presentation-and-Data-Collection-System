@@ -24,7 +24,7 @@ class LabRecorder:
             return
         save_dir = os.path.join(self.base_dir, current_test)
         os.makedirs(save_dir, exist_ok=True)
-        xdf_path = os.path.join('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-', save_dir)
+        xdf_path = os.path.join('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-', save_dir)
         self.s.sendall(b"update\n")
         time.sleep(3)
         self.s.sendall(b"select all\n")

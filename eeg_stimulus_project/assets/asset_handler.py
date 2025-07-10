@@ -19,23 +19,25 @@ def load_images_from_folder(folder):
 personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Personalized')
 personalized_images = load_images_from_folder(personalized_folder)
 
-# Mix personalized images with general images
 def get_mixed_images(general_images, personalized_images):
     mixed_images = general_images.copy()
     mixed_images.extend(personalized_images)
-    random.shuffle(mixed_images)
-    ## Print the order after shuffling
-    #print("Order of images after shuffling:")
-    #for img in mixed_images:
-    #    if hasattr(img, 'filename'):
-    #        print(os.path.splitext(os.path.basename(img.filename))[0])
-    #    else:
-    #        print(img)
     return mixed_images
 
 class Display():
     @staticmethod
-    def get_assets(alcohol_folder=None, non_alcohol_folder=None):
+    def randomize_images(images, randomize_cues=False, seed=None):
+        images = images.copy()
+        if randomize_cues:
+            if not seed:
+                # Generate a random seed if none is provided
+                seed = random.randint(0, 10000)
+            rnd = random.Random(seed)
+            rnd.shuffle(images)
+        return images, seed
+
+    @staticmethod
+    def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
         # Use user folders if provided, else use defaults
         if alcohol_folder and os.path.isdir(alcohol_folder):
             alcohol_images = load_images_from_folder(alcohol_folder)
@@ -47,17 +49,25 @@ class Display():
         else:
             non_alcohol_images = personalized_images
 
-        # Build test_assets dict as before, but use these lists
-        test_assets = {
-            'Unisensory Neutral Visual': get_mixed_images(non_alcohol_images, []),
-            'Unisensory Alcohol Visual': get_mixed_images(alcohol_images, []),
-            'Multisensory Neutral Visual & Olfactory': get_mixed_images([], personalized_images),
-            'Multisensory Alcohol Visual & Olfactory': get_mixed_images([Beer], personalized_images),
-            'Multisensory Neutral Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
-            'Multisensory Alcohol Visual, Tactile & Olfactory': get_mixed_images([Beer], personalized_images),
-            'Stroop Multisensory Alcohol (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
-            'Stroop Multisensory Alcohol (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
-            'Stroop Multisensory Neutral (Visual & Tactile)': get_mixed_images([Beer], personalized_images),
-            'Stroop Multisensory Neutral (Visual & Olfactory)': get_mixed_images([Beer], personalized_images),
-        }
+        # Build test_assets dict as before, but randomize if needed
+        test_assets = {}
+
+        # Example for each test type:
+        for test_name, (general, personalized) in {
+            'Unisensory Neutral Visual': (non_alcohol_images, []),
+            'Unisensory Alcohol Visual': (alcohol_images, []),
+            'Multisensory Neutral Visual & Olfactory': ([], personalized_images),
+            'Multisensory Alcohol Visual & Olfactory': ([Beer], personalized_images),
+            'Multisensory Neutral Visual, Tactile & Olfactory': ([Beer], personalized_images),
+            'Multisensory Alcohol Visual, Tactile & Olfactory': ([Beer], personalized_images),
+            'Stroop Multisensory Alcohol (Visual & Tactile)': ([Beer], personalized_images),
+            'Stroop Multisensory Alcohol (Visual & Olfactory)': ([Beer], personalized_images),
+            'Stroop Multisensory Neutral (Visual & Tactile)': ([Beer], personalized_images),
+            'Stroop Multisensory Neutral (Visual & Olfactory)': ([Beer], personalized_images),
+        }.items():
+            mixed = get_mixed_images(general, personalized)
+            randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed)
+            test_assets[test_name] = randomized
+            # Optionally, you could store used_seed somewhere if you want to log/display it
+
         return test_assets

@@ -1,5 +1,5 @@
 import sys
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
@@ -18,7 +18,8 @@ from logging.handlers import QueueHandler
 
 
 class GUI(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False, alcohol_folder=None, non_alcohol_folder=None):
+    def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
+                 alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -26,6 +27,8 @@ class GUI(QMainWindow):
         self.log_queue = log_queue
         self.alcohol_folder = alcohol_folder
         self.non_alcohol_folder = non_alcohol_folder
+        self.randomize_cues = randomize_cues
+        self.seed = seed
         
         if connection is not None:
             self.start_listener()
@@ -163,7 +166,9 @@ class GUI(QMainWindow):
                     self.connection, log_queue, label_stream, current_frame, current_test,
                     self.base_dir, self.test_number, eyetracker=eyetracker, shared_status=shared_status, client=self.client,
                     alcohol_folder=self.alcohol_folder,
-                    non_alcohol_folder=self.non_alcohol_folder
+                    non_alcohol_folder=self.non_alcohol_folder,
+                    randomize_cues=self.randomize_cues,
+                    seed=self.seed
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)

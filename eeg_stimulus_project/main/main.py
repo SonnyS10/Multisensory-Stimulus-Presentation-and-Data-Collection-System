@@ -1,7 +1,7 @@
 import sys
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QFileDialog, QGroupBox, QSizePolicy, QSpacerItem
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QFileDialog, QGroupBox, QSizePolicy, QSpacerItem, QCheckBox
 )
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt
@@ -75,10 +75,10 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
     sys.exit(app.exec_())
 
 # Launches the main GUI process (client or local)
-def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None):
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, randomize_cues=None, seed=None):
     from eeg_stimulus_project.gui.main_gui import GUI
     app = QApplication(sys.argv)
-    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder)
+    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, randomize_cues, seed)
     window.show()
     sys.exit(app.exec_())
 
@@ -199,6 +199,20 @@ class MainWindow(QMainWindow):
         asset_layout.addLayout(alcohol_row)
         asset_layout.addLayout(non_alcohol_row)
 
+        # Randomizer
+        randomizer_row = QHBoxLayout()
+        self.randomize_checkbox = QCheckBox("Randomize Alcohol/Non-Alcohol Cues")
+        self.randomize_checkbox.setFont(QFont("Segoe UI", 10))
+        self.seed_label = QLabel("Seed(1-10000):")
+        self.seed_label.setFont(QFont("Segoe UI", 10))
+        self.seed_input = QLineEdit()
+        self.seed_input.setFont(QFont("Segoe UI", 10))
+        self.seed_input.setPlaceholderText("Leave blank for random")
+        randomizer_row.addWidget(self.randomize_checkbox)
+        randomizer_row.addWidget(self.seed_label)
+        randomizer_row.addWidget(self.seed_input)
+        asset_layout.addLayout(randomizer_row)
+
         # --- Documentation Section ---
         documentation_group = QGroupBox("Documentation")
         documentation_layout = QVBoxLayout(documentation_group)
@@ -242,6 +256,11 @@ class MainWindow(QMainWindow):
         test_number = self.test_number_input.text() if host or (not host and not client) else None
         host_ip = self.host_ip_input.text().strip() if client else None
 
+        #Randomization settings
+        randomize_cues = self.randomize_checkbox.isChecked()
+        seed_text = self.seed_input.text().strip()
+        seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
+
         # Host or local mode: require subject info
         if host:
             if not subject_id or test_number not in ['1', '2']:
@@ -276,7 +295,7 @@ class MainWindow(QMainWindow):
             self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
             self.gui_process = Process(
                 target=run_main_gui_client,
-                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder)
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, randomize_cues, seed)
             ) # client=False
             self.control_process.start()
             self.gui_process.start()
@@ -367,6 +386,11 @@ class MainWindow(QMainWindow):
         folder = QFileDialog.getExistingDirectory(self, "Select Non-Alcohol Images Folder")
         if folder:
             self.non_alcohol_folder_input.setText(folder)
+
+    def randomize_cues(self):
+        randomize_cues = self.randomize_checkbox.isChecked()
+        seed_text = self.seed_input.text().strip()
+        seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
 
 if __name__ == "__main__":
     # Create the application and main window, then run the application
