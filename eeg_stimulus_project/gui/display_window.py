@@ -1,5 +1,5 @@
 import sys
-sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
@@ -200,13 +200,19 @@ class DisplayWindow(QMainWindow):
     experiment_started = pyqtSignal()
     proceed_after_crosshair = pyqtSignal()  # Add this at class level
 
-    def __init__(self, connection, log_queue, label_stream, parent=None, current_test=None, base_dir=None, test_number=None, eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None):
-        super().__init__(parent)
+    def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
+                 eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
+                 randomize_cues=False, seed=None):
+        super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
         self.eyetracker = eyetracker
         self.client = client
         self.label_stream = label_stream if label_stream else LSLLabelStream()
+        self.alcohol_folder = alcohol_folder
+        self.non_alcohol_folder = non_alcohol_folder
+        self.randomize_cues = randomize_cues
+        self.seed = seed
 
         if self.shared_status.get('eyetracker_connected', False):
             # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -346,7 +352,14 @@ class DisplayWindow(QMainWindow):
                     self.current_image_index = self.paused_image_index - 1
                     self.timer.start(1)  # Start the timer with 100 ms interval
                 else:
-                    self.images = Display.test_assets[current_test]
+                    # When loading images for the current test:
+                    from eeg_stimulus_project.assets.asset_handler import Display
+                    self.images = Display.get_assets(
+                        alcohol_folder=self.alcohol_folder,
+                        non_alcohol_folder=self.non_alcohol_folder,
+                        randomize_cues=self.randomize_cues,
+                        seed=self.seed
+                    )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
                     self.timer.start(1)  # Start the timer with 100 ms interval

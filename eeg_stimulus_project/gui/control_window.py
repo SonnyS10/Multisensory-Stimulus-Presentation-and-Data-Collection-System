@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
 import subprocess
@@ -38,7 +38,7 @@ def excepthook(type, value, tb):
 
 sys.excepthook = excepthook
 
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
@@ -62,146 +62,176 @@ class ControlWindow(QMainWindow):
         self.current_test = None
         self.log_queue = log_queue
         self.host = host
-        
-        #self.setup_logging(log_queue)
 
-        # Set the window title and size (half of the screen width and full height)
+        # --- Window Aesthetics ---
         self.setWindowTitle("Control Window")
-        self.setGeometry(screen_geometry.width() // 2, 100, screen_geometry.width() // 2, screen_geometry.height()- 150)
+        self.setGeometry(screen_geometry.width() // 2, 100, screen_geometry.width() // 2, screen_geometry.height() - 150)
+        self.setMinimumSize(900, 700)
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f5f5fa;
+            }
+        """)
 
-        # Create the central widget and layout
+        # --- Central Widget & Main Layout ---
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
+        self.control_layout = QVBoxLayout(self.central_widget)
+        self.control_layout.setAlignment(Qt.AlignTop)
+        self.control_layout.setContentsMargins(24, 24, 24, 24)
+        self.control_layout.setSpacing(18)
 
         # --- DEVICE FRAME ---
         self.device_frame = QFrame(self.central_widget)
-        self.device_frame.setMinimumWidth(800)  # Set minimum width to 800
+        self.device_frame.setMinimumWidth(800)
+        self.device_frame.setStyleSheet("""
+            QFrame {
+                background-color: #ede7f6;
+                border-radius: 16px;
+                border: 1.5px solid #bc85fa;
+            }
+        """)
         self.device_frame_layout = QVBoxLayout(self.device_frame)
         self.device_frame_layout.setAlignment(Qt.AlignTop)
-        self.device_frame_layout.setContentsMargins(10, 10, 10, 10)
+        self.device_frame_layout.setContentsMargins(18, 18, 18, 18)
+        self.device_frame_layout.setSpacing(14)
 
-        # Actichamp status row (button + icons + labels)
-        actichamp_row = QHBoxLayout()
-        self.actichamp_button = QPushButton("Actichamp", self)
-        self.actichamp_button.clicked.connect(lambda: threading.Thread(target=self.start_actichamp, daemon=True).start())
-        actichamp_row.addWidget(self.actichamp_button)
-        
-        self.actichamp_linked_text = QLabel("Linked Status:", self)
-        actichamp_row.addWidget(self.actichamp_linked_text)
-        self.actichamp_linked_icon = QLabel(self)
-        self.update_app_status_icon(self.actichamp_linked_icon, False)
-        actichamp_row.addWidget(self.actichamp_linked_icon)
+        # --- Device Rows Helper ---
+        def device_row(button_text, button_func, status_text, icon_ref, extra_widgets=None):
+            row = QHBoxLayout()
+            row.setSpacing(10)
+            btn = QPushButton(button_text, self)
+            btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #7E57C2;
+                    color: white;
+                    border-radius: 8px;
+                    padding: 8px 22px;
+                }
+                QPushButton:hover {
+                    background-color: #512da8;
+                }
+            """)
+            if button_func:
+                btn.clicked.connect(button_func)
+            row.addWidget(btn)
+            label = QLabel(status_text, self)
+            label.setFont(QFont("Segoe UI", 11))
+            row.addWidget(label)
+            # --- Status Bar (fills vertical space) ---
+            status_bar = QFrame(self)
+            status_bar.setFixedWidth(120)
+            status_bar.setMinimumHeight(32)
+            status_bar.setMaximumHeight(40)
+            status_bar.setStyleSheet("""
+                QFrame {
+                    border-radius: 7px;
+                    background-color: #d32f2f; /* Default to red */
+                }
+            """)
+            row.addWidget(status_bar)
+            if extra_widgets:
+                for w in extra_widgets:
+                    row.addWidget(w)
+            return row, status_bar
 
+        # --- Actichamp Row ---
+        actichamp_row, self.actichamp_linked_icon = device_row(
+            "Actichamp",
+            lambda: threading.Thread(target=self.start_actichamp, daemon=True).start(),
+            "Linked Status:",
+            "actichamp_linked_icon"
+        )
         self.device_frame_layout.addLayout(actichamp_row)
-        
-        # LabRecorder status row (button + icons + labels)
-        labrecorder_row = QHBoxLayout()
-        self.labrecorder_button = QPushButton("LabRecorder", self)
-        self.labrecorder_button.clicked.connect(lambda: threading.Thread(target=self.start_labrecorder, daemon=True).start())
-        labrecorder_row.addWidget(self.labrecorder_button)
-        
-        self.labrecorder_connected_text = QLabel("Connection Status:", self)
-        labrecorder_row.addWidget(self.labrecorder_connected_text)
-        self.labrecorder_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.labrecorder_connected_icon, False)
-        labrecorder_row.addWidget(self.labrecorder_connected_icon)
-        
+
+        # --- LabRecorder Row ---
+        labrecorder_row, self.labrecorder_connected_icon = device_row(
+            "LabRecorder",
+            lambda: threading.Thread(target=self.start_labrecorder, daemon=True).start(),
+            "Connection Status:",
+            "labrecorder_connected_icon"
+        )
         self.device_frame_layout.addLayout(labrecorder_row)
 
-        # Eye Tracker status row (button + icons + labels)
-        eyetracker_row = QHBoxLayout()
-        self.eyetracker_button = QPushButton("Eye Tracker", self)
-        self.eyetracker_button.clicked.connect(self.connect_eyetracker) # Connect to the eyetracker
-        eyetracker_row.addWidget(self.eyetracker_button)
-        
-        self.eyetracker_connected_text = QLabel("Connection Status:", self)
-        eyetracker_row.addWidget(self.eyetracker_connected_text)
-        self.eyetracker_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.eyetracker_connected_icon, False)
-        eyetracker_row.addWidget(self.eyetracker_connected_icon)
-        
+        # --- Eye Tracker Row ---
+        eyetracker_row, self.eyetracker_connected_icon = device_row(
+            "Eye Tracker",
+            self.connect_eyetracker,
+            "Connection Status:",
+            "eyetracker_connected_icon"
+        )
         self.device_frame_layout.addLayout(eyetracker_row)
 
-        # Touch Box status row (button + icons + labels)
-        touchbox_row = QHBoxLayout()
-        self.touchbox_button = QPushButton("Touchbox", self)
-        self.touchbox_button.clicked.connect(self.open_tactile_box)  # Connect to the touchbox
-        touchbox_row.addWidget(self.touchbox_button)
-        
-        self.touchbox_connected_text = QLabel("Connection Status:", self)
-        touchbox_row.addWidget(self.touchbox_connected_text)
-        self.touchbox_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.touchbox_connected_icon, False)
-        touchbox_row.addWidget(self.touchbox_connected_icon)
-
-        self.lsl_touch_label = QLabel("LSL stream ready for Touch:", self)
-        touchbox_row.addWidget(self.lsl_touch_label)
-        self.lsl_touch_icon = QLabel(self)
-        self.update_app_status_icon(self.lsl_touch_icon, False)  # Start as red
-        touchbox_row.addWidget(self.lsl_touch_icon)
-
+        # --- Touch Box Row ---
+        lsl_touch_label = QLabel("LSL stream ready for Touch:", self)
+        lsl_touch_label.setFont(QFont("Segoe UI", 11))
+        self.lsl_touch_icon = QFrame(self)
+        self.lsl_touch_icon.setFixedWidth(120)
+        self.lsl_touch_icon.setMinimumHeight(32)
+        self.lsl_touch_icon.setMaximumHeight(40)
+        self.lsl_touch_icon.setStyleSheet("""
+            QFrame {
+                border-radius: 7px;
+                background-color: #d32f2f; /* Default to red */
+            }
+        """)
+        touchbox_row, self.touchbox_connected_icon = device_row(
+            "Touchbox",
+            self.open_tactile_box,
+            "Connection Status:",
+            "touchbox_connected_icon",
+            extra_widgets=[lsl_touch_label, self.lsl_touch_icon]
+        )
         self.device_frame_layout.addLayout(touchbox_row)
 
-        # VR status row (button + icons + labels)
-        vr_row = QHBoxLayout()
-        self.vr_button = QPushButton("Virtual Reality", self)
-        #self.vr_button.clicked.connect() # Connect to the VR device
-        vr_row.addWidget(self.vr_button)
-        
-        self.vr_connected_text = QLabel("Connection Status:", self)
-        vr_row.addWidget(self.vr_connected_text)
-        self.vr_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.vr_connected_icon, False)
-        vr_row.addWidget(self.vr_connected_icon)
-        
+        # --- VR Row ---
+        vr_row, self.vr_connected_icon = device_row(
+            "Virtual Reality",
+            None,  # Add function if needed
+            "Connection Status:",
+            "vr_connected_icon"
+        )
         self.device_frame_layout.addLayout(vr_row)
 
-        # Turntable status row (button + icons + labels)
-        turntable_row = QHBoxLayout()
-        self.turntable_button = QPushButton("Turntable", self)
-        #self.turntable_button.clicked.connect() # Connect to the turntable
-        turntable_row.addWidget(self.turntable_button)
-        
-        self.turntable_connected_text = QLabel("Connection Status:", self)
-        turntable_row.addWidget(self.turntable_connected_text)
-        self.turntable_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.turntable_connected_icon, False)
-        turntable_row.addWidget(self.turntable_connected_icon)
-        
+        # --- Turntable Row ---
+        turntable_row, self.turntable_connected_icon = device_row(
+            "Turntable",
+            None,  # Add function if needed
+            "Connection Status:",
+            "turntable_connected_icon"
+        )
         self.device_frame_layout.addLayout(turntable_row)
 
-        # Olfactory Sysytem status row (button + icons + labels)
-        olfactory_row = QHBoxLayout()
-        self.olfactory_button = QPushButton("Olfactory System", self)
-        #self.olfactory_button.clicked.connect() # Connect to the olfactory
-        olfactory_row.addWidget(self.olfactory_button)
-        
-        self.olfactory_connected_text = QLabel("Connection Status:", self)
-        olfactory_row.addWidget(self.olfactory_connected_text)
-        self.olfactory_connected_icon = QLabel(self)
-        self.update_app_status_icon(self.olfactory_connected_icon, False)
-        olfactory_row.addWidget(self.olfactory_connected_icon)
-        
+        # --- Olfactory Row ---
+        olfactory_row, self.olfactory_connected_icon = device_row(
+            "Olfactory System",
+            None,  # Add function if needed
+            "Connection Status:",
+            "olfactory_connected_icon"
+        )
         self.device_frame_layout.addLayout(olfactory_row)
 
-        # TO MAYBE BE IMPLEMENTED LATER
-        # LSL Status
-        #self.lsl_status_label = QLabel("LSL Status:", self)
-        #layout.addWidget(self.lsl_status_label)
-        #self.lsl_status_icon = QLabel(self)
-        #self.update_lsl_status_icon(False)
-        #layout.addWidget(self.lsl_status_icon)
-        
-        # --- MAIN LAYOUT ---
-        self.control_layout = QVBoxLayout(self.central_widget)
-        self.control_layout.setAlignment(Qt.AlignTop)
+        # --- Add Device Frame to Main Layout ---
         self.control_layout.addWidget(self.device_frame)
 
         # --- LOG TEXT EDITOR ---
+        log_label = QLabel("Log Output:", self)
+        log_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.control_layout.addWidget(log_label)
+
         self.log_text_edit = QTextEdit(self)
         self.log_text_edit.setReadOnly(True)
         self.log_text_edit.setMinimumHeight(150)
-        self.control_layout.addWidget(QLabel("Log Output:", self))
+        self.log_text_edit.setStyleSheet("""
+            QTextEdit {
+                background-color: #fff;
+                border-radius: 10px;
+                border: 1px solid #bc85fa;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 26px;
+            }
+        """)
         self.control_layout.addWidget(self.log_text_edit)
 
         log_handler = QTextEditLogger(self.log_text_edit)
@@ -211,7 +241,7 @@ class ControlWindow(QMainWindow):
         if log_queue is not None:
             self.queue_listener = QueueListener(log_queue, log_handler)
             self.queue_listener.start()
-            
+
         # Process for the applications
         self.actichamp_process = None
         self.labrecorder_process = None
@@ -221,19 +251,12 @@ class ControlWindow(QMainWindow):
         self.turntable_process = None
         self.olfactory_process = None
 
-        # Start a thread to listen to the log queue and print messages in the QTextEdit
-        #if self.log_queue is not None:
-        #   self.log_thread = threading.Thread(target=self.listen_to_log_queue, daemon=True)
-        #   self.log_thread.start()
-
         if self.host:
             # If this is the host, start listening for commands from the client
             if self.connection is not None:
                 self.connection_thread = threading.Thread(target=self.host_command_listener, daemon=True)
                 self.connection_thread.start()
 
-        # Start label listener for receiving labels
-        #self.start_label_listener = start_label_listener.__get__(self)
         self.start_tactile_listener()
 
     # Redirect terminal outputs to the log queue
@@ -340,10 +363,15 @@ class ControlWindow(QMainWindow):
         self.tactile_process.start()
 
     #Update the application connection/linkage status icon to show a red or green light.
-    def update_app_status_icon(self, icon_label, is_green):
-        pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.green if is_green else Qt.red)
-        icon_label.setPixmap(pixmap)
+    def update_app_status_icon(self, bar_widget, is_green):
+        # Fill the bar with green or red
+        color = "#43a047" if is_green else "#b82c2c"
+        bar_widget.setStyleSheet(f"""
+            QFrame {{
+                border-radius: 7px;
+                background-color: {color};
+            }}
+        """)
 
     def flush(self):
         # Needed for compatibility with sys.stdout redirection

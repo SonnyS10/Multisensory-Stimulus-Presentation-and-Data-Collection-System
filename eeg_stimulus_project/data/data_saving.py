@@ -1,7 +1,7 @@
 import os
 import csv
 import sys
-sys.path.append('C:\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
+sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from eeg_stimulus_project.lsl.stream_manager import LSL
 #from eeg_stimulus_project.utils.labrecorder import LabRecorder
 #IN THE FUTURE, WE CAN JUST CREATE ALL OF THE TEST DIRECTORIES WEN WE CREATE A NEW PARTICIPANT AND THEN THIS FILE IS NOT NEEDED
