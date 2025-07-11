@@ -1,5 +1,3 @@
-# Software-for-Paid-Research-
-
 # Multisensory Stimulus Presentation and Data Collection System
 
 Overview:
