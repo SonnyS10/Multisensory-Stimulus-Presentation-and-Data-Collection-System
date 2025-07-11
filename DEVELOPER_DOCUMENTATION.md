@@ -154,13 +154,47 @@ Software-for-Paid-Research-/
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Core experiment setup
-def start_experiment(self, client=False, host=False):
-    # Process creation and management logic
-    
-# DO NOT MODIFY - Network initialization
+# DO NOT MODIFY - Multiprocessing initialization (lines 60-68)
+def init_shared_resources():
+    manager = Manager()
+    shared_status = manager.dict()
+    shared_status['lab_recorder_connected'] = False
+    shared_status['eyetracker_connected'] = False
+    shared_status['lsl_enabled'] = False
+    shared_status['tactile_connected'] = False
+    log_queue = Queue()
+    return manager, shared_status, log_queue
+
+# DO NOT MODIFY - Process creation (lines 71-76)
+def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number, host):
+    from eeg_stimulus_project.gui.control_window import ControlWindow
+    app = QApplication(sys.argv)
+    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host)
+    window.show()
+    sys.exit(app.exec_())
+
+# DO NOT MODIFY - Network server setup (lines 311-340)
 def start_server(self):
-    # Server socket setup for host mode
+    HOST = '0.0.0.0'
+    PORT = 9999
+    try:
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((HOST, PORT))
+        server_socket.listen(1)
+        logging.info(f"Host: Waiting for client on port {PORT}...")
+        conn, addr = server_socket.accept()
+        logging.info(f"Host: Connected by {addr}")
+        self.connection = conn
+        self.client_connected = True
+        # Process creation continues...
+    except Exception as e:
+        logging.info(f"Host: Server error: {e}")
+
+# MODIFY WITH CAUTION - Experiment startup logic (lines 245-300)
+def start_experiment(self, client=False, host=False):
+    # Button disabling and input validation
+    # Process creation based on mode selection
+    # Network connection handling
 ```
 
 **Configuration Points**:
@@ -181,13 +215,51 @@ def start_server(self):
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Hardware initialization
-def setup_hardware_connections(self):
-    # EEG, eye tracker, and other hardware setup
+# DO NOT MODIFY - GUI initialization and layout (lines 21-100)
+def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
+             alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
+    super().__init__()
+    self.shared_status = shared_status
+    self.connection = connection
+    self.client = client
+    # GUI component initialization
+    self.sidebar = Sidebar(self)
+    self.main_frame = MainFrame(self)
+    self.stacked_widget = self.main_frame.stacked_widget
     
-# MODIFY WITH CAUTION - Experiment flow
-def run_experiment_sequence(self):
-    # Main experiment execution logic
+# DO NOT MODIFY - Network communication listener (lines 268-294)
+def start_listener(self):
+    def listen():
+        buffer = ""
+        while True:
+            try:
+                data = self.connection.recv(4096).decode('utf-8')
+                if not data:
+                    break
+                buffer += data
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    if not line.strip():
+                        continue
+                    msg = json.loads(line)
+                    # Message handling continues...
+            except Exception as e:
+                logging.info(f"Listener error: {e}")
+                break
+    threading.Thread(target=listen, daemon=True).start()
+
+# DO NOT MODIFY - Logging setup (lines 296-301)
+def setup_logging(self, log_queue):
+    queue_handler = QueueHandler(log_queue)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.handlers = []
+    logger.addHandler(queue_handler)
+    
+# MODIFY WITH CAUTION - Test frame creation (lines 101-104)
+def create_frame(self, title, is_stroop_test=False):
+    return Frame(self, title, self.connection, is_stroop_test, self.shared_status, 
+                 self.base_dir, self.test_number, self.client, self.log_queue)
 ```
 
 **GUI Components**:
@@ -208,13 +280,55 @@ def run_experiment_sequence(self):
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Network communication
-def handle_client_messages(self):
-    # Client message processing
-    
-# MODIFY WITH CAUTION - Experiment control
-def start_experiment_on_client(self):
-    # Remote experiment initiation
+# DO NOT MODIFY - Control window initialization (lines 48-100)
+def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False):
+    super().__init__()
+    self.shared_status = shared_status
+    self.connection = connection
+    self.base_dir = base_dir
+    self.test_number = test_number
+    self.label_stream = None
+    self.labrecorder = None
+    self.lab_recorder_connected = False
+    self.eyetracker = None
+    # GUI layout initialization continues...
+
+# DO NOT MODIFY - Log queue monitoring (lines 263-273)
+def listen_to_log_queue(self):
+    def worker():
+        while True:
+            try:
+                msg = self.log_queue.get(timeout=1)
+                if msg:
+                    self.write(msg)
+            except:
+                pass
+    threading.Thread(target=worker, daemon=True).start()
+
+# DO NOT MODIFY - Hardware connection methods (lines 319-359)
+def start_labrecorder(self):
+    def worker():
+        try:
+            self.labrecorder = LabRecorder()
+            self.labrecorder.start_recording()
+            self.shared_status['lab_recorder_connected'] = True
+        except Exception as e:
+            logging.info(f"LabRecorder error: {e}")
+    threading.Thread(target=worker, daemon=True).start()
+
+def connect_eyetracker(self):
+    def worker():
+        try:
+            self.eyetracker = PupilLabs()
+            self.eyetracker.connect()
+            self.shared_status['eyetracker_connected'] = True
+        except Exception as e:
+            logging.info(f"Eyetracker error: {e}")
+    threading.Thread(target=worker, daemon=True).start()
+
+# MODIFY WITH CAUTION - Host command processing (lines 380+)
+def host_command_listener(self):
+    # Network command processing for distributed experiments
 ```
 
 ### 4. Stimulus Modules (`stimulus/`)
@@ -231,31 +345,50 @@ def start_experiment_on_client(self):
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Display initialization
-def initialize_display(self):
-    # Display setup and calibration
-    
-# MODIFY WITH CAUTION - Stimulus timing
-def present_stimulus(self, stimulus_type, duration):
-    # Stimulus presentation logic
+# Note: Visual stimulus modules are currently empty base files
+# Implementation needed based on experiment requirements
 ```
 
 #### Tactile Stimulus (`stimulus/tactile_box_code/`)
 
-**Purpose**: Control tactile stimulation hardware
+**Purpose**: Control tactile stimulation hardware via SSH connection
 
 **Key Files**:
 - `tactile_setup.py`: Hardware interface for tactile stimulation
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Hardware communication
-def connect_tactile_hardware(self):
-    # SSH connection to tactile control system
+# DO NOT MODIFY - SSH connection setup (lines 24-54)
+def start_remote_script(local_script_callback): 
+    def task():
+        global ssh_client, remote_channel
+        try:
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(ssh_host, username=ssh_user, password=ssh_password)
+            remote_command = f"{remote_venv_activate} && {remote_script}"
+            remote_channel = ssh_client.get_transport().open_session()
+            remote_channel.get_pty()
+            remote_channel.exec_command(remote_command)
+            # Data collection loop continues...
+        except Exception as e:
+            output_queue.put(f"[ERROR] Failed to start remote script: {e}\n")
+    threading.Thread(target=task, daemon=True).start()
+
+# DO NOT MODIFY - Connection termination (lines 55-64)
+def stop_remote_script():
+    global ssh_client, remote_channel
+    if remote_channel:
+        remote_channel.close()
+    if ssh_client:
+        ssh_client.close()
+
+# MODIFY WITH CAUTION - Threshold and baseline settings (lines 153-159)
+def set_threshold(self, value):
+    # Tactile detection threshold configuration
     
-# MODIFY WITH CAUTION - Stimulation parameters
-def deliver_tactile_stimulus(self, intensity, duration):
-    # Tactile stimulus delivery
+def set_baseline(self):
+    # Baseline calibration for tactile system
 ```
 
 #### Olfactory Stimulus (`stimulus/olfactory.py`)
@@ -274,13 +407,33 @@ def deliver_tactile_stimulus(self, intensity, duration):
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Data integrity
-def save_experiment_data(self, data, metadata):
-    # Ensures data consistency and backup
-    
-# MODIFY WITH CAUTION - File paths
-def create_data_directories(self, subject_id, test_number):
-    # Directory structure creation
+# DO NOT MODIFY - Data saving class initialization (lines 9-12)
+class Save_Data():
+    def __init__(self, base_dir, test_number):
+        self.base_dir = base_dir
+        self.test_number = test_number
+
+# DO NOT MODIFY - Stroop test data saving (lines 15-36)
+def save_data_stroop(self, current_test, user_inputs, elapsed_time, labrecorder=None):
+    test_dir = os.path.join(self.base_dir, current_test)
+    os.makedirs(test_dir, exist_ok=True)
+    file_path = os.path.join(test_dir, 'data.csv')
+    file_exists = os.path.isfile(file_path)
+    if file_exists:
+        print("File already exists. Deleting the old file.")
+        os.remove(file_path)
+    with open(file_path, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['User Inputs', 'Elapsed Time'])
+        for input, time in zip(user_inputs, elapsed_time):
+            writer.writerow([input, time])
+    print("Data saved successfully!")
+
+# MODIFY WITH CAUTION - Passive test data saving (lines 38-44)
+def save_data_passive(self, current_test, labrecorder=None):
+    test_dir = os.path.join(self.base_dir, current_test)
+    os.makedirs(test_dir, exist_ok=True)
+    print("Data saved successfully!")
 ```
 
 ### 6. LSL Integration (`lsl/`)
@@ -293,13 +446,56 @@ def create_data_directories(self, subject_id, test_number):
 
 **Critical Code Sections**:
 ```python
-# DO NOT MODIFY - Stream initialization
-def init_lsl_stream(self):
-    # LSL stream discovery and setup
+# DO NOT MODIFY - Stream initialization (lines 32-51)
+@staticmethod
+def init_lsl_stream():
+    """
+    MUST BE CALLED TO initialize streams, data, timestamp offset, and the collection thread.
+    """
+    # Variables to hold streams, data, and the collection thread
+    LSL.streams = {}
+    LSL.collected_data = {}
+    for stream_type, enabled in config.SUPPORTED_STREAMS.items():
+        if enabled:
+            LSL.streams[stream_type] = None
+            LSL.collected_data[stream_type] = []
+    # Initialize all required streams
+    for stream_type in LSL.streams.keys():
+        LSL._find_and_initialize_stream(stream_type, checked=False)
+    # Check if any streams were found
+    if not any(LSL.streams.values()):
+        print("No valid LSL streams found.")
+        return False
+
+# DO NOT MODIFY - Buffer clearing (lines 53-66)
+@staticmethod
+def clear_stream_buffers():
+    """
+    Clears the buffer of each LSL stream to ensure no old data is included in the new collection.
+    """
+    for stream_type, stream in LSL.streams.items():
+        if stream:
+            print(f"Clearing buffer for {stream_type} stream...")
+            while True:
+                sample, timestamp = stream.pull_sample(timeout=0.0)
+                if not sample:
+                    break
+            print(f"{stream_type} stream buffer cleared.")
+
+# MODIFY WITH CAUTION - Data collection control (lines 68-96)
+@staticmethod
+def start_collection():
+    """Function to start data collection."""
     
-# MODIFY WITH CAUTION - Event timing
-def send_event_marker(self, event_type, timestamp):
-    # Event marker transmission
+@staticmethod
+def stop_collection(path: str):
+    """Function to stop data collection and save data."""
+
+# Event labeling system (labels.py)
+def push_label(self, label):
+    """Push a label (string) to the LSL stream."""
+    if self.outlet:
+        self.outlet.push_sample([str(label)])
 ```
 
 ---
@@ -336,23 +532,38 @@ def send_event_marker(self, event_type, timestamp):
 ### Critical Files (DO NOT MODIFY WITHOUT DEEP UNDERSTANDING)
 
 #### `main/main.py`
-- **Lines 69-84**: Process creation and management
-- **Lines 310-342**: Server socket setup
-- **Lines 360-380**: Process cleanup and termination
+- **Lines 60-68**: `init_shared_resources()` - Multiprocessing setup
+- **Lines 71-76**: `run_control_window_host()` - Process creation
+- **Lines 79-84**: `run_main_gui_client()` - GUI process launch
+- **Lines 245-300**: `start_experiment()` - Experiment initialization
+- **Lines 311-340**: `start_server()` - Network server setup
+- **Lines 343-353**: `connect_to_host()` - Client connection
 
 #### `gui/main_gui.py`
-- **Lines 33-50**: Connection and logging setup
-- **Lines 100-150**: Hardware initialization
-- **Lines 200-250**: Experiment sequence control
+- **Lines 21-100**: `__init__()` - GUI initialization and layout
+- **Lines 268-294**: `start_listener()` - Network communication
+- **Lines 296-301**: `setup_logging()` - Logging configuration
+- **Lines 101-104**: `create_frame()` - Test frame creation
+
+#### `gui/control_window.py`
+- **Lines 48-100**: `__init__()` - Control window initialization
+- **Lines 263-273**: `listen_to_log_queue()` - Log monitoring
+- **Lines 319-332**: `start_labrecorder()` - EEG recording setup
+- **Lines 345-359**: `connect_eyetracker()` - Eye tracking setup
 
 #### `lsl/stream_manager.py`
-- **Lines 32-50**: LSL stream discovery
-- **Lines 80-120**: Data collection threading
-- **Lines 140-160**: Stream synchronization
+- **Lines 32-51**: `init_lsl_stream()` - Stream discovery
+- **Lines 53-66**: `clear_stream_buffers()` - Buffer management
+- **Lines 68-84**: `start_collection()` - Data collection start
+- **Lines 119-139**: `_find_and_initialize_stream()` - Stream initialization
 
 #### `data/data_saving.py`
-- **Lines 15-45**: Data integrity and CSV writing
-- **Lines 25-35**: File path construction
+- **Lines 15-36**: `save_data_stroop()` - Stroop test data saving
+- **Lines 38-44**: `save_data_passive()` - Passive test data saving
+
+#### `stimulus/tactile_box_code/tactile_setup.py`
+- **Lines 24-54**: `start_remote_script()` - SSH connection setup
+- **Lines 55-64**: `stop_remote_script()` - Connection cleanup
 
 ### Utility Files (SAFE TO MODIFY)
 
