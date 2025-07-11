@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
@@ -258,6 +258,40 @@ class ControlWindow(QMainWindow):
                 self.connection_thread.start()
 
         self.start_tactile_listener()
+
+        # --- Control Instructions ---
+        self.instructions_frame = ControlInstructionsFrame(self)
+        self.control_layout.addWidget(self.instructions_frame)
+        self.instructions_frame.setVisible(False)  # Hide instructions by default
+
+        # --- Show/Hide Instructions Button ---
+        self.toggle_instructions_button = QPushButton("Show Instructions", self)
+        self.toggle_instructions_button.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        self.toggle_instructions_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7E57C2;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 20px;
+                min-width: 160px;
+                min-height: 48px;
+            }
+            QPushButton:hover {
+                background-color: #512da8;
+            }
+        """)
+        self.toggle_instructions_button.setMinimumHeight(48)
+        self.toggle_instructions_button.clicked.connect(self.toggle_instructions)
+        self.control_layout.addWidget(self.toggle_instructions_button, alignment=Qt.AlignCenter)
+
+    def toggle_instructions(self):
+        if self.instructions_frame.isVisible():
+            self.instructions_frame.setVisible(False)
+            self.toggle_instructions_button.setText("Show Instructions")
+        else:
+            self.instructions_frame.setVisible(True)
+            self.toggle_instructions_button.setText("Hide Instructions")
 
     # Redirect terminal outputs to the log queue
     def listen_to_log_queue(self):
@@ -559,6 +593,151 @@ class ControlWindow(QMainWindow):
         error_dialog.setText(message)
         error_dialog.exec_()
     '''
+
+class ControlInstructionsFrame(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(32, 32, 32, 32)
+        layout.setSpacing(18)
+
+        # --- Multi-page instructions ---
+        self.stacked = QStackedWidget(self)
+        layout.addWidget(self.stacked)
+
+        self.pages = []
+        self.add_instruction_page(
+            "Welcome to the Control Window!\n\n"
+            "This guide explains how to use the Control Window to manage device connections and monitor experiment progress.\n\n"
+            "Click 'Next' to continue."
+        )
+        self.add_instruction_page(
+            "Device Buttons & Status Icons:\n\n"
+            "- Each row represents a device (Actichamp, LabRecorder, Eye Tracker, Touchbox, VR, Turntable, Olfactory System).\n"
+            "- The button on each row will attempt to connect or launch the corresponding device/software.\n"
+            "- The red/green icon next to each device shows its connection status:\n"
+            "    • Red = Not connected\n"
+            "    • Green = Connected\n"
+            "- Some devices (like Touchbox) have additional indicators for LSL stream readiness.\n"
+            "    • This icon turns green when the experiment is ready to receive touch input via LSL to continue.\n"
+        )
+        self.add_instruction_page(
+            "How to Use:\n\n"
+            "1. Click each device's button to connect or launch its software.\n"
+            "2. Watch the status icon to confirm successful connection (icon turns green).\n"
+            "   Note: The touchbox will require you to manually connect by clicking the 'Start Remote Script' button after it has been launched.\n"
+            "3. If a device fails to connect, check cables, power, and software, then try again."
+        )
+        self.add_instruction_page(
+            "Monitoring Progress & Errors:\n\n"
+            "- The Log Output panel at the bottom displays real-time status updates, progress messages, and any errors.\n"
+            "- Always watch the log for confirmation of device connections and troubleshooting information.\n"
+            "- If you see an error, follow the instructions in the log or consult the experiment protocol."
+        )
+        self.add_instruction_page(
+            "Tips & Troubleshooting:\n\n"
+            "- If a device does not connect, restart its software and check all connections.\n"
+            "- Ensure all devices are powered on and properly configured before starting the experiment.\n"
+            "- For the touchbox, it may require you to start the remote script multiple times before it connects.\n"
+            "    • If it still does not connect, try closing the application and relaunching it before messing with the hardware.\n"
+            "- For persistent issues, refer to the experiment documentation or contact technical support.\n"
+            "- You can close these instructions at any time and return to the main Control Window."
+        )
+
+        # --- Navigation Buttons ---
+        nav_layout = QHBoxLayout()
+        self.prev_button = QPushButton("Previous")
+        self.prev_button.setFont(QFont("Segoe UI", 16))
+        self.prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 18px;
+                min-width: 120px;
+                min-height: 48px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.prev_button.setMinimumHeight(48)
+        self.prev_button.clicked.connect(self.prev_page)
+        nav_layout.addWidget(self.prev_button)
+
+        self.page_label = QLabel()
+        self.page_label.setAlignment(Qt.AlignCenter)
+        self.page_label.setFont(QFont("Segoe UI", 18, QFont.Bold))
+        self.page_label.setMinimumHeight(48)
+        self.page_label.setStyleSheet("""
+            QLabel {
+                padding: 12px 32px;
+                color: #333;
+                background: #e3e3e3;
+                border-radius: 8px;
+                font-size: 20px;
+            }
+        """)
+        nav_layout.addWidget(self.page_label, stretch=1)
+
+        self.next_button = QPushButton("Next")
+        self.next_button.setFont(QFont("Segoe UI", 16))
+        self.next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 18px;
+                min-width: 120px;
+                min-height: 48px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.next_button.setMinimumHeight(48)
+        self.next_button.clicked.connect(self.next_page)
+        nav_layout.addWidget(self.next_button)
+
+        layout.addLayout(nav_layout)
+        self.update_nav_buttons()
+
+    def add_instruction_page(self, text):
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignTop)
+        label.setFont(QFont("Segoe UI", 15))
+        label.setMargin(20)
+        self.stacked.addWidget(label)
+        self.pages.append(label)
+
+    def next_page(self):
+        idx = self.stacked.currentIndex()
+        if idx < self.stacked.count() - 1:
+            self.stacked.setCurrentIndex(idx + 1)
+        self.update_nav_buttons()
+
+    def prev_page(self):
+        idx = self.stacked.currentIndex()
+        if idx > 0:
+            self.stacked.setCurrentIndex(idx - 1)
+        self.update_nav_buttons()
+
+    def update_nav_buttons(self):
+        idx = self.stacked.currentIndex()
+        total = self.stacked.count()
+        self.prev_button.setEnabled(idx > 0)
+        self.next_button.setEnabled(idx < total - 1)
+        self.prev_button.setVisible(idx > 0)
+        self.next_button.setVisible(idx < total - 1)
+        self.page_label.setText(f"Page {idx + 1} of {total}")
+
+    def hide_instructions(self):
+        self.setVisible(False)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

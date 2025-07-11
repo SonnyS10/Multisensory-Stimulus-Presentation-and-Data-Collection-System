@@ -81,9 +81,9 @@ class Sidebar(QFrame):
         ])
 
         # Instructions button
-        instructions_button = QPushButton("Show Instructions", self)
-        instructions_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        instructions_button.setStyleSheet("""
+        self.instructions_button = QPushButton("Hide Instructions", self)
+        self.instructions_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.instructions_button.setStyleSheet("""
             QPushButton {
                 background-color: #7E57C2;
                 color: white;
@@ -95,8 +95,8 @@ class Sidebar(QFrame):
                 background-color: #512da8;
             }
         """)
-        instructions_button.clicked.connect(parent.show_instruction_frame)
-        self.layout.addWidget(instructions_button)
+        self.instructions_button.clicked.connect(parent.toggle_instruction_frame)
+        self.layout.addWidget(self.instructions_button)
 
         # Latency Checker Button
         latency_button = QPushButton("Latency Checker", self)
@@ -113,7 +113,7 @@ class Sidebar(QFrame):
                 background-color: #512da8;
             }
         """)
-        latency_button.clicked.connect(parent.show_latency_checker)
+        latency_button.clicked.connect(parent.toggle_latency_checker)
         self.layout.addWidget(latency_button)
 
     # Add a submenu with a heading and options  

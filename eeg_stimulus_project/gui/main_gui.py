@@ -92,53 +92,67 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.latency_checker)
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
+        self.last_test_frame = self.unisensory_neutral_visual  # Default to first test
 
         self._latency_test_active = False
         self._latency_rtts = []
         self._latency_test_count = 0
+
+    def show_test_frame(self, frame):
+        self.last_test_frame = frame
+        self.stacked_widget.setCurrentWidget(frame)
+        self.sidebar.instructions_button.setText("Show Instructions")
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
         return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue)
     
     def show_unisensory_neutral_visual(self):
-        self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
+        self.show_test_frame(self.unisensory_neutral_visual)
     
     def show_unisensory_alcohol_visual(self):
-        self.stacked_widget.setCurrentWidget(self.unisensory_alcohol_visual)
+        self.show_test_frame(self.unisensory_alcohol_visual)
     
     def show_multisensory_neutral_visual_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory)
+        self.show_test_frame(self.multisensory_neutral_visual_olfactory)
     
     def show_multisensory_alcohol_visual_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_olfactory)
+        self.show_test_frame(self.multisensory_alcohol_visual_olfactory)
     
     def show_multisensory_neutral_visual_tactile_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_tactile_olfactory)
+        self.show_test_frame(self.multisensory_neutral_visual_tactile_olfactory)
     
     def show_multisensory_alcohol_visual_tactile_olfactory(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile_olfactory)
+        self.show_test_frame(self.multisensory_alcohol_visual_tactile_olfactory)
     
     def show_multisensory_alcohol_visual_tactile(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_tactile)
+        self.show_test_frame(self.multisensory_alcohol_visual_tactile)
     
     def show_multisensory_neutral_visual_tactile(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_tactile)
+        self.show_test_frame(self.multisensory_neutral_visual_tactile)
     
     def show_multisensory_alcohol_visual_olfactory2(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_alcohol_visual_olfactory2)
+        self.show_test_frame(self.multisensory_alcohol_visual_olfactory2)
     
     def show_multisensory_neutral_visual_olfactory2(self):
-        self.stacked_widget.setCurrentWidget(self.multisensory_neutral_visual_olfactory2)
-
-    def show_instruction_frame(self):
-        self.stacked_widget.setCurrentWidget(self.instruction_frame)
-
-    def show_latency_checker(self):
-        self.stacked_widget.setCurrentWidget(self.latency_checker)
+        self.show_test_frame(self.multisensory_neutral_visual_olfactory2)
 
     def show_first_test_frame(self):
-        self.stacked_widget.setCurrentWidget(self.unisensory_neutral_visual)
+        self.show_test_frame(self.unisensory_neutral_visual)
+
+    def toggle_instruction_frame(self):
+        if self.stacked_widget.currentWidget() == self.instruction_frame:
+            self.stacked_widget.setCurrentWidget(self.last_test_frame)
+            self.sidebar.instructions_button.setText("Show Instructions")
+        else:
+            self.stacked_widget.setCurrentWidget(self.instruction_frame)
+            self.sidebar.instructions_button.setText("Hide Instructions")
+
+    def toggle_latency_checker(self):
+        if self.stacked_widget.currentWidget() == self.latency_checker:
+            self.stacked_widget.setCurrentWidget(self.last_test_frame)
+        else:
+            self.stacked_widget.setCurrentWidget(self.latency_checker)
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
@@ -622,72 +636,136 @@ class InstructionFrame(QWidget):
 
         self.pages = []
         self.add_instruction_page(
-            "Welcome to the Experiment Control Panel!\n\n"
-            "This guide will walk you through the process of running an experiment using the main GUI.\n\n"
+            "Welcome to the Experiment Graphical User Interface!\n\n"
+            "This guide will walk you through the process of running an experiment using the Experiment GUI.\n\n"
+            "You can exit from this guide at any time by clicking on your desired test or the 'Hide Instructions' button.\n\n"
             "Click 'Next' to continue."
         )
         self.add_instruction_page(
             "Navigation Overview:\n\n"
-            "- The sidebar on the left lets you select different experiment types.\n"
+            "- The sidebar on the left lets you select from different experimental tests and the modalities to be used for it.\n"
+            "- The sidebar also contains a button to open/close this instruction guide, as well as a latency checker (Page 4).\n"
             "- The main area displays controls and status for the selected experiment.\n"
-            "- Use the 'Start', 'Stop', 'Pause', and 'Resume' buttons to control the experiment flow."
+            "- Use the 'Start', 'Stop', 'Pause', 'Resume', and 'Next' buttons to control the experiment flow."
         )
         self.add_instruction_page(
             "Button Functions:\n\n"
             "- Start: Begins the selected test.\n"
-            "- Stop: Ends the current test and saves data.\n"
-            "- Pause: Temporarily halts the test (if supported).\n"
+            "- Stop: Ends the current test and saves all the data from the devices used.\n"
+            "- Pause: Temporarily halts the test.\n"
             "- Resume: Continues a paused test.\n"
-            "- Next: Advances to the next trial or image (if enabled).\n"
-            "- Display/VR/Viewing Booth: Select the output mode for the experiment."
+            "- Next: Displays instructions to the participant allowing them to touch the object in the tactile box.\n"
+            "    • This button is not to be pressed until an experimenter has switched the object in the tactile box.\n"
+            "    • This button is only available for tests including a tactile modality.\n"
+            "- Display/VR/Viewing Booth: Select the output mode for the experiment. Only one may be selected at a time.\n"
+            "    • Display: Shows the 2D experiment on the main screen.\n"
+            "    • VR: Activates the VR headset for a 3D experiences.\n"
+            "    • Viewing Booth: Uses the viewing booth for the experiment."
+        )
+        self.add_instruction_page(
+            "Latency Checker:\n\n"
+            "The Latency Checker allows you to measure the latency between the Experiment computer and the Data Collection computer.\n"
+            "To use it:\n"
+            "1. Click the 'Latency Checker' button in the sidebar.\n"
+            "2. Click 'Start Latency Test' to begin measuring.\n"
+            "3. The average latency will be displayed after the test completes.\n"
+            "4. Verify the latency is within acceptable limits (typically below 2 ms).\n\n"
+            "Note: The Latency Checker will run for 5 seconds, sending 10 pings per second, and will display the average latency for the 50 total pings.\n\n"
+            "Click the 'Latency Checker' button in the sidebar to close the Latency Checker.\n\n"
         )
         self.add_instruction_page(
             "Running a Test:\n\n"
             "1. Select the desired test from the sidebar.\n"
-            "2. Choose the display mode (Display, VR, or Viewing Booth).\n"
-            "3. Click 'Start' to begin.\n"
-            "4. Follow on-screen prompts and monitor the status indicators.\n"
-            "5. Use 'Stop' to end and save the test.\n\n"
-            "For tactile tests, ensure the tactile box is connected before starting."
+            "2. Ensure the required external devices are connected in the Control Window on the data collection computer.\n"
+            "3. Choose the display mode (Display, VR, or Viewing Booth).\n"
+            "4. Click 'Start' to begin.\n"
+            "5. Follow on-screen prompts and monitor the status indicators.\n"
+            "6. Click 'Stop' to end and save the test."
         )
         self.add_instruction_page(
             "Troubleshooting & Tips:\n\n"
-            "- If a warning appears about the tactile box, check the connection and try again.\n"
+            "- If a warning appears for any external device, check the connection in the Control Window and try again.\n"
             "- Use the latency check to verify network responsiveness.\n"
             "- For further help, consult the experiment protocol document or contact the lead researcher.\n\n"
-            "Click 'Continue' to proceed to the latency check and main controls."
+            "Click 'Continue' to exit this guide and proceed to the first test."
         )
 
         # --- Navigation Buttons ---
         nav_layout = QHBoxLayout()
         self.prev_button = QPushButton("Previous")
+        self.prev_button.setFont(QFont("Segoe UI", 16))
+        self.prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 18px;
+                min-width: 120px;
+                min-height: 48px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.prev_button.setMinimumHeight(48)
         self.prev_button.clicked.connect(self.prev_page)
         nav_layout.addWidget(self.prev_button)
 
         self.page_label = QLabel()
         self.page_label.setAlignment(Qt.AlignCenter)
+        self.page_label.setFont(QFont("Segoe UI", 18, QFont.Bold))  # Larger font
+        self.page_label.setMinimumHeight(48)                        # Taller label
+        self.page_label.setStyleSheet("""
+            QLabel {
+                padding: 12px 32px;
+                color: #333;
+                background: #e3e3e3;
+                border-radius: 8px;
+                font-size: 20px;
+            }
+        """)
         nav_layout.addWidget(self.page_label, stretch=1)
 
         self.next_button = QPushButton("Next")
+        self.next_button.setFont(QFont("Segoe UI", 16))
+        self.next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 18px;
+                min-width: 120px;
+                min-height: 48px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.next_button.setMinimumHeight(48)
         self.next_button.clicked.connect(self.next_page)
         nav_layout.addWidget(self.next_button)
 
         layout.addLayout(nav_layout)
 
         continue_button = QPushButton("Continue")
-        continue_button.setFont(QFont("Segoe UI", 14))
+        continue_button.setFont(QFont("Segoe UI", 18, QFont.Bold))  # Larger font
         continue_button.setStyleSheet("""
             QPushButton {
                 background-color: #7E57C2;
                 color: white;
                 border-radius: 8px;
-                padding: 8px 22px;
-                font-size: 16px;
+                padding: 12px 32px;
+                font-size: 20px;
+                min-width: 160px;
+                min-height: 48px;
             }
             QPushButton:hover {
                 background-color: #512da8;
             }
         """)
+        continue_button.setMinimumHeight(48)
         continue_button.clicked.connect(parent.show_first_test_frame)
         layout.addWidget(continue_button, alignment=Qt.AlignCenter)
         continue_button.setVisible(False)
@@ -721,9 +799,14 @@ class InstructionFrame(QWidget):
         self.prev_button.setEnabled(idx > 0)
         if idx == total - 1:
             self.next_button.setVisible(False)
+            self.prev_button.setVisible(True)
             self.continue_button.setVisible(True)
+        elif idx == 0:
+            self.next_button.setVisible(True)
+            self.prev_button.setVisible(False)
         else:
             self.next_button.setVisible(True)
+            self.prev_button.setVisible(True)
             self.continue_button.setVisible(False)
         self.page_label.setText(f"Page {idx + 1} of {total}")
 
@@ -752,19 +835,22 @@ class LatencyChecker(QWidget):
         layout.addWidget(self.status_label)
 
         latency_button = QPushButton("Check Latency")
-        latency_button.setFont(QFont("Segoe UI", 12))
+        latency_button.setFont(QFont("Segoe UI", 16))
         latency_button.setStyleSheet("""
             QPushButton {
                 background-color: #42A5F5;
                 color: white;
                 border-radius: 8px;
-                padding: 8px 22px;
-                font-size: 15px;
+                padding: 12px 32px;
+                font-size: 18px;
+                min-width: 160px;
+                min-height: 48px;
             }
             QPushButton:hover {
                 background-color: #1976D2;
             }
         """)
+        latency_button.setMinimumHeight(48)
         latency_button.clicked.connect(self.send_latency_ping)
         layout.addWidget(latency_button, alignment=Qt.AlignCenter)
         self.latency_button = latency_button
