@@ -21,24 +21,11 @@ from logging.handlers import QueueListener
 from eeg_stimulus_project.config import config
 
 
-# Set up logging for the application
-def setup_logging():
-    """Setup logging using configuration settings."""
-    log_level = config.get('logging.level', 'INFO')
-    log_format = config.get('logging.format', '%(asctime)s %(levelname)s %(message)s')
-    log_file = config.get_absolute_path('paths.log_file')
-    
-    logging.basicConfig(
-        level=getattr(logging, log_level),
-        format=log_format,
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
-    )
+# Import logging utilities
+from eeg_stimulus_project.utils.logging_utils import setup_main_process_logging
 
 # Initialize logging
-setup_logging()
+setup_main_process_logging()
 
 # Returns lists of passive and stroop test names
 def get_test_lists():
@@ -92,7 +79,12 @@ def init_shared_resources():
 
 # Launches the control window process (host)
 def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number, host):
+    from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.control_window import ControlWindow
+    
+    # Setup logging for this child process
+    setup_child_process_logging(log_queue)
+    
     app = QApplication(sys.argv)
     window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host)
     window.show()
@@ -100,7 +92,12 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
 
 # Launches the main GUI process (client or local)
 def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, randomize_cues=None, seed=None):
+    from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.main_gui import GUI
+    
+    # Setup logging for this child process
+    setup_child_process_logging(log_queue)
+    
     app = QApplication(sys.argv)
     window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, randomize_cues, seed)
     window.show()
