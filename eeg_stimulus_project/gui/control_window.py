@@ -55,9 +55,9 @@ def excepthook(type, value, tb):
 
 sys.excepthook = excepthook
 
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+# Import utility modules
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.pupil_labs import PupilLabs
+from eeg_stimulus_project.utils.Pupil_Labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 
