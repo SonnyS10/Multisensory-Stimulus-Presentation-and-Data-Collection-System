@@ -103,9 +103,14 @@ class MirroredDisplayWindow(QWidget):
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)  # <-- Hide countdown label
-        label_height = self.instructions_label.height()
         if font is None:
-            font_size = max(8, int(label_height * 0.04))
+            # Use a more reliable font size calculation with a reasonable minimum
+            label_height = self.instructions_label.height()
+            if label_height <= 0:
+                # If height is not yet available, use a reasonable default
+                font_size = 18
+            else:
+                font_size = max(18, int(label_height * 0.04))  # Increased minimum from 8 to 18
             font = QFont("Arial", font_size, QFont.Bold)
         self.instructions_label.setFont(font)
         self.set_overlay_visible(True)
@@ -497,21 +502,31 @@ class DisplayWindow(QMainWindow):
     def show_touch_instruction(self, initial=False):
         label = "Touch Instruction Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        if initial:
-            self.instructions_label.setText("Please touch the object to begin.")
-            self.waiting_for_initial_touch = True
-        else:
-            self.instructions_label.setText("You may now touch the object.")
-        #self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
+
+        # Always set the instruction text for both display and mirror
+        instruction_text = "Please touch the object to begin." if initial else "You may now touch the object."
+        font = QFont("Arial", 32, QFont.Bold)
+
+        # Display widget
+        self.instructions_label.setText(instruction_text)
+        self.instructions_label.setFont(font)
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
+
+        # Mirror widget
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.set_instruction_text(self.instructions_label.text(), QFont("Arial", 32, QFont.Bold))
-        self.send_message({"action": "touchbox_lsl_true"})
+            self.mirror_widget.set_instruction_text(instruction_text, font)
+            self.mirror_widget.set_overlay_visible(True)
+
+        # State flags
         self.showing_touch_instruction = True
+        if initial:
+            self.waiting_for_initial_touch = True
+
+        self.send_message({"action": "touchbox_lsl_true"})
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
@@ -810,4 +825,3 @@ class DisplayWindow(QMainWindow):
         logger.setLevel(logging.INFO)
         logger.handlers = []
         logger.addHandler(queue_handler)
-
