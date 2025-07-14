@@ -103,11 +103,20 @@ class MirroredDisplayWindow(QWidget):
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)  # <-- Hide countdown label
-        label_height = self.instructions_label.height()
+        
+        # Improved font handling - ensure minimum readable size and use passed font when available
         if font is None:
-            font_size = max(8, int(label_height * 0.04))
+            # Use a more reliable font size calculation with a reasonable minimum
+            label_height = self.instructions_label.height()
+            if label_height <= 0:
+                # If height is not yet available, use a reasonable default
+                font_size = 18
+            else:
+                font_size = max(18, int(label_height * 0.04))  # Increased minimum from 8 to 18
             font = QFont("Arial", font_size, QFont.Bold)
+        
         self.instructions_label.setFont(font)
+        # Ensure overlay is visible to show the instruction text
         self.set_overlay_visible(True)
 
     #Method to set the timer text
@@ -502,7 +511,8 @@ class DisplayWindow(QMainWindow):
             self.waiting_for_initial_touch = True
         else:
             self.instructions_label.setText("You may now touch the object.")
-        #self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
+        # Set a clear, readable font for the touch instruction
+        self.instructions_label.setFont(QFont("Arial", 32, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
