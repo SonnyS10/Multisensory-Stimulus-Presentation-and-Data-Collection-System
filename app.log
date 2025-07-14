@@ -1966,3 +1966,5 @@
 2025-07-14 16:11:46,816 INFO Main GUI: Experiment completed
 2025-07-14 16:15:12,416 INFO Main process test message
 2025-07-14 16:15:12,426 INFO Child process test message
+2025-07-14 12:23:25,503 INFO Client: Connected to host.
+2025-07-14 12:24:33,744 INFO Client: Connected to host.

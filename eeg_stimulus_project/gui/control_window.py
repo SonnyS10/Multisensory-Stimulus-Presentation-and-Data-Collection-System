@@ -57,7 +57,7 @@ sys.excepthook = excepthook
 
 # Import utility modules
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.Pupil_Labs import PupilLabs
+from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 
@@ -251,13 +251,17 @@ class ControlWindow(QMainWindow):
         """)
         self.control_layout.addWidget(self.log_text_edit)
 
+        logger = logging.getLogger()
+        logger.handlers = []  # Remove all existing handlers
+
         log_handler = QTextEditLogger(self.log_text_edit)
         log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-        logging.getLogger().addHandler(log_handler)
 
         if log_queue is not None:
             self.queue_listener = QueueListener(log_queue, log_handler)
             self.queue_listener.start()
+        else:
+            logger.addHandler(log_handler)
 
         # Process for the applications
         self.actichamp_process = None
