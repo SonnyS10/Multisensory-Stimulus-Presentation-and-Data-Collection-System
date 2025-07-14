@@ -1941,3 +1941,28 @@
 2025-07-10 09:47:52,184 INFO LabRecorder opened.
 2025-07-10 09:48:33,808 INFO LabRecorder opened.
 >>>>>>> b3b64142d0ff12dbecd39232e5a98eb54c9e7c3b
+2025-07-14 16:09:37,477 INFO FIXED Child process: This is a test message from the child
+2025-07-14 16:09:37,478 WARNING FIXED Child process: This is a warning message
+2025-07-14 16:09:37,478 ERROR FIXED Child process: This is an error message
+2025-07-14 16:09:56,298 INFO FIXED Child process: This is a test message from the child
+2025-07-14 16:09:56,299 WARNING FIXED Child process: This is a warning message
+2025-07-14 16:09:56,299 ERROR FIXED Child process: This is an error message
+2025-07-14 16:11:46,809 INFO Control Window: Initializing control window
+2025-07-14 16:11:46,809 INFO Control Window: Setting up device connections
+2025-07-14 16:11:46,810 INFO Control Window: Attempting to connect to Actichamp
+2025-07-14 16:11:46,810 WARNING Control Window: Actichamp connection timeout, retrying...
+2025-07-14 16:11:46,810 INFO Control Window: Actichamp connected successfully
+2025-07-14 16:11:46,810 INFO Control Window: Starting LabRecorder
+2025-07-14 16:11:46,810 INFO Control Window: LabRecorder connected
+2025-07-14 16:11:46,810 INFO Control Window: Connecting to eye tracker
+2025-07-14 16:11:46,811 ERROR Control Window: Eye tracker connection failed
+2025-07-14 16:11:46,815 INFO Main GUI: Initializing main GUI
+2025-07-14 16:11:46,815 INFO Main GUI: Loading experiment configuration
+2025-07-14 16:11:46,815 INFO Main GUI: Loading test assets
+2025-07-14 16:11:46,816 INFO Main GUI: Preparing stimulus presentation
+2025-07-14 16:11:46,816 INFO Main GUI: Experiment started
+2025-07-14 16:11:46,816 INFO Main GUI: Presenting stimulus 1
+2025-07-14 16:11:46,816 INFO Main GUI: Presenting stimulus 2
+2025-07-14 16:11:46,816 INFO Main GUI: Experiment completed
+2025-07-14 16:15:12,416 INFO Main process test message
+2025-07-14 16:15:12,426 INFO Child process test message
