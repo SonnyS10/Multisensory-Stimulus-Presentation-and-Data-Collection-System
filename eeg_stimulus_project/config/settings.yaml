@@ -35,7 +35,7 @@ network:
     host: "10.115.12.225"
     # SSH username
     username: "benja"
-    # SSH password (should be moved to environment variable in production)
+    # SSH password (can use environment variable: ${TACTILE_PASSWORD:neuro})
     password: "neuro"
     # Data streaming port
     data_port: 5006

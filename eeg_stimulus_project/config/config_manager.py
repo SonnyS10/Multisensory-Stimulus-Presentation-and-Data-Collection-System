@@ -8,6 +8,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 import logging
+import re
 
 class ConfigManager:
     """
@@ -42,12 +43,38 @@ class ConfigManager:
             with open(config_path, 'r', encoding='utf-8') as f:
                 self._config = yaml.safe_load(f)
                 
+            # Process environment variables
+            self._process_environment_variables()
+                
             logging.info(f"Configuration loaded from {config_path}")
             
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             # Use default configuration if loading fails
             self._config = self._get_default_config()
+    
+    def _process_environment_variables(self):
+        """Process environment variables in configuration values."""
+        self._config = self._substitute_env_vars(self._config)
+    
+    def _substitute_env_vars(self, obj):
+        """Recursively substitute environment variables in configuration."""
+        if isinstance(obj, dict):
+            return {k: self._substitute_env_vars(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._substitute_env_vars(item) for item in obj]
+        elif isinstance(obj, str):
+            # Look for ${ENV_VAR} or ${ENV_VAR:default} patterns
+            pattern = r'\$\{([^}:]+)(?::([^}]*))?\}'
+            
+            def replace_env_var(match):
+                env_var = match.group(1)
+                default_value = match.group(2) if match.group(2) is not None else ""
+                return os.environ.get(env_var, default_value)
+            
+            return re.sub(pattern, replace_env_var, obj)
+        else:
+            return obj
     
     def _get_project_root(self) -> Path:
         """Get the project root directory."""
