@@ -153,6 +153,8 @@ class GUI(QMainWindow):
             self.stacked_widget.setCurrentWidget(self.last_test_frame)
         else:
             self.stacked_widget.setCurrentWidget(self.latency_checker)
+            self.sidebar.instructions_button.setText("Show Instructions")
+
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
