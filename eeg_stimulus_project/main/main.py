@@ -1,60 +1,83 @@
 import sys
-sys.path.append('\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+import os
+from pathlib import Path
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QFileDialog, QGroupBox, QSizePolicy, QSpacerItem, QCheckBox
 )
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt
-import os
 from multiprocessing import Manager, Process, Queue
 import socket
 import threading
 import logging
 from logging.handlers import QueueListener
 
+# Import configuration manager
+from eeg_stimulus_project.config import config
+
 
 # Set up logging for the application
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s',
-    handlers=[
-        logging.FileHandler("app.log"),
-        logging.StreamHandler()
-    ]
-)
+def setup_logging():
+    """Setup logging using configuration settings."""
+    log_level = config.get('logging.level', 'INFO')
+    log_format = config.get('logging.format', '%(asctime)s %(levelname)s %(message)s')
+    log_file = config.get_absolute_path('paths.log_file')
+    
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format=log_format,
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+
+# Initialize logging
+setup_logging()
 
 # Returns lists of passive and stroop test names
 def get_test_lists():
-    passive_tests = [
+    # Get test types from configuration
+    passive_tests = config.get('experiment.test_types.passive', [
         'Unisensory Neutral Visual',
         'Unisensory Alcohol Visual',
         'Multisensory Neutral Visual & Olfactory',
         'Multisensory Alcohol Visual & Olfactory',
         'Multisensory Neutral Visual, Tactile & Olfactory',
         'Multisensory Alcohol Visual, Tactile & Olfactory'
-    ]
-    stroop_tests = [
+    ])
+    stroop_tests = config.get('experiment.test_types.stroop', [
         'Stroop Multisensory Alcohol (Visual & Tactile)',
         'Stroop Multisensory Neutral (Visual & Tactile)',
         'Stroop Multisensory Alcohol (Visual & Olfactory)',
         'Stroop Multisensory Neutral (Visual & Olfactory)'
-    ]
+    ])
     return passive_tests, stroop_tests
 
 # Creates the data directories for a subject and test, and clears any existing data.csv files
 def create_data_dirs(subject_id, test_number):
-    base_dir = os.path.join('eeg_stimulus_project', 'saved_data', f'subject_{subject_id}', f'test_{test_number}')
-    os.makedirs(base_dir, exist_ok=True)
+    # Get data directory from configuration
+    data_dir = config.get_absolute_path('paths.data_directory')
+    base_dir = data_dir / f'subject_{subject_id}' / f'test_{test_number}'
+    base_dir.mkdir(parents=True, exist_ok=True)
+    
     passive_tests, stroop_tests = get_test_lists()
     selected_tests = passive_tests if test_number == '1' else stroop_tests
     for test in selected_tests:
-        test_dir = os.path.join(base_dir, test)
-        os.makedirs(test_dir, exist_ok=True)
-        file_path = os.path.join(test_dir, 'data.csv')
-        if os.path.exists(file_path):
-            with open(file_path, 'w') as file:
-                file.truncate(0)
-    return base_dir
+        test_dir = base_dir / test
+        test_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Clear existing data.csv files
+        csv_file = test_dir / 'data.csv'
+        if csv_file.exists():
+            csv_file.unlink()
+    
+    return str(base_dir)
 
 # Initializes shared resources for multiprocessing (status dict and log queue)
 def init_shared_resources():
@@ -393,11 +416,15 @@ class MainWindow(QMainWindow):
         seed_text = self.seed_input.text().strip()
         seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the EEG Stimulus Project."""
     # Create the application and main window, then run the application
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
 
 

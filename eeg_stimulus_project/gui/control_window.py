@@ -3,16 +3,33 @@ from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
 import subprocess
-from pywinauto import Application
 import time 
 import threading
 import json
 import traceback
 import logging 
 import os
+import platform
+from pathlib import Path
 from logging.handlers import QueueListener #QueueHandler
 import socket
 from multiprocessing import Process, Manager
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from eeg_stimulus_project.config import config
+
+# Platform-specific imports
+if platform.system() == 'Windows':
+    try:
+        from pywinauto import Application
+    except ImportError:
+        print("pywinauto not available - Windows automation features disabled")
+        Application = None
+else:
+    Application = None
 
 class QTextEditLogger(logging.Handler, QObject):
     append_text = pyqtSignal(str)
@@ -319,7 +336,17 @@ class ControlWindow(QMainWindow):
     def start_actichamp(self):
         def worker():
             try:
-                self.actichamp_process = subprocess.Popen(["C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"])
+                # Get actichamp path from configuration based on platform
+                current_platform = platform.system().lower()
+                platform_config = config.get(f'platform.{current_platform}', {})
+                
+                if current_platform == 'windows':
+                    actichamp_path = platform_config.get('actichamp_path', 'C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe')
+                    self.actichamp_process = subprocess.Popen([actichamp_path])
+                else:
+                    logging.info("Actichamp not supported on this platform")
+                    return
+                    
                 logging.info("Actichamp started.")
                 logging.info("Attempting Link with the Actichamp Device")
                 time.sleep(2)  # Wait for the application to start
@@ -353,7 +380,17 @@ class ControlWindow(QMainWindow):
     def start_labrecorder(self):
         def worker():
             try:
-                self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", "C:\\Vision\\LabRecorder\\LabRecorder.exe"])
+                # Get labrecorder path from configuration based on platform
+                current_platform = platform.system().lower()
+                platform_config = config.get(f'platform.{current_platform}', {})
+                labrecorder_path = platform_config.get('labrecorder_path', 'labrecorder')
+                
+                if current_platform == 'windows':
+                    self.labrecorder_process = subprocess.Popen(["cmd.exe", "/C", "start", "cmd.exe", "/K", labrecorder_path])
+                else:
+                    # For Linux/Mac, try to start labrecorder directly
+                    self.labrecorder_process = subprocess.Popen([labrecorder_path])
+                    
                 logging.info("LabRecorder opened.")
                 time.sleep(5)  # Wait for the application to start
                 self.connect_labrecorder()  # Connect to LabRecorder after it has started
