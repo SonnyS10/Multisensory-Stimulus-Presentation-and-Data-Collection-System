@@ -1,0 +1,181 @@
+# EEG Stimulus Project Configuration
+# This file contains all configurable settings for the multisensory stimulus presentation system
+
+# File and directory paths
+paths:
+  # Base directory for saving experiment data (relative to project root)
+  data_directory: "eeg_stimulus_project/saved_data"
+  
+  # Directory for stimulus assets (relative to project root)
+  assets_directory: "eeg_stimulus_project/assets"
+  
+  # Default image directory (relative to assets directory)
+  images_directory: "Images"
+  
+  # Log file path (relative to project root)
+  log_file: "app.log"
+  
+  # Tactile data output file (relative to project root)
+  tactile_data_file: "eeg_stimulus_project/stimulus/tactile_box_code/received_data.txt"
+
+# Network configuration
+network:
+  # Host/client communication port
+  host_port: 9999
+  
+  # LabRecorder control port
+  labrecorder_port: 22345
+  
+  # Connection timeout in seconds
+  timeout: 30
+  
+  # Tactile system configuration
+  tactile_system:
+    # Tactile control computer IP
+    host: "10.115.12.225"
+    # SSH username
+    username: "benja"
+    # SSH password (should be moved to environment variable in production)
+    password: "neuro"
+    # Data streaming port
+    data_port: 5006
+    # Remote Python virtual environment activation command
+    venv_activate: "source ~/Desktop/bin/activate"
+    # Remote script path
+    script_path: "python ~/forcereadwithzero.py"
+
+# Hardware configuration
+hardware:
+  # EEG system settings
+  eeg:
+    device_type: "EMOTIV"
+    sampling_rate: 256
+    channel_count: 32
+    labrecorder_host: "localhost"
+    
+  # Eye tracking system settings
+  eye_tracker:
+    device_type: "Eyelink"
+    calibration_points: 9
+    sampling_rate: 1000
+    
+  # VR system settings
+  vr:
+    device_type: "HTC_VIVE_Pro_Eye"
+    refresh_rate: 90
+    
+  # Tactile system settings
+  tactile:
+    threshold: 500
+    baseline_force: 0
+    rezero_time: 2  # seconds
+    rezero_threshold: 50  # force units
+
+# Experiment configuration
+experiment:
+  # Default test types
+  test_types:
+    passive:
+      - "Unisensory Neutral Visual"
+      - "Unisensory Alcohol Visual"
+      - "Multisensory Neutral Visual & Olfactory"
+      - "Multisensory Alcohol Visual & Olfactory"
+      - "Multisensory Neutral Visual, Tactile & Olfactory"
+      - "Multisensory Alcohol Visual, Tactile & Olfactory"
+    stroop:
+      - "Stroop Multisensory Alcohol (Visual & Tactile)"
+      - "Stroop Multisensory Neutral (Visual & Tactile)"
+      - "Stroop Multisensory Alcohol (Visual & Olfactory)"
+      - "Stroop Multisensory Neutral (Visual & Olfactory)"
+  
+  # Timing settings
+  stimulus_duration: 2000  # milliseconds
+  inter_stimulus_interval: 1500  # milliseconds
+  
+  # Default randomization settings
+  randomize_cues: false
+  default_seed: null
+
+# Data collection settings
+data:
+  # File formats to save
+  formats:
+    - "csv"
+    - "xdf"
+  
+  # Data collection parameters
+  collection:
+    buffer_size: 1024
+    auto_save_interval: 30  # seconds
+
+# LSL (Lab Streaming Layer) configuration
+lsl:
+  # Supported stream types
+  supported_streams:
+    eeg: true
+    eye_tracker: true
+    behavioral: true
+    tactile: true
+    
+  # Stream settings
+  stream_settings:
+    eeg:
+      name: "EEG"
+      type: "EEG"
+      channel_count: 32
+      sampling_rate: 256
+    eye_tracker:
+      name: "EyeTracker"
+      type: "Gaze"
+      channel_count: 4
+      sampling_rate: 1000
+    tactile:
+      name: "Tactile"
+      type: "Force"
+      channel_count: 1
+      sampling_rate: 100
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s %(levelname)s %(message)s"
+  handlers:
+    - type: "file"
+      filename: "app.log"
+    - type: "console"
+
+# GUI configuration
+gui:
+  # Window settings
+  window:
+    title: "EEG Stimulus Presentation System"
+    width: 1200
+    height: 800
+  
+  # Font settings
+  font:
+    family: "Arial"
+    size: 12
+    
+  # Theme settings
+  theme: "default"
+
+# Platform-specific settings
+platform:
+  # Windows-specific settings
+  windows:
+    use_pywinauto: true
+    labrecorder_path: "C:\\Vision\\LabRecorder\\LabRecorder.exe"
+    actichamp_path: "C:\\Vision\\actiCHamp-1.15.1-win32\\actiCHamp.exe"
+    
+  # Linux-specific settings
+  linux:
+    use_pywinauto: false
+    labrecorder_path: "/usr/local/bin/labrecorder"
+    actichamp_path: ""
+    
+  # macOS-specific settings
+  macos:
+    use_pywinauto: false
+    labrecorder_path: "/Applications/LabRecorder.app/Contents/MacOS/LabRecorder"
+    actichamp_path: ""
