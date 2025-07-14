@@ -1,7 +1,12 @@
 import os
 import csv
 import sys
-sys.path.append('C:\\Users\\srs1520\\Documents\\Paid Research\\Software-for-Paid-Research-')
+from pathlib import Path
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from eeg_stimulus_project.lsl.stream_manager import LSL
 #from eeg_stimulus_project.utils.labrecorder import LabRecorder
 #IN THE FUTURE, WE CAN JUST CREATE ALL OF THE TEST DIRECTORIES WEN WE CREATE A NEW PARTICIPANT AND THEN THIS FILE IS NOT NEEDED

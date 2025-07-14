@@ -7,15 +7,36 @@ import socket
 import json
 import sys
 import datetime
+import os
+from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QTextEdit, QLabel, QSpinBox, QDesktopWidget
 from PyQt5.QtCore import QTimer
 
-# SSH connection info
-ssh_host = '10.115.12.225'
-ssh_user = 'benja'
-ssh_password = 'neuro'
-remote_venv_activate = 'source ~/Desktop/bin/activate'
-remote_script = 'python ~/forcereadwithzero.py'
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from eeg_stimulus_project.config import config
+
+# SSH connection info - load from configuration
+def get_ssh_config():
+    """Get SSH configuration from settings."""
+    return {
+        'host': config.get('network.tactile_system.host', '10.115.12.225'),
+        'username': config.get('network.tactile_system.username', 'benja'),
+        'password': config.get('network.tactile_system.password', 'neuro'),
+        'data_port': config.get('network.tactile_system.data_port', 5006),
+        'venv_activate': config.get('network.tactile_system.venv_activate', 'source ~/Desktop/bin/activate'),
+        'script_path': config.get('network.tactile_system.script_path', 'python ~/forcereadwithzero.py')
+    }
+
+# Get SSH configuration
+ssh_config = get_ssh_config()
+ssh_host = ssh_config['host']
+ssh_user = ssh_config['username']
+ssh_password = ssh_config['password']
+remote_venv_activate = ssh_config['venv_activate']
+remote_script = ssh_config['script_path']
 
 ssh_client = None
 remote_channel = None
@@ -76,12 +97,14 @@ class RemoteScriptGUI(QMainWindow):
         y = screen.height() - height
         self.setGeometry(x, y, width, height)
 
-        self.threshold = 500
+        # Load hardware configuration
+        hardware_config = config.get('hardware.tactile', {})
+        self.threshold = hardware_config.get('threshold', 500)
         self.last_force = 0
-        self.baseline_force = 0
+        self.baseline_force = hardware_config.get('baseline_force', 0)
         self.force_history = []
-        self.rezero_time = 2  # seconds
-        self.rezero_threshold = 50  # force units
+        self.rezero_time = hardware_config.get('rezero_time', 2)  # seconds
+        self.rezero_threshold = hardware_config.get('rezero_threshold', 50)  # force units
         self.last_rezero_time = time.time()
 
         self.lsl_enabled = self.shared_status['lsl_enabled']
@@ -163,14 +186,18 @@ class RemoteScriptGUI(QMainWindow):
         #start_remote_script(on_success=lambda: self.send_label_to_control("tactile_started"))
 
     def start_local_script(self):
-        PI_IP = '10.115.12.225'  # Raspberry Pi's IP
-        PORT = 5006
-        OUTPUT_FILENAME = r"C:\Users\srs1520\Documents\Paid Research\Software-for-Paid-Research-\eeg_stimulus_project\stimulus\tactile_box_code\received_data.txt"
+        # Get configuration values
+        ssh_config = get_ssh_config()
+        PI_IP = ssh_config['host']
+        PORT = ssh_config['data_port']
+        
+        # Get output filename from configuration
+        output_file = config.get_absolute_path('paths.tactile_data_file')
         
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((PI_IP, PORT))
-                with open(OUTPUT_FILENAME, "wb") as f:
+                with open(output_file, "wb") as f:
                     print(f"Connected to {PI_IP}:{PORT}. Receiving data...")
                     self.send_label_to_control("tactile_connected")
                     while True:
@@ -178,7 +205,7 @@ class RemoteScriptGUI(QMainWindow):
                         if not data:
                             break
                         f.write(data)
-            print(f"All data saved to {OUTPUT_FILENAME}")
+            print(f"All data saved to {output_file}")
         except KeyboardInterrupt:
             print("Connection terminated by user.")  
 
