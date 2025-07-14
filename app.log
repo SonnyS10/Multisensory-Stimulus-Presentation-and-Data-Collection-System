@@ -1968,3 +1968,6 @@
 2025-07-14 16:15:12,426 INFO Child process test message
 2025-07-14 12:23:25,503 INFO Client: Connected to host.
 2025-07-14 12:24:33,744 INFO Client: Connected to host.
+2025-07-14 16:41:51,722 INFO Test message 1 from main process
+2025-07-14 16:41:51,722 WARNING Test warning from main process
+2025-07-14 16:41:51,722 ERROR Test error from main process
