@@ -1971,5 +1971,27 @@
 2025-07-14 16:41:51,722 INFO Test message 1 from main process
 2025-07-14 16:41:51,722 WARNING Test warning from main process
 2025-07-14 16:41:51,722 ERROR Test error from main process
+<<<<<<< HEAD
 2025-07-14 13:16:23,885 INFO Client: Connected to host.
 2025-07-14 13:19:38,210 INFO Client: Connected to host.
+=======
+2025-07-14 12:47:05,820 INFO Host: Waiting for client on port 9999...
+2025-07-14 12:47:06,318 INFO Host: Connected by ('169.254.185.196', 61634)
+2025-07-14 12:47:26,775 INFO Client disconnected.
+2025-07-14 13:03:04,037 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:10:03,881 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:10:04,640 INFO Authentication (publickey) failed.
+2025-07-14 13:10:04,730 INFO Authentication (password) successful!
+2025-07-14 13:16:21,397 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:16:23,871 INFO Host: Connected by ('169.254.185.196', 64920)
+2025-07-14 13:16:31,496 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:16:31,630 INFO Authentication (publickey) failed.
+2025-07-14 13:16:31,662 INFO Authentication (password) successful!
+2025-07-14 13:18:16,055 INFO Client disconnected.
+2025-07-14 13:19:34,496 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:19:38,196 INFO Host: Connected by ('169.254.185.196', 64990)
+2025-07-14 13:19:47,895 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:19:48,003 INFO Authentication (publickey) failed.
+2025-07-14 13:19:48,038 INFO Authentication (password) successful!
+2025-07-14 13:21:52,243 INFO Client disconnected.
+>>>>>>> 4a4c830c7778ce0c81ca12896a6fd6e08c8695bb
