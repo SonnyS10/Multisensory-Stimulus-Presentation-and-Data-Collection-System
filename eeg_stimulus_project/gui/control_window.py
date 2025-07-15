@@ -57,7 +57,7 @@ sys.excepthook = excepthook
 
 # Import utility modules
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.Pupil_Labs import PupilLabs
+from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 
