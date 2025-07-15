@@ -533,6 +533,7 @@ class ControlWindow(QMainWindow):
                             logging.info(f"Host: Pushing label: {label}")
                             self.update_app_status_icon(self.touchbox_connected_icon, True)
                             self.shared_status['tactile_connected'] = True
+                            self.connection.sendall((json.dumps({"action": "tactile_connected"}) + "\n").encode('utf-8'))
                         if msg.get("action") == "tactile_touch":
                             label = "tactile_touch"
                             logging.info(f"Received label: {label}")

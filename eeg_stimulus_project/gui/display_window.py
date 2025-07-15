@@ -146,7 +146,8 @@ class MirroredDisplayWindow(QWidget):
         else:
             self.countdown_timer.stop()
             self.countdown_label.setText("Go!")
-            QTimer.singleShot(1000, self.begin_experiment)
+            if "Tactile" not in self.current_test:
+                QTimer.singleShot(1000, self.begin_experiment)
 
     #Method to show the instruction for the next image
     def show_instruction_for_next_image(self, text=None, font=None):
@@ -534,6 +535,7 @@ class DisplayWindow(QMainWindow):
             self.waiting_for_initial_touch = False
             self.showing_touch_instruction = False
             self.begin_experiment()  # This will show the first image
+            self.mirror_widget.begin_experiment()  # Also start the mirror widget
             return
         if not self.showing_touch_instruction:
             print("Touch advance ignored: not showing touch instruction.")

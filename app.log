@@ -1995,3 +1995,65 @@
 2025-07-14 13:19:48,038 INFO Authentication (password) successful!
 2025-07-14 13:21:52,243 INFO Client disconnected.
 >>>>>>> 4a4c830c7778ce0c81ca12896a6fd6e08c8695bb
+2025-07-14 13:31:09,215 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:31:11,495 INFO Host: Connected by ('169.254.185.196', 65218)
+2025-07-14 13:31:16,866 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:31:17,018 INFO Authentication (publickey) failed.
+2025-07-14 13:31:17,079 INFO Authentication (password) successful!
+2025-07-14 13:32:00,799 INFO Client disconnected.
+2025-07-14 13:32:46,658 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:32:48,821 INFO Host: Connected by ('169.254.185.196', 65260)
+2025-07-14 13:33:04,172 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:33:04,279 INFO Authentication (publickey) failed.
+2025-07-14 13:33:04,312 INFO Authentication (password) successful!
+2025-07-14 13:33:08,644 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:33:09,184 INFO Authentication (publickey) failed.
+2025-07-14 13:33:09,325 INFO Authentication (password) successful!
+2025-07-14 13:33:16,366 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:33:16,510 INFO Authentication (publickey) failed.
+2025-07-14 13:33:16,571 INFO Authentication (password) successful!
+2025-07-14 13:33:27,204 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:33:27,324 INFO Authentication (publickey) failed.
+2025-07-14 13:33:27,380 INFO Authentication (password) successful!
+2025-07-14 13:34:05,364 INFO Client disconnected.
+2025-07-14 13:36:12,489 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:36:13,545 INFO Host: Connected by ('169.254.185.196', 65345)
+2025-07-14 13:36:18,533 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:36:18,678 INFO Authentication (publickey) failed.
+2025-07-14 13:36:18,739 INFO Authentication (password) successful!
+2025-07-14 13:38:16,094 INFO Client disconnected.
+2025-07-14 13:45:33,506 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:45:35,979 INFO Host: Connected by ('169.254.185.196', 65526)
+2025-07-14 13:45:46,301 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:45:46,458 INFO Authentication (publickey) failed.
+2025-07-14 13:45:46,523 INFO Authentication (password) successful!
+2025-07-14 13:47:48,652 INFO Client disconnected.
+2025-07-14 13:51:31,426 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:51:33,665 INFO Host: Connected by ('169.254.185.196', 49261)
+2025-07-14 13:51:39,414 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:51:40,277 INFO Authentication (publickey) failed.
+2025-07-14 13:51:40,332 INFO Authentication (password) successful!
+2025-07-14 13:53:13,472 INFO Client disconnected.
+2025-07-14 13:53:25,250 INFO Host: Waiting for client on port 9999...
+2025-07-14 13:53:31,083 INFO Host: Connected by ('169.254.185.196', 49290)
+2025-07-14 13:54:27,457 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-14 13:54:27,887 INFO Authentication (publickey) failed.
+2025-07-14 13:54:27,942 INFO Authentication (password) successful!
+2025-07-14 13:54:44,948 INFO Client disconnected.
+2025-07-14 14:13:31,058 INFO Host: Waiting for client on port 9999...
+2025-07-14 14:13:36,532 INFO Host: Connected by ('169.254.185.196', 49889)
+2025-07-14 14:14:53,781 INFO Client disconnected.
+2025-07-15 09:24:03,375 INFO Host: Waiting for client on port 9999...
+2025-07-15 09:24:05,374 INFO Host: Connected by ('169.254.185.196', 54921)
+2025-07-15 09:24:16,319 INFO Client disconnected.
+2025-07-15 09:43:40,457 INFO Host: Waiting for client on port 9999...
+2025-07-15 09:43:42,173 INFO Host: Connected by ('169.254.185.196', 55463)
+2025-07-15 09:44:55,043 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-15 09:44:55,367 INFO Authentication (publickey) failed.
+2025-07-15 09:44:55,427 INFO Authentication (password) successful!
+2025-07-15 09:45:03,090 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-15 09:45:03,308 INFO Authentication (publickey) failed.
+2025-07-15 09:45:03,373 INFO Authentication (password) successful!
+2025-07-15 09:45:22,660 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-15 09:45:24,228 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-15 09:45:24,899 INFO Client disconnected.
