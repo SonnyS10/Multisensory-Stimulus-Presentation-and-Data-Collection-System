@@ -27,11 +27,11 @@ class StimulusOrderFrame(QWidget):
         self.custom_orders = {}  # Store custom orders for each test
         self.original_assets = {}  # Store original asset order
         
+        # Setup UI first
+        self.setup_ui()
+        
         # Load current assets
         self.load_current_assets()
-        
-        # Setup UI
-        self.setup_ui()
         
         # Set default test
         if self.test_selector.count() > 0:
