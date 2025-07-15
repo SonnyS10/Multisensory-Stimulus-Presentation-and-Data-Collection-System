@@ -77,7 +77,11 @@ class GUI(QMainWindow):
         # Instructions and Latency Checker Frame
         self.instruction_frame = InstructionFrame(self)
         self.latency_checker = LatencyChecker(self)
-        self.stimulus_order_frame = StimulusOrderFrame(self)
+        self.stimulus_order_frame = StimulusOrderFrame(
+            parent=self,
+            alcohol_folder=self.alcohol_folder,
+            non_alcohol_folder=self.non_alcohol_folder
+        )
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS

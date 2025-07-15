@@ -20,9 +20,11 @@ class StimulusOrderFrame(QWidget):
     for each test using drag-and-drop functionality.
     """
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, alcohol_folder=None, non_alcohol_folder=None):
         super().__init__(parent)
         self.parent = parent
+        self.alcohol_folder = alcohol_folder
+        self.non_alcohol_folder = non_alcohol_folder
         self.current_test_name = None
         self.custom_orders = {}  # Store custom orders for each test
         self.original_assets = {}  # Store original asset order
@@ -184,10 +186,10 @@ class StimulusOrderFrame(QWidget):
     def load_current_assets(self):
         """Load current assets from the asset handler."""
         try:
-            # Get assets without randomization to maintain original order
+            # Use the folders passed in, so custom images are loaded
             self.original_assets = Display.get_assets(
-                alcohol_folder=None,
-                non_alcohol_folder=None,
+                alcohol_folder=self.alcohol_folder,
+                non_alcohol_folder=self.non_alcohol_folder,
                 randomize_cues=False,
                 seed=None
             )
