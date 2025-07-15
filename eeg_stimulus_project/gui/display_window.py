@@ -566,7 +566,6 @@ class DisplayWindow(QMainWindow):
                 label = "Passive Test Ended"
 
             self.send_message({"action": "label", "label": label})
-            self.showing_second_pre = True
             #self.label_stream.push_label("Test Ended")
             self.paused_image_index = 0
             self.paused_time = 0
@@ -807,13 +806,8 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
-        # If this is the second time, show the end screen after a delay
-        if getattr(self, 'showing_second_pre', False):
-            QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
-            self.showing_second_pre = False
-        else:
-        # After 2 minutes, show the main instructions
-            QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
+        # After 2 minutes, show the main instructions (for pre-test crosshair period)
+        QTimer.singleShot(120000, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
@@ -982,7 +976,8 @@ class DisplayWindow(QMainWindow):
         self.craving_response = value
         self.save_craving_response()
         self.removeEventFilter(self)
-        QTimer.singleShot(500, self.show_crosshair_instructions)  # Short delay before advancing
+        # After craving rating is saved, go directly to crosshair instructions for post-test period
+        QTimer.singleShot(500, self.show_post_test_crosshair_instructions)  # Short delay before advancing
 
     def save_craving_response(self):
         # Save the craving response to a CSV file
@@ -991,3 +986,33 @@ class DisplayWindow(QMainWindow):
             writer = csv.writer(csvfile)
             writer.writerow([self.test_number, self.current_test, self.craving_response])
         logging.info(f"Craving rating saved: {self.craving_response}")
+
+    def show_post_test_crosshair_instructions(self):
+        # Show post-test crosshair instructions (after craving rating)
+        label = "Post-Test Crosshair Instructions Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_instructions()
+        # After a short delay (5 seconds), show the crosshair
+        QTimer.singleShot(5000, self.show_post_test_crosshair_period)  # Show crosshair after 5 seconds
+
+    def show_post_test_crosshair_period(self):
+        # Show a crosshair for 2 minutes after the test has ended
+        label = "Post-Test Crosshair Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.instructions_label.setText("+")
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_period()
+        # After 2 minutes, show the end screen (not restart the experiment)
+        QTimer.singleShot(120000, self.end_screen)  # Show end screen after 2 minutes (120000)
