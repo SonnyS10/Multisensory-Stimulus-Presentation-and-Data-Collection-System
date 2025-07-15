@@ -116,6 +116,24 @@ class Sidebar(QFrame):
         latency_button.clicked.connect(parent.toggle_latency_checker)
         self.layout.addWidget(latency_button)
 
+        # Stimulus Order Button
+        stimulus_order_button = QPushButton("Stimulus Order", self)
+        stimulus_order_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        stimulus_order_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7E57C2;
+                color: white;
+                border-radius: 8px;
+                padding: 10px 0px;
+                margin-top: 18px;
+            }
+            QPushButton:hover {
+                background-color: #512da8;
+            }
+        """)
+        stimulus_order_button.clicked.connect(parent.toggle_stimulus_order)
+        self.layout.addWidget(stimulus_order_button)
+
     # Add a submenu with a heading and options  
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)

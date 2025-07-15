@@ -9,10 +9,12 @@ import threading
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
+from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
+from eeg_stimulus_project.assets.asset_handler import Display
 import logging
 from logging.handlers import QueueHandler
 
@@ -75,6 +77,7 @@ class GUI(QMainWindow):
         # Instructions and Latency Checker Frame
         self.instruction_frame = InstructionFrame(self)
         self.latency_checker = LatencyChecker(self)
+        self.stimulus_order_frame = StimulusOrderFrame(self)
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
@@ -90,6 +93,7 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         self.stacked_widget.addWidget(self.instruction_frame)
         self.stacked_widget.addWidget(self.latency_checker)
+        self.stacked_widget.addWidget(self.stimulus_order_frame)
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
         self.last_test_frame = self.unisensory_neutral_visual  # Default to first test
@@ -154,6 +158,17 @@ class GUI(QMainWindow):
         else:
             self.stacked_widget.setCurrentWidget(self.latency_checker)
             self.sidebar.instructions_button.setText("Show Instructions")
+
+    def toggle_stimulus_order(self):
+        if self.stacked_widget.currentWidget() == self.stimulus_order_frame:
+            self.stacked_widget.setCurrentWidget(self.last_test_frame)
+        else:
+            self.stacked_widget.setCurrentWidget(self.stimulus_order_frame)
+            self.sidebar.instructions_button.setText("Show Instructions")
+
+    def update_custom_orders(self, custom_orders):
+        """Update the custom orders in the Display class."""
+        Display.set_custom_orders(custom_orders)
 
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
