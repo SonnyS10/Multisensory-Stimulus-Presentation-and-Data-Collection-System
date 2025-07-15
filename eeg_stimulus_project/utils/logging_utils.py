@@ -48,13 +48,11 @@ class NetworkLogHandler(logging.Handler):
             
             # Create a log message packet
             log_packet = {
-                'type': 'log_message',
                 'timestamp': record.created,
                 'level': record.levelname,
                 'message': formatted_msg,
-                'logger': record.name,
                 'filename': record.filename,
-                'lineno': record.lineno
+                'line_number': record.lineno
             }
             
             # Convert to JSON and send

@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         client_layout.addWidget(self.start_as_client_button)
 
         # --- Asset Import Section ---
-        asset_group = QGroupBox("Import Custom Assets (Optional)")
+        asset_group = QGroupBox("Import Custom Assets (Optional: For the Client Only)")
         asset_layout = QVBoxLayout(asset_group)
         asset_layout.setSpacing(8)
 
