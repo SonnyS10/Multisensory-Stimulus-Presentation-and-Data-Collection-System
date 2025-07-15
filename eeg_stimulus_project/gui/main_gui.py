@@ -304,6 +304,8 @@ class GUI(QMainWindow):
                             current_frame = self.stacked_widget.currentWidget()
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
                                 QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
+                        elif msg.get("action") == "tactile_connected":
+                            self.shared_status['tactile_connected'] = True
                 except Exception as e:
                     logging.info(f"Listener error: {e}")
                     break
