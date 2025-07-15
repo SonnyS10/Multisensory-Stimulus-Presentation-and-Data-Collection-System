@@ -33,8 +33,8 @@ class GUI(QMainWindow):
         if connection is not None:
             self.start_listener()
 
-        # Set up logging
-        self.setup_logging(log_queue)
+        # Set up logging (handled in main process setup)
+        # self.setup_logging(log_queue)
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
