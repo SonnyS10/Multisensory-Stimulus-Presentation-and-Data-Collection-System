@@ -33,7 +33,7 @@ class NetworkLogHandler(logging.Handler):
         """
         super().__init__()
         self.connection = connection
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()  # Use RLock instead of Lock
     
     def emit(self, record):
         """
@@ -60,11 +60,12 @@ class NetworkLogHandler(logging.Handler):
             # Convert to JSON and send
             json_msg = json.dumps(log_packet) + '\n'
             
+            # Use a timeout to avoid hanging
             with self.lock:
                 if self.connection:
                     try:
                         self.connection.send(json_msg.encode('utf-8'))
-                    except (ConnectionResetError, BrokenPipeError, OSError):
+                    except (ConnectionResetError, BrokenPipeError, OSError) as e:
                         # Connection lost, disable this handler
                         self.connection = None
                         
