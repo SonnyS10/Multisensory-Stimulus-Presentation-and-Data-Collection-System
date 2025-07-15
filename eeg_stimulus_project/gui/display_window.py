@@ -1,12 +1,13 @@
 import sys
 import os
 from pathlib import Path
+import csv
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
 from eeg_stimulus_project.assets.asset_handler import Display
@@ -470,7 +471,7 @@ class DisplayWindow(QMainWindow):
     def show_crosshair_between_images(self, test_type):
         label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        duration_ms = random.randint(2000, 5000)
+        duration_ms = random.randint(800, 1200)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -566,13 +567,14 @@ class DisplayWindow(QMainWindow):
 
             self.send_message({"action": "label", "label": label})
             self.showing_second_pre = True
-            self.show_crosshair_instructions()
-            self.label_stream.push_label("Test Ended")
+            #self.label_stream.push_label("Test Ended")
             self.paused_image_index = 0
             self.paused_time = 0
             self.timer.stop()
             #if self.eyetracker and self.eyetracker.device is not None:
             #    self.eyetracker.stop_recording()
+            self.show_craving_rating_screen()
+            #self.show_crosshair_instructions()
 
     def poll_label(self):
         # This will print the current label and the current time in ms
@@ -643,35 +645,43 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
-            img = self.images[self.current_image_index]
-            if self.Paused == False:
-                if event.type() == QEvent.KeyPress:
-                    if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
-                        if event.key() == Qt.Key_Y:
-                            self.user_data['user_inputs'].append('Yes') # Store the user input
-                            if hasattr(img, 'filename'):
-                                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
-                                self.send_message({"action": "label", "label": label})
-                                self.label_stream.push_label(label)
-                                logging.info(f"Current label: {label}")
-                                self.current_label = label  # Push label to LSL stream
-                        else:
-                            self.user_data['user_inputs'].append('No')  # Store the user input
-                            if hasattr(img, 'filename'):
-                                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
-                                self.send_message({"action": "label", "label": label})
-                                self.label_stream.push_label(label)
-                                logging.info(f"Current label: {label}")
-                                self.current_label = label  # Push label to LSL stream
-                        self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
-                        self.removeEventFilter(self)
-                        if "Tactile" in self.current_test:
-                            # For tactile Stroop, show crosshair after keypress
-                            self.show_crosshair_and_wait_tactile(stroop=True)
-                        else:
-                            self.show_crosshair_between_images('stroop')
-                        return True
-            return super().eventFilter(source, event)
+        # Only handle image input if index is valid
+        if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
+            if event.type() == QEvent.KeyPress:
+                if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
+                    img = self.images[self.current_image_index]
+                    if event.key() == Qt.Key_Y:
+                        self.user_data['user_inputs'].append('Yes') # Store the user input
+                        if hasattr(img, 'filename'):
+                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
+                            self.send_message({"action": "label", "label": label})
+                            self.label_stream.push_label(label)
+                            logging.info(f"Current label: {label}")
+                            self.current_label = label  # Push label to LSL stream
+                    else:
+                        self.user_data['user_inputs'].append('No')  # Store the user input
+                        if hasattr(img, 'filename'):
+                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
+                            self.send_message({"action": "label", "label": label})
+                            self.label_stream.push_label(label)
+                            logging.info(f"Current label: {label}")
+                            self.current_label = label  # Push label to LSL stream
+                    self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
+                    self.removeEventFilter(self)
+                    if "Tactile" in self.current_test:
+                        # For tactile Stroop, show crosshair after keypress
+                        self.show_crosshair_and_wait_tactile(stroop=True)
+                    else:
+                        self.show_crosshair_between_images('stroop')
+                    return True
+        # Handle craving rating input
+        if hasattr(self, 'craving_response') and self.craving_response is None:
+            if event.type() == QEvent.KeyPress:
+                key = event.key()
+                if Qt.Key_1 <= key <= Qt.Key_7:
+                    self.handle_craving_button(key - Qt.Key_0)
+                    return True
+        return super().eventFilter(source, event)
 
     #This method is called to update the timer label, it updates the elapsed time and formats the timer text
     def update_timer(self):
@@ -799,11 +809,11 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.show_crosshair_period()
         # If this is the second time, show the end screen after a delay
         if getattr(self, 'showing_second_pre', False):
-            QTimer.singleShot(5000, self.end_screen)  # Show end screen after 5 seconds
+            QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
             self.showing_second_pre = False
         else:
         # After 2 minutes, show the main instructions
-            QTimer.singleShot(5000, self.show_main_instructions)  # 2 minutes (120000)
+            QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
@@ -832,3 +842,152 @@ class DisplayWindow(QMainWindow):
         logger.setLevel(logging.INFO)
         logger.handlers = []
         logger.addHandler(queue_handler)
+
+    def show_craving_rating_screen(self):
+        # Clear overlay layout
+        for i in reversed(range(self.overlay_layout.count())):
+            widget = self.overlay_layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        # Instructions
+        instr = QLabel(
+            "How much are you craving alcohol right now?\n"
+            "Select a number from 1 to 7 below:",
+            self.overlay_widget
+        )
+        instr.setFont(QFont("Arial", 24, QFont.Bold))
+        instr.setAlignment(Qt.AlignCenter)
+        instr.setWordWrap(True)
+        instr.setStyleSheet("color: #222; margin-bottom: 24px;")
+        self.overlay_layout.addWidget(instr)
+
+        # Craving meanings for each number
+        meanings = [
+            "Not craving at all",
+            "Almost craving",
+            "Barely craving",
+            "Somewhat craving",
+            "Craving",
+            "Really craving",
+            "Extremely craving"
+        ]
+
+        # Create a grid layout for labels and buttons
+        grid = QGridLayout()
+        grid.setSpacing(30)
+        grid.setAlignment(Qt.AlignCenter)
+
+        self.craving_buttons = []
+        for i in range(7):
+            # Add label above button
+            label = QLabel(meanings[i], self.overlay_widget)
+            label.setFont(QFont("Arial", 14))
+            label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)  # Center horizontally, align top
+            label.setWordWrap(True)
+            label.setMinimumHeight(40)  # Give more space for wrapping
+            label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignTop)  # Center label in cell
+
+            # Add button
+            btn = QPushButton(str(i+1), self.overlay_widget)
+            btn.setFont(QFont("Arial", 22, QFont.Bold))
+            btn.setFixedSize(70, 70)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #e0e0e0;
+                    border-radius: 35px;
+                    border: 2px solid #bc85fa;
+                    color: #333;
+                }
+                QPushButton:hover {
+                    background-color: #bc85fa;
+                    color: white;
+                }
+            """)
+            btn.clicked.connect(lambda checked, val=i+1: self.handle_craving_button(val))
+            self.craving_buttons.append(btn)
+            grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
+
+        for i in range(7):
+            grid.setColumnStretch(i, 1)
+        grid.setRowStretch(0, 1)  # Allow label row to expand
+        grid.setRowStretch(1, 0)
+
+        grid_widget = QWidget(self.overlay_widget)
+        grid_widget.setLayout(grid)
+        grid_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        # Center the grid in the overlay both vertically and horizontally
+        vcenter_layout = QVBoxLayout()
+        vcenter_layout.addStretch(1)           # Top stretch
+
+        # Add instructions just above the bar
+        vcenter_layout.addWidget(instr)
+
+        hcenter_layout = QHBoxLayout()
+        hcenter_layout.addStretch(1)           # Left stretch
+        hcenter_layout.addWidget(grid_widget)  # Grid in center
+        hcenter_layout.addStretch(1)           # Right stretch
+        vcenter_layout.addLayout(hcenter_layout)
+
+        vcenter_layout.addStretch(1)           # Bottom stretch
+
+        self.overlay_layout.addLayout(vcenter_layout)
+
+        # Remove extra stretch at the bottom if present
+        # (Do not add self.overlay_layout.addStretch(1) again)
+
+        # Mirror widget update
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.set_instruction_text(
+                "How much are you craving alcohol right now?\n"
+                "Select a number from 1 to 7 below:\n"
+                "1 = Not craving at all ... 7 = extremely craving",
+                QFont("Arial", 24, QFont.Bold)
+            )
+            self.mirror_widget.set_overlay_visible(True)
+
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        self.craving_response = None
+
+        self.installEventFilter(self)
+
+    def handle_craving_button(self, value):
+        if self.craving_response is not None:
+            return  # Already handled
+        # Highlight selected button
+        for btn in self.craving_buttons:
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #e0e0e0;
+                    border-radius: 35px;
+                    border: 2px solid #bc85fa;
+                    color: #333;
+                }
+                QPushButton:hover {
+                    background-color: #bc85fa;
+                    color: white;
+                }
+            """)
+        self.craving_buttons[value-1].setStyleSheet("""
+            QPushButton {
+                background-color: #bc85fa;
+                border-radius: 35px;
+                border: 2px solid #bc85fa;
+                color: white;
+            }
+        """)
+        self.craving_response = value
+        self.save_craving_response()
+        self.removeEventFilter(self)
+        QTimer.singleShot(500, self.show_crosshair_instructions)  # Short delay before advancing
+
+    def save_craving_response(self):
+        # Save the craving response to a CSV file
+        craving_file = os.path.join(str(self.base_dir), "craving_rating.csv")
+        with open(craving_file, "a", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([self.test_number, self.current_test, self.craving_response])
+        logging.info(f"Craving rating saved: {self.craving_response}")
