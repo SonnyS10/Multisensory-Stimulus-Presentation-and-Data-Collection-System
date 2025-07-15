@@ -252,7 +252,7 @@ class ControlWindow(QMainWindow):
         self.control_layout.addWidget(self.log_text_edit)
 
         logger = logging.getLogger()
-        logger.handlers = []  # Remove all existing handlers
+        #logger.handlers = []  # Remove all existing handlers
 
         log_handler = QTextEditLogger(self.log_text_edit)
         log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
@@ -509,10 +509,10 @@ class ControlWindow(QMainWindow):
                             msg_type = message.get("type")
                             action = message.get("action")
                             
-                            if msg_type == "log_message":
+                            #if msg_type == "log_message":
                                 # This is a log message from the client
-                                self.handle_network_log_message(message)
-                            elif action == "start_button":
+                            #   self.handle_network_log_message(message)
+                            if action == "start_button":
                                 test_name = message.get("test", None)
                                 if test_name:
                                     self.current_test = test_name  # Store for use in start_test
