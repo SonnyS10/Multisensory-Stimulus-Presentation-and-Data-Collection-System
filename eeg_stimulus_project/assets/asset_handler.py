@@ -25,6 +25,8 @@ def get_mixed_images(general_images, personalized_images):
     return mixed_images
 
 class Display():
+    custom_orders = {}  # Class variable to store custom image orders
+    
     @staticmethod
     def randomize_images(images, randomize_cues=False, seed=None):
         images = images.copy()
@@ -35,6 +37,16 @@ class Display():
             rnd = random.Random(seed)
             rnd.shuffle(images)
         return images, seed
+    
+    @staticmethod
+    def set_custom_orders(custom_orders):
+        """Set custom orders for tests."""
+        Display.custom_orders = custom_orders.copy()
+    
+    @staticmethod
+    def get_custom_orders():
+        """Get current custom orders."""
+        return Display.custom_orders.copy()
 
     @staticmethod
     def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
@@ -66,8 +78,14 @@ class Display():
             'Stroop Multisensory Neutral (Visual & Olfactory)': ([Beer], personalized_images),
         }.items():
             mixed = get_mixed_images(general, personalized)
-            randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed)
-            test_assets[test_name] = randomized
+            
+            # Check if there's a custom order for this test
+            if test_name in Display.custom_orders:
+                test_assets[test_name] = Display.custom_orders[test_name]
+            else:
+                # Use randomization if enabled and no custom order
+                randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed)
+                test_assets[test_name] = randomized
             # Optionally, you could store used_seed somewhere if you want to log/display it
 
         return test_assets
