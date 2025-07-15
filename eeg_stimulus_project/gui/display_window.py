@@ -224,6 +224,7 @@ class DisplayWindow(QMainWindow):
         self.non_alcohol_folder = non_alcohol_folder
         self.randomize_cues = randomize_cues
         self.seed = seed
+        self.frame = parent_frame  # Store reference to the Frame instance
 
         if self.shared_status.get('eyetracker_connected', False):
             # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -459,8 +460,12 @@ class DisplayWindow(QMainWindow):
         self.show_crosshair_between_images('stroop' if stroop else 'passive')
         if self.current_image_index < (len(self.images) - 1):
             self.waiting_for_next = True
-            if hasattr(self.parent(), 'next_button'):
-                self.parent().next_button.setEnabled(True)
+            if hasattr(self.frame, 'next_button'):
+                self.frame.next_button.setEnabled(True)
+            else:
+                print("Next button not found in parent widget.")
+        else:
+            print("Current image index is at the last image, waiting for next button is not applicable.")
 
     def show_crosshair_between_images(self, test_type):
         label = "Crosshair Shown"
@@ -496,8 +501,8 @@ class DisplayWindow(QMainWindow):
     def proceed_from_next_button(self):
         if self.waiting_for_next:
             self.waiting_for_next = False
-            if hasattr(self.parent(), 'next_button'):
-                self.parent().next_button.setEnabled(False)
+            if hasattr(self.frame, 'next_button'):
+                self.frame.next_button.setEnabled(False)
             self.show_touch_instruction()
 
     def show_touch_instruction(self, initial=False):

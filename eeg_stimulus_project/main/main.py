@@ -84,7 +84,6 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
     
     # Setup logging for this child process
     setup_child_process_logging(log_queue)
-    
     app = QApplication(sys.argv)
     window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host)
     window.show()
@@ -96,7 +95,9 @@ def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_num
     from eeg_stimulus_project.gui.main_gui import GUI
     
     # Setup logging for this child process
-    setup_child_process_logging(log_queue)
+    # If this is a client, pass the connection for network logging
+    network_connection = connection if client else None
+    setup_child_process_logging(log_queue, network_connection)
     
     app = QApplication(sys.argv)
     window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, randomize_cues, seed)

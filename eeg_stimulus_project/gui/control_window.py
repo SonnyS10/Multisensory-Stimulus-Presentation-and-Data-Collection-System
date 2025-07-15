@@ -452,6 +452,37 @@ class ControlWindow(QMainWindow):
         # Needed for compatibility with sys.stdout redirection
         pass
 
+    def handle_network_log_message(self, message):
+        """
+        Handle a log message received from the network (client).
+        Display it in the log text widget with a prefix to identify it as from client.
+        
+        Args:
+            message: Dictionary containing log message data
+        """
+        try:
+            # Extract log information
+            formatted_msg = message.get('message', '')
+            level = message.get('level', 'INFO')
+            timestamp = message.get('timestamp', '')
+            
+            # Add a prefix to identify this as a client log message
+            client_msg = f"[CLIENT] {formatted_msg}"
+            
+            # Create a log record and display it
+            # We'll use the existing log handler to ensure consistent formatting
+            if hasattr(self, 'log_text_edit'):
+                # Use QMetaObject to ensure thread safety when updating UI
+                QMetaObject.invokeMethod(
+                    self.log_text_edit,
+                    'append',
+                    Qt.QueuedConnection,
+                    client_msg
+                )
+            
+        except Exception as e:
+            logging.error(f"Error handling network log message: {e}")
+
     def host_command_listener(self):
         logging.info("Host: Listening for commands...")
         buffer = ''
@@ -473,8 +504,15 @@ class ControlWindow(QMainWindow):
                             if not line.endswith("}"):
                                 line = line + "}"
                             message = json.loads(line)
+                            
+                            # Handle different message types
+                            msg_type = message.get("type")
                             action = message.get("action")
-                            if action == "start_button":
+                            
+                            if msg_type == "log_message":
+                                # This is a log message from the client
+                                self.handle_network_log_message(message)
+                            elif action == "start_button":
                                 test_name = message.get("test", None)
                                 if test_name:
                                     self.current_test = test_name  # Store for use in start_test
@@ -497,7 +535,6 @@ class ControlWindow(QMainWindow):
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
                                 self.shared_status['lsl_enabled'] = True
                                 #self.send_lsl_control("touchbox_lsl_true")
-                            # ...other actions...
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
