@@ -806,8 +806,8 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
-        # After 2 minutes, show the main instructions (for pre-test crosshair period)
-        QTimer.singleShot(120000, self.show_main_instructions)  # 2 minutes (120000)
+        # After 2 Minutes, show the main instructions (for pre-test crosshair period)
+        QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
@@ -837,7 +837,7 @@ class DisplayWindow(QMainWindow):
         logger.handlers = []
         logger.addHandler(queue_handler)
 
-    def show_craving_rating_screen(self):
+    def show_craving_rating_screen(self, next_step=None):
         # Clear overlay layout
         for i in reversed(range(self.overlay_layout.count())):
             widget = self.overlay_layout.itemAt(i).widget()
@@ -946,6 +946,9 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         self.craving_response = None
 
+        # Store the next step callback
+        self._craving_next_step = next_step if next_step is not None else self.show_post_test_crosshair_instructions
+
         self.installEventFilter(self)
 
     def handle_craving_button(self, value):
@@ -976,8 +979,8 @@ class DisplayWindow(QMainWindow):
         self.craving_response = value
         self.save_craving_response()
         self.removeEventFilter(self)
-        # After craving rating is saved, go directly to crosshair instructions for post-test period
-        QTimer.singleShot(500, self.show_post_test_crosshair_instructions)  # Short delay before advancing
+        # After craving rating is saved, go to the next step
+        QTimer.singleShot(500, self._craving_next_step)
 
     def save_craving_response(self):
         # Save the craving response to a CSV file
@@ -1015,4 +1018,4 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 minutes, show the end screen (not restart the experiment)
-        QTimer.singleShot(120000, self.end_screen)  # Show end screen after 2 minutes (120000)
+        QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)

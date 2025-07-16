@@ -182,21 +182,144 @@ class StimulusOrderFrame(QWidget):
         button_layout.addWidget(apply_button)
         
         layout.addLayout(button_layout)
-    
+
+        # --- Available Assets Section ---
+        assets_frame = QFrame()
+        assets_frame.setStyleSheet("""
+            QFrame {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 10px;
+                margin-top: 12px;
+            }
+        """)
+        assets_layout = QVBoxLayout(assets_frame)
+        assets_layout.setSpacing(8)
+
+        assets_label = QLabel("Available Assets (click to add):")
+        assets_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        assets_label.setAlignment(Qt.AlignLeft)
+        assets_layout.addWidget(assets_label)
+
+        self.available_assets_list = QListWidget()
+        self.available_assets_list.setSelectionMode(QListWidget.SingleSelection)
+        self.available_assets_list.setMinimumHeight(120)
+        self.available_assets_list.setStyleSheet("""
+            QListWidget {
+                background-color: white;
+                border: 1px solid #bbb;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                margin: 2px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                background-color: #f9f9f9;
+            }
+            QListWidget::item:selected {
+                background-color: #007bff;
+                color: white;
+            }
+            QListWidget::item:hover {
+                background-color: #e9ecef;
+            }
+        """)
+        assets_layout.addWidget(self.available_assets_list)
+
+        asset_btn_layout = QHBoxLayout()
+        self.add_asset_btn = QPushButton("Add Selected Asset")
+        self.add_asset_btn.setFont(QFont("Segoe UI", 11))
+        self.add_asset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 18px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+            }
+        """)
+        self.add_asset_btn.clicked.connect(self.add_selected_asset_to_test)
+        asset_btn_layout.addWidget(self.add_asset_btn)
+
+        self.delete_asset_btn = QPushButton("Delete Selected Stimulus")
+        self.delete_asset_btn.setFont(QFont("Segoe UI", 11))
+        self.delete_asset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 18px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #c82333;
+            }
+        """)
+        self.delete_asset_btn.clicked.connect(self.delete_selected_stimulus_from_test)
+        asset_btn_layout.addWidget(self.delete_asset_btn)
+
+        asset_btn_layout.addStretch()
+        assets_layout.addLayout(asset_btn_layout)
+
+        layout.addWidget(assets_frame)
+
     def load_current_assets(self):
         """Load current assets from the asset handler."""
         try:
-            # Use the folders passed in, so custom images are loaded
             self.original_assets = Display.get_assets(
                 alcohol_folder=self.alcohol_folder,
                 non_alcohol_folder=self.non_alcohol_folder,
                 randomize_cues=False,
                 seed=None
             )
+            # Gather all unique assets for the available assets list
+            all_assets = set()
+            for images in self.original_assets.values():
+                for img in images:
+                    fname = getattr(img, 'filename', None)
+                    if fname:
+                        all_assets.add(fname)
+            self.all_asset_objs = []
+            for images in self.original_assets.values():
+                for img in images:
+                    fname = getattr(img, 'filename', None)
+                    if fname and fname in all_assets:
+                        self.all_asset_objs.append(img)
+                        all_assets.remove(fname)
+            self.update_available_assets_list()
         except Exception as e:
             print(f"Error loading assets: {e}")
             self.original_assets = {}
-    
+            self.all_asset_objs = []
+            self.update_available_assets_list()
+
+    def update_available_assets_list(self):
+        """Update the available assets list widget."""
+        self.available_assets_list.clear()
+        for img in self.all_asset_objs:
+            item = QListWidgetItem()
+            fname = getattr(img, 'filename', None)
+            display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
+            item.setText(display_name)
+            if fname:
+                try:
+                    pixmap = QPixmap(fname)
+                    if not pixmap.isNull():
+                        thumbnail = pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        item.setIcon(QIcon(thumbnail))
+                except Exception as e:
+                    print(f"Error creating thumbnail for {fname}: {e}")
+            item.setData(Qt.UserRole, img)
+            self.available_assets_list.addItem(item)
+
     def on_test_selected(self):
         """Handle test selection change."""
         self.current_test_name = self.test_selector.currentText()
@@ -288,6 +411,46 @@ class StimulusOrderFrame(QWidget):
             f"This order will be used when running the test."
         )
     
+    def add_selected_asset_to_test(self):
+        """Add the selected asset from the available list to the current test's order."""
+        if not self.current_test_name:
+            return
+        selected_items = self.available_assets_list.selectedItems()
+        if not selected_items:
+            return
+        img = selected_items[0].data(Qt.UserRole)
+        # Add to custom order or original order
+        if self.current_test_name in self.custom_orders:
+            self.custom_orders[self.current_test_name].append(img)
+        else:
+            self.custom_orders[self.current_test_name] = self.original_assets[self.current_test_name] + [img]
+        self.update_image_list()
+
+    def delete_selected_stimulus_from_test(self):
+        """Delete only the selected stimulus from the current test's order."""
+        if not self.current_test_name:
+            return
+        selected_items = self.image_list.selectedItems()
+        if not selected_items:
+            return
+        selected_row = self.image_list.row(selected_items[0])
+        # Remove from custom order or original order
+        if self.current_test_name in self.custom_orders:
+            order = self.custom_orders[self.current_test_name]
+        else:
+            order = self.original_assets[self.current_test_name].copy()
+        # Remove only the item at the selected position
+        if 0 <= selected_row < len(order):
+            del order[selected_row]
+        self.custom_orders[self.current_test_name] = order
+        self.update_image_list()
+
     def get_custom_orders(self):
         """Return the current custom orders."""
         return self.custom_orders.copy()
+
+    def select_test(self, test_name):
+        """Select the given test in the test selector combo box."""
+        index = self.test_selector.findText(test_name)
+        if index != -1:
+            self.test_selector.setCurrentIndex(index)
