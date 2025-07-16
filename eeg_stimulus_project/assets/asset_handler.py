@@ -20,8 +20,16 @@ personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Persona
 personalized_images = load_images_from_folder(personalized_folder)
 
 def get_mixed_images(general_images, personalized_images):
-    mixed_images = general_images.copy()
-    mixed_images.extend(personalized_images)
+    # Avoid duplicates by using a set of filenames
+    seen = set()
+    mixed_images = []
+    for img in general_images + personalized_images:
+        fname = getattr(img, 'filename', None)
+        if fname and fname not in seen:
+            mixed_images.append(img)
+            seen.add(fname)
+        elif not fname:
+            mixed_images.append(img)  # If no filename, just add
     return mixed_images
 
 class Display():

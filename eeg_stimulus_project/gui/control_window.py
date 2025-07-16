@@ -229,6 +229,16 @@ class ControlWindow(QMainWindow):
         )
         self.device_frame_layout.addLayout(olfactory_row)
 
+        # --- EEG Stream Row ---
+        eeg_stream_row, self.eeg_stream_connected_icon = device_row(
+            "EEG Stream",
+            self.open_eeg_stream,
+            "Stream Status:",
+            "eeg_stream_connected_icon"
+        )
+        self.device_frame_layout.addLayout(eeg_stream_row)
+
+
         # --- Add Device Frame to Main Layout ---
         self.control_layout.addWidget(self.device_frame)
 
@@ -271,6 +281,7 @@ class ControlWindow(QMainWindow):
         self.vr_process = None
         self.turntable_process = None
         self.olfactory_process = None
+        self.eeg_stream_process = None
 
         if self.host:
             # If this is the host, start listening for commands from the client
@@ -436,6 +447,18 @@ class ControlWindow(QMainWindow):
         from eeg_stimulus_project.stimulus.tactile_box_code import tactile_setup
         self.tactile_process = Process(target=tactile_setup.run_tactile_setup, args=(self.shared_status, self.connection))
         self.tactile_process.start()
+
+    def open_eeg_stream(self):
+        """Open the EEG stream window in a separate process."""
+        try:
+            from eeg_stimulus_project.gui.eeg_stream_window import run_eeg_stream_window
+            self.eeg_stream_process = Process(target=run_eeg_stream_window)
+            self.eeg_stream_process.start()
+            self.update_app_status_icon(self.eeg_stream_connected_icon, True)
+            logging.info("EEG Stream window opened")
+        except Exception as e:
+            logging.error(f"Failed to open EEG Stream window: {e}")
+            self.update_app_status_icon(self.eeg_stream_connected_icon, False)
 
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, bar_widget, is_green):

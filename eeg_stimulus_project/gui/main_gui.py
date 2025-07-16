@@ -81,6 +81,7 @@ class GUI(QMainWindow):
             parent=self,
             alcohol_folder=self.alcohol_folder,
             non_alcohol_folder=self.non_alcohol_folder
+            
         )
         
         # Add new frames to stacked_widget
@@ -167,6 +168,10 @@ class GUI(QMainWindow):
         if self.stacked_widget.currentWidget() == self.stimulus_order_frame:
             self.stacked_widget.setCurrentWidget(self.last_test_frame)
         else:
+            # Get the current test name
+            current_test = self.get_current_test()
+            # Select it in the stimulus order frame
+            self.stimulus_order_frame.select_test(current_test)
             self.stacked_widget.setCurrentWidget(self.stimulus_order_frame)
             self.sidebar.instructions_button.setText("Show Instructions")
 
@@ -653,69 +658,96 @@ class InstructionFrame(QWidget):
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(18)
 
+        # --- Card-like background for instructions ---
+        card = QFrame(self)
+        card.setStyleSheet("""
+            QFrame {
+                background-color: #f8f9fa;
+                border: 2px solid #bc85fa;
+                border-radius: 18px;
+                padding: 24px;
+            }
+        """)
+        card_layout = QVBoxLayout(card)
+        card_layout.setSpacing(24)
+        layout.addWidget(card, stretch=1)
+
         # --- Multi-page instructions ---
-        self.stacked = QStackedWidget(self)
-        layout.addWidget(self.stacked)
+        self.stacked = QStackedWidget(card)
+        card_layout.addWidget(self.stacked)
 
         self.pages = []
         self.add_instruction_page(
-            "Welcome to the Experiment Graphical User Interface!\n\n"
-            "This guide will walk you through the process of running an experiment using the Experiment GUI.\n\n"
-            "You can exit from this guide at any time by clicking on your desired test or the 'Hide Instructions' button.\n\n"
-            "Click 'Next' to continue."
+            "<h2>👋 Welcome to the Experiment GUI!</h2>"
+            "<p>This guide will walk you through the process of running an experiment using the Experiment Graphical User Interface.</p>"
+            "<ul>"
+            "<li>You can exit this guide at any time by clicking your desired test or the 'Hide Instructions' button.</li>"
+            "<li>Use the <b>Next</b> button below to continue.</li>"
+            "</ul>"
         )
         self.add_instruction_page(
-            "Navigation Overview:\n\n"
-            "- The sidebar on the left lets you select from different experimental tests and the modalities to be used for it.\n"
-            "- The sidebar also contains a button to open/close this instruction guide, as well as a latency checker (Page 4).\n"
-            "- The main area displays controls and status for the selected experiment.\n"
-            "- Use the 'Start', 'Stop', 'Pause', 'Resume', and 'Next' buttons to control the experiment flow."
+            "<h2>🧭 Navigation Overview</h2>"
+            "<ul>"
+            "<li><b>Sidebar:</b> Select different experimental tests and modalities.</li>"
+            "<li><b>Instructions Button:</b> Open/close this guide.</li>"
+            "<li><b>Latency Checker:</b> Measure network latency (see next page).</li>"
+            "<li><b>Main Area:</b> Controls and status for the selected experiment.</li>"
+            "</ul>"
+            "<p>Use the <b>Start</b>, <b>Stop</b>, <b>Pause</b>, <b>Resume</b>, and <b>Next</b> buttons to control the experiment flow.</p>"
         )
         self.add_instruction_page(
-            "Button Functions:\n\n"
-            "- Start: Begins the selected test.\n"
-            "- Stop: Ends the current test and saves all the data from the devices used.\n"
-            "- Pause: Temporarily halts the test.\n"
-            "- Resume: Continues a paused test.\n"
-            "- Next: Displays instructions to the participant allowing them to touch the object in the tactile box.\n"
-            "    • This button is not to be pressed until an experimenter has switched the object in the tactile box.\n"
-            "    • This button is only available for tests including a tactile modality.\n"
-            "- Display/VR/Viewing Booth: Select the output mode for the experiment. Only one may be selected at a time.\n"
-            "    • Display: Shows the 2D experiment on the main screen.\n"
-            "    • VR: Activates the VR headset for a 3D experiences.\n"
-            "    • Viewing Booth: Uses the viewing booth for the experiment."
+            "<h2>🕹️ Button Functions</h2>"
+            "<ul>"
+            "<li><b>Start:</b> Begins the selected test.</li>"
+            "<li><b>Stop:</b> Ends the current test and saves all data from connected devices.</li>"
+            "<li><b>Pause:</b> Temporarily halts the test.</li>"
+            "<li><b>Resume:</b> Continues a paused test.</li>"
+            "<li><b>Next:</b> Displays instructions for the participant to interact with the tactile box (only for tactile tests).</li>"
+            "</ul>"
+            "<p><b>Display/VR/Viewing Booth:</b> Select the output mode for the experiment. Only one may be selected at a time:</p>"
+            "<ul>"
+            "<li>🖥️ <b>Display:</b> Shows the 2D experiment on the main screen.</li>"
+            "<li>🕶️ <b>VR:</b> Activates the VR headset for a 3D experience.</li>"
+            "<li>🔬 <b>Viewing Booth:</b> Uses the viewing booth for the experiment.</li>"
+            "</ul>"
         )
         self.add_instruction_page(
-            "Latency Checker:\n\n"
-            "The Latency Checker allows you to measure the latency between the Experiment computer and the Data Collection computer.\n"
-            "To use it:\n"
-            "1. Click the 'Latency Checker' button in the sidebar.\n"
-            "2. Click 'Start Latency Test' to begin measuring.\n"
-            "3. The average latency will be displayed after the test completes.\n"
-            "4. Verify the latency is within acceptable limits (typically below 2 ms).\n\n"
-            "Note: The Latency Checker will run for 5 seconds, sending 10 pings per second, and will display the average latency for the 50 total pings.\n\n"
-            "Click the 'Latency Checker' button in the sidebar to close the Latency Checker.\n\n"
+            "<h2>⏱️ Latency Checker</h2>"
+            "<ol>"
+            "<li>Click the <b>Latency Checker</b> button in the sidebar.</li>"
+            "<li>Click <b>Start Latency Test</b> to begin measuring.</li>"
+            "<li>The average latency will be displayed after the test completes.</li>"
+            "<li>Verify the latency is within acceptable limits (typically below <b>2 ms</b>).</li>"
+            "</ol>"
+            "<p><i>The Latency Checker runs for 5 seconds, sending 10 pings per second, and displays the average latency for 50 total pings.</i></p>"
         )
         self.add_instruction_page(
-            "Running a Test:\n\n"
-            "1. Select the desired test from the sidebar.\n"
-            "2. Ensure the required external devices are connected in the Control Window on the data collection computer.\n"
-            "3. Choose the display mode (Display, VR, or Viewing Booth).\n"
-            "4. Click 'Start' to begin.\n"
-            "5. Follow on-screen prompts and monitor the status indicators.\n"
-            "6. Click 'Stop' to end and save the test."
+            "<h2>🧪 Running a Test</h2>"
+            "<ol>"
+            "<li>Select the desired test from the sidebar.</li>"
+            "<li>Ensure all required external devices are connected in the Control Window.</li>"
+            "<li>Choose the display mode (<b>Display</b>, <b>VR</b>, or <b>Viewing Booth</b>).</li>"
+            "<li>Click <b>Start</b> to begin.</li>"
+            "<li>Follow on-screen prompts and monitor the status indicators.</li>"
+            "<li>Click <b>Stop</b> to end and save the test.</li>"
+            "</ol>"
+            "<p><b>Tip:</b> For tactile tests, wait for the experimenter to switch the object before pressing <b>Next</b>.</p>"
         )
         self.add_instruction_page(
-            "Troubleshooting & Tips:\n\n"
-            "- If a warning appears for any external device, check the connection in the Control Window and try again.\n"
-            "- Use the latency check to verify network responsiveness.\n"
-            "- For further help, consult the experiment protocol document or contact the lead researcher.\n\n"
-            "Click 'Continue' to exit this guide and proceed to the first test."
+            "<h2>🛠️ Troubleshooting & Tips</h2>"
+            "<ul>"
+            "<li>If a warning appears for any device, check the connection in the Control Window and try again.</li>"
+            "<li>Use the latency check to verify network responsiveness.</li>"
+            "<li>For further help, consult the experiment protocol or contact the lead researcher.</li>"
+            "<li>Always ensure participant safety and comfort.</li>"
+            "</ul>"
+            "<p>Click <b>Continue</b> to exit this guide and proceed to the first test.</p>"
         )
 
         # --- Navigation Buttons ---
         nav_layout = QHBoxLayout()
-        self.prev_button = QPushButton("Previous")
+        nav_layout.setSpacing(18)
+        self.prev_button = QPushButton("← Previous")
         self.prev_button.setFont(QFont("Segoe UI", 16))
         self.prev_button.setStyleSheet("""
             QPushButton {
@@ -737,8 +769,8 @@ class InstructionFrame(QWidget):
 
         self.page_label = QLabel()
         self.page_label.setAlignment(Qt.AlignCenter)
-        self.page_label.setFont(QFont("Segoe UI", 18, QFont.Bold))  # Larger font
-        self.page_label.setMinimumHeight(48)                        # Taller label
+        self.page_label.setFont(QFont("Segoe UI", 18, QFont.Bold))
+        self.page_label.setMinimumHeight(48)
         self.page_label.setStyleSheet("""
             QLabel {
                 padding: 12px 32px;
@@ -750,7 +782,7 @@ class InstructionFrame(QWidget):
         """)
         nav_layout.addWidget(self.page_label, stretch=1)
 
-        self.next_button = QPushButton("Next")
+        self.next_button = QPushButton("Next →")
         self.next_button.setFont(QFont("Segoe UI", 16))
         self.next_button.setStyleSheet("""
             QPushButton {
@@ -770,10 +802,10 @@ class InstructionFrame(QWidget):
         self.next_button.clicked.connect(self.next_page)
         nav_layout.addWidget(self.next_button)
 
-        layout.addLayout(nav_layout)
+        card_layout.addLayout(nav_layout)
 
-        continue_button = QPushButton("Continue")
-        continue_button.setFont(QFont("Segoe UI", 18, QFont.Bold))  # Larger font
+        continue_button = QPushButton("Continue to Experiment")
+        continue_button.setFont(QFont("Segoe UI", 18, QFont.Bold))
         continue_button.setStyleSheet("""
             QPushButton {
                 background-color: #7E57C2;
@@ -790,17 +822,19 @@ class InstructionFrame(QWidget):
         """)
         continue_button.setMinimumHeight(48)
         continue_button.clicked.connect(parent.show_first_test_frame)
-        layout.addWidget(continue_button, alignment=Qt.AlignCenter)
+        card_layout.addWidget(continue_button, alignment=Qt.AlignCenter)
         continue_button.setVisible(False)
         self.continue_button = continue_button
         self.update_nav_buttons()
 
-    def add_instruction_page(self, text):
-        label = QLabel(text)
+    def add_instruction_page(self, html_text):
+        label = QLabel()
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignTop)
         label.setFont(QFont("Segoe UI", 15))
         label.setMargin(20)
+        label.setText(html_text)
+        label.setTextFormat(Qt.RichText)
         self.stacked.addWidget(label)
         self.pages.append(label)
 
