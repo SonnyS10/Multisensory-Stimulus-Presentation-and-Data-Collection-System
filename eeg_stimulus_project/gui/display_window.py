@@ -838,8 +838,12 @@ class DisplayWindow(QMainWindow):
         logger.addHandler(queue_handler)
 
     def show_craving_rating_screen(self):
-        # Clear overlay layout
-        for i in reversed(range(self.overlay_layout.count())):
+         # --- Adjustable parameters ---
+        craving_bar_vertical_offset = 120  # Pixels from the top of the overlay (increase to move bar lower)
+        craving_bar_spacing = 40           # Space between instruction and bar
+
+        # Clear overlay layout except for the persistent instruction and countdown labels
+        for i in reversed(range(2, self.overlay_layout.count())):
             widget = self.overlay_layout.itemAt(i).widget()
             if widget is not None:
                 self.overlay_layout.removeWidget(widget)
@@ -967,7 +971,7 @@ class DisplayWindow(QMainWindow):
         self.save_craving_response()
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
-        QTimer.singleShot(500, self._craving_next_step)
+        QTimer.singleShot(500, self.show_post_test_crosshair_instructions)
 
     def save_craving_response(self):
         # Save the craving response to a CSV file
@@ -978,12 +982,23 @@ class DisplayWindow(QMainWindow):
         logging.info(f"Craving rating saved: {self.craving_response}")
 
     def show_post_test_crosshair_instructions(self):
-        # Remove all widgets after the persistent instruction and countdown labels
+        # Remove all widgets and layouts after the persistent instruction and countdown labels
         for i in reversed(range(2, self.overlay_layout.count())):
-            widget = self.overlay_layout.itemAt(i).widget()
-            if widget is not None:
-                self.overlay_layout.removeWidget(widget)
-                widget.deleteLater()
+            item = self.overlay_layout.itemAt(i)
+            if item is not None:
+                widget = item.widget()
+                layout = item.layout()
+                if widget is not None:
+                    self.overlay_layout.removeWidget(widget)
+                    widget.deleteLater()
+                elif layout is not None:
+                    # Recursively delete all widgets in the layout
+                    while layout.count():
+                        child = layout.takeAt(0)
+                        if child.widget():
+                            child.widget().deleteLater()
+                    self.overlay_layout.removeItem(layout)
+                    # No deleteLater for layouts, just remove
 
         # Now update the instructions as usual
         label = "Post-Test Crosshair Instructions Shown"
