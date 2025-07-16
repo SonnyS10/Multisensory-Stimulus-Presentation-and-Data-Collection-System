@@ -143,3 +143,9 @@ cython_debug/
 saved_data/
 eeg_stimulus_project/saved_data/
 eeg_stimulus_project/stimulus/tactile_box_code/received_data.txt
+
+# Test files and temporary files
+test_eeg_*.py
+demo_eeg_*.py
+*.deb
+*.tar.gz
