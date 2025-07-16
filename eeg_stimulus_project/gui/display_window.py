@@ -807,7 +807,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 minutes, show the main instructions (for pre-test crosshair period)
-        QTimer.singleShot(120000, self.show_main_instructions)  # 2 minutes (120000)
+        QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
@@ -838,23 +838,28 @@ class DisplayWindow(QMainWindow):
         logger.addHandler(queue_handler)
 
     def show_craving_rating_screen(self):
-        # Clear overlay layout
-        for i in reversed(range(self.overlay_layout.count())):
+        # --- Adjustable parameters ---
+        craving_bar_vertical_offset = 120  # Pixels from the top of the overlay (increase to move bar lower)
+        craving_bar_spacing = 40           # Space between instruction and bar
+
+        # Clear overlay layout except for the persistent instruction and countdown labels
+        for i in reversed(range(2, self.overlay_layout.count())):
             widget = self.overlay_layout.itemAt(i).widget()
             if widget is not None:
-                widget.setParent(None)
+                self.overlay_layout.removeWidget(widget)
+                widget.deleteLater()
 
-        # Instructions
-        instr = QLabel(
+        # Use the persistent instructions_label for craving instructions
+        self.instructions_label.setText(
             "How much are you craving alcohol right now?\n"
-            "Select a number from 1 to 7 below:",
-            self.overlay_widget
+            "Select a number from 1 to 7 below:"
         )
-        instr.setFont(QFont("Arial", 24, QFont.Bold))
-        instr.setAlignment(Qt.AlignCenter)
-        instr.setWordWrap(True)
-        instr.setStyleSheet("color: #222; margin-bottom: 24px;")
-        self.overlay_layout.addWidget(instr)
+        self.instructions_label.setFont(QFont("Arial", 24, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setWordWrap(True)
+        self.instructions_label.setStyleSheet("color: #222; margin-bottom: 24px;")
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
 
         # Craving meanings for each number
         meanings = [
@@ -869,7 +874,7 @@ class DisplayWindow(QMainWindow):
 
         # Create a grid layout for labels and buttons
         grid = QGridLayout()
-        grid.setSpacing(30)
+        grid.setSpacing(50)
         grid.setAlignment(Qt.AlignCenter)
 
         self.craving_buttons = []
@@ -877,11 +882,12 @@ class DisplayWindow(QMainWindow):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
             label.setFont(QFont("Arial", 14))
-            label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)  # Center horizontally, align top
+            label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
             label.setWordWrap(True)
-            label.setMinimumHeight(40)  # Give more space for wrapping
-            label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignTop)  # Center label in cell
+            label.setMinimumHeight(60)
+            label.setMaximumWidth(160)
+            label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
 
             # Add button
             btn = QPushButton(str(i+1), self.overlay_widget)
@@ -903,41 +909,29 @@ class DisplayWindow(QMainWindow):
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
 
-        for i in range(7):
-            grid.setColumnStretch(i, 1)
-        grid.setRowStretch(0, 1)  # Allow label row to expand
-        grid.setRowStretch(1, 0)
+        #for i in range(7):
+        #    grid.setColumnStretch(i, 1)
+        #grid.setRowStretch(0, 1)
+        #grid.setRowStretch(1, 0)
 
         grid_widget = QWidget(self.overlay_widget)
         grid_widget.setLayout(grid)
-        grid_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        grid_widget.setMaximumWidth(1200)
 
-        # Center the grid in the overlay both vertically and horizontally
+        # --- Center the grid with adjustable vertical offset ---
         vcenter_layout = QVBoxLayout()
-        vcenter_layout.addStretch(1)           # Top stretch
-
-        # Add instructions just above the bar
-        vcenter_layout.addWidget(instr)
-
-        hcenter_layout = QHBoxLayout()
-        hcenter_layout.addStretch(1)           # Left stretch
-        hcenter_layout.addWidget(grid_widget)  # Grid in center
-        hcenter_layout.addStretch(1)           # Right stretch
-        vcenter_layout.addLayout(hcenter_layout)
-
-        vcenter_layout.addStretch(1)           # Bottom stretch
+        vcenter_layout.addSpacing(craving_bar_vertical_offset)  # Top offset
+        vcenter_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
+        vcenter_layout.addSpacing(craving_bar_spacing)          # Space below grid (optional)
+        vcenter_layout.addStretch(1)                            # Fill remaining space
 
         self.overlay_layout.addLayout(vcenter_layout)
-
-        # Remove extra stretch at the bottom if present
-        # (Do not add self.overlay_layout.addStretch(1) again)
 
         # Mirror widget update
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(
-                "How much are you craving alcohol right now?\n"
-                "Select a number from 1 to 7 below:\n"
-                "1 = Not craving at all ... 7 = extremely craving",
+                "Craving Rating Instructions Being Shown",
                 QFont("Arial", 24, QFont.Bold)
             )
             self.mirror_widget.set_overlay_visible(True)
@@ -945,7 +939,6 @@ class DisplayWindow(QMainWindow):
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         self.craving_response = None
-
         self.installEventFilter(self)
 
     def handle_craving_button(self, value):
@@ -988,7 +981,14 @@ class DisplayWindow(QMainWindow):
         logging.info(f"Craving rating saved: {self.craving_response}")
 
     def show_post_test_crosshair_instructions(self):
-        # Show post-test crosshair instructions (after craving rating)
+        # Remove all widgets after the persistent instruction and countdown labels
+        for i in reversed(range(2, self.overlay_layout.count())):
+            widget = self.overlay_layout.itemAt(i).widget()
+            if widget is not None:
+                self.overlay_layout.removeWidget(widget)
+                widget.deleteLater()
+
+        # Now update the instructions as usual
         label = "Post-Test Crosshair Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
@@ -1015,4 +1015,4 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 minutes, show the end screen (not restart the experiment)
-        QTimer.singleShot(120000, self.end_screen)  # Show end screen after 2 minutes (120000)
+        QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
