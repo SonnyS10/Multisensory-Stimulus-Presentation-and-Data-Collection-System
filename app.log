@@ -2097,3 +2097,4 @@
 2025-07-15 10:29:17,367 INFO Client: Connected to host.
 2025-07-15 10:33:56,246 INFO Client: Connected to host.
 >>>>>>> a69595b057b5f1594dbc7506002abfa0cdf761cc
+2025-07-16 11:08:47,291 ERROR EEG stream connection failed: No EEG streams found
