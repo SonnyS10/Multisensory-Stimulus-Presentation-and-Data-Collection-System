@@ -40,9 +40,9 @@ class EEGStreamWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         # EEG data parameters
-        self.sample_rate = 250  # Default sample rate
+        self.sample_rate = 500  # Default sample rate
         self.window_size = 5  # Window size in seconds
-        self.channels_per_page = 8  # Number of channels per page
+        self.channels_per_page = 4  # Number of channels per page
         self.current_page = 0
         self.num_channels = 0
 
@@ -83,6 +83,7 @@ class EEGStreamWindow(QMainWindow):
         # Status bar
         self.status_label = QLabel("Status: Connecting to EEG stream...")
         self.status_label.setFont(QFont("Arial", 10))
+        self.status_label.setMaximumHeight(30)
         layout.addWidget(self.status_label)
 
     def create_control_panel(self):
@@ -122,7 +123,7 @@ class EEGStreamWindow(QMainWindow):
         layout.addWidget(QLabel("Amplitude Scale:"))
         self.amplitude_slider = QSlider(Qt.Horizontal)
         self.amplitude_slider.setRange(1, 100)
-        self.amplitude_slider.setValue(50)
+        self.amplitude_slider.setValue(20)
         self.amplitude_slider.valueChanged.connect(self.update_amplitude_scale)
         layout.addWidget(self.amplitude_slider)
 
