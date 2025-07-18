@@ -5,14 +5,16 @@ for each test. Users can view and rearrange the order of images through drag-and
 """
 
 import os
+import csv
+import re
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, 
-    QListWidget, QListWidgetItem, QFrame, QMessageBox, QSizePolicy
+    QListWidget, QListWidgetItem, QFrame, QMessageBox, QSizePolicy, QFileDialog
 )
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize
 from eeg_stimulus_project.assets.asset_handler import Display
-
+import openpyxl
 
 class StimulusOrderFrame(QWidget):
     """
@@ -137,6 +139,7 @@ class StimulusOrderFrame(QWidget):
         """)
         self.image_list.setMinimumHeight(300)
         list_layout.addWidget(self.image_list)
+        self.image_list.model().rowsMoved.connect(lambda *args: self.update_apply_button_state())
         
         layout.addWidget(list_frame)
         
@@ -163,9 +166,9 @@ class StimulusOrderFrame(QWidget):
         
         button_layout.addStretch()
         
-        apply_button = QPushButton("Apply Custom Order")
-        apply_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        apply_button.setStyleSheet("""
+        self.apply_button = QPushButton("Apply Custom Order")
+        self.apply_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.apply_button.setStyleSheet("""
             QPushButton {
                 background-color: #007bff;
                 color: white;
@@ -177,9 +180,31 @@ class StimulusOrderFrame(QWidget):
             QPushButton:hover {
                 background-color: #0056b3;
             }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #888888;
+            }
         """)
-        apply_button.clicked.connect(self.apply_custom_order)
-        button_layout.addWidget(apply_button)
+        self.apply_button.clicked.connect(self.apply_custom_order)
+        button_layout.addWidget(self.apply_button)
+        
+        import_button = QPushButton("Import Order from CSV")
+        import_button.setFont(QFont("Segoe UI", 11))
+        import_button.setStyleSheet("""
+            QPushButton {
+                background-color: #ffb300;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                min-width: 160px;
+            }
+            QPushButton:hover {
+                background-color: #ffa000;
+            }
+        """)
+        import_button.clicked.connect(self.import_order_from_csv)
+        button_layout.insertWidget(button_layout.count() // 2, import_button)
         
         layout.addLayout(button_layout)
 
@@ -281,19 +306,14 @@ class StimulusOrderFrame(QWidget):
                 seed=None
             )
             # Gather all unique assets for the available assets list
-            all_assets = set()
+            asset_dict = {}
             for images in self.original_assets.values():
                 for img in images:
                     fname = getattr(img, 'filename', None)
                     if fname:
-                        all_assets.add(fname)
-            self.all_asset_objs = []
-            for images in self.original_assets.values():
-                for img in images:
-                    fname = getattr(img, 'filename', None)
-                    if fname and fname in all_assets:
-                        self.all_asset_objs.append(img)
-                        all_assets.remove(fname)
+                        norm = self.normalize_name(os.path.basename(fname))
+                        asset_dict[norm] = img
+            self.all_asset_objs = list(asset_dict.values())
             self.update_available_assets_list()
         except Exception as e:
             print(f"Error loading assets: {e}")
@@ -363,7 +383,8 @@ class StimulusOrderFrame(QWidget):
             # Store the original image object in the item data
             item.setData(Qt.UserRole, image)
             self.image_list.addItem(item)
-    
+            self.update_apply_button_state()
+
     def reset_to_original(self):
         """Reset the current test to its original image order."""
         if not self.current_test_name:
@@ -384,7 +405,8 @@ class StimulusOrderFrame(QWidget):
             
             # Update the display
             self.update_image_list()
-    
+            self.update_apply_button_state()
+            
     def apply_custom_order(self):
         """Apply the current order as the custom order for the selected test."""
         if not self.current_test_name:
@@ -410,6 +432,7 @@ class StimulusOrderFrame(QWidget):
             f"Custom order applied for '{self.current_test_name}'. "
             f"This order will be used when running the test."
         )
+        self.update_apply_button_state()  # <-- Step D: Add this line
     
     def add_selected_asset_to_test(self):
         """Add the selected asset from the available list to the current test's order."""
@@ -425,6 +448,7 @@ class StimulusOrderFrame(QWidget):
         else:
             self.custom_orders[self.current_test_name] = self.original_assets[self.current_test_name] + [img]
         self.update_image_list()
+        self.update_apply_button_state()
 
     def delete_selected_stimulus_from_test(self):
         """Delete only the selected stimulus from the current test's order."""
@@ -444,6 +468,7 @@ class StimulusOrderFrame(QWidget):
             del order[selected_row]
         self.custom_orders[self.current_test_name] = order
         self.update_image_list()
+        self.update_apply_button_state()
 
     def get_custom_orders(self):
         """Return the current custom orders."""
@@ -454,3 +479,128 @@ class StimulusOrderFrame(QWidget):
         index = self.test_selector.findText(test_name)
         if index != -1:
             self.test_selector.setCurrentIndex(index)
+
+    def import_order_from_csv(self):
+        """Import stimulus order from a CSV or Excel file."""
+        if not self.current_test_name:
+            return
+
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Order from CSV/Excel",
+            "",
+            "CSV/Excel Files (*.csv *.xlsx);;All Files (*)",
+            options=options
+        )
+
+        if not file_name:
+            return
+
+        imported_order_names = []
+        try:
+            if file_name.lower().endswith('.csv'):
+                import csv
+                with open(file_name, newline='', encoding='utf-8') as csvfile:
+                    reader = csv.reader(csvfile)
+                    for row in reader:
+                        if row and len(row) > 0:
+                            imported_order_names.append(row[0].strip())
+            elif file_name.lower().endswith('.xlsx'):
+                try:
+                    from openpyxl import load_workbook
+                except ImportError:
+                    QMessageBox.critical(
+                        self,
+                        "Import Failed",
+                        "openpyxl is required for Excel file import. Please install it with 'pip install openpyxl'.",
+                        QMessageBox.Ok
+                    )
+                    return
+                wb = load_workbook(file_name, read_only=True)
+                ws = wb.active
+                for row in ws.iter_rows(min_row=1, max_col=1, values_only=True):
+                    if row and row[0]:
+                        imported_order_names.append(str(row[0]).strip())
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Import Failed",
+                    "Unsupported file type. Please select a .csv or .xlsx file.",
+                    QMessageBox.Ok
+                )
+                return
+
+            # Validate and build the order
+            imported_order = []
+            missing = []
+            for name in imported_order_names:
+                norm_name = self.normalize_name(name)
+                img_obj = None
+                for img in self.all_asset_objs:
+                    if hasattr(img, 'filename'):
+                        base = os.path.basename(img.filename)
+                        base_no_ext = os.path.splitext(base)[0]
+                        norm_base = self.normalize_name(base)
+                        norm_base_no_ext = self.normalize_name(base_no_ext)
+                        # Accept match if normalized names match
+                        if norm_name == norm_base or norm_name == norm_base_no_ext:
+                            img_obj = img
+                            break
+                if img_obj:
+                    imported_order.append(img_obj)
+                else:
+                    missing.append(name)
+
+            if missing:
+                available_names = [os.path.basename(img.filename) for img in self.all_asset_objs if hasattr(img, 'filename')]
+                QMessageBox.critical(
+                    self,
+                    "Import Failed",
+                    "The following images were not found in the available assets:\n\n"
+                    + "\n".join(missing)
+                    + "\n\nAvailable assets for this test:\n"
+                    + "\n".join(available_names),
+                    QMessageBox.Ok
+                )
+                return
+
+            # Update the custom order for the current test
+            self.custom_orders[self.current_test_name] = imported_order
+            self.update_image_list()
+            self.apply_custom_order()  # <-- This applies and shows the "Order Applied" message
+
+            QMessageBox.information(
+                self,
+                "Import Successful",
+                f"Stimulus order imported successfully from '{os.path.basename(file_name)}'.",
+                QMessageBox.Ok
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Import Failed",
+                f"Failed to import stimulus order:\n{e}",
+                QMessageBox.Ok
+            )
+
+    def normalize_name(self, name):
+        """Normalize the asset name for consistent matching."""
+        # Lowercase, remove any common image extension (case-insensitive), strip spaces and underscores
+        name = name.strip().lower()
+        name = re.sub(r'\.(jpg|jpeg|png|bmp|gif|tiff|webp)$', '', name, flags=re.IGNORECASE)
+        name = name.replace('_', '').replace(' ', '')
+        return name
+
+    def is_current_order_applied(self):
+        """Return True if the current order matches the applied custom order."""
+        if not self.current_test_name:
+            return False
+        current_order = [self.image_list.item(i).data(Qt.UserRole) for i in range(self.image_list.count())]
+        applied_order = self.custom_orders.get(self.current_test_name, self.original_assets.get(self.current_test_name, []))
+        return current_order == applied_order
+
+    def update_apply_button_state(self):
+        """Enable/disable the apply button based on whether the order is applied."""
+        if hasattr(self, 'apply_button'):
+            self.apply_button.setEnabled(not self.is_current_order_applied())

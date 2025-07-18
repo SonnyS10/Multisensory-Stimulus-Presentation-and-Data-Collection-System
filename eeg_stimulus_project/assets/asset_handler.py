@@ -8,11 +8,17 @@ Stella = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Stella.jp
 
 # Function to load images from a folder
 def load_images_from_folder(folder):
+    supported_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')
     images = []
-    for filename in os.listdir(folder):
-        if filename.endswith(('.jpg', '.jpeg', '.png', '.gif')):
-            img = Image.open(os.path.join(folder, filename))
-            images.append(img)
+    for fname in os.listdir(folder):
+        if fname.lower().endswith(supported_exts):
+            path = os.path.join(folder, fname)
+            try:
+                img = Image.open(path)
+                img.filename = path  # Attach the filename attribute for later reference
+                images.append(img)
+            except Exception as e:
+                print(f"Error loading image {path}: {e}")
     return images
 
 # Load personalized images
