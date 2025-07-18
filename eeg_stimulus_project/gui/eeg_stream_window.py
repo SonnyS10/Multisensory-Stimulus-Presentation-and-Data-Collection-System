@@ -83,6 +83,7 @@ class EEGStreamWindow(QMainWindow):
         # Status bar
         self.status_label = QLabel("Status: Connecting to EEG stream...")
         self.status_label.setFont(QFont("Arial", 10))
+        self.status_label.setMaximumHeight(30)
         layout.addWidget(self.status_label)
 
     def create_control_panel(self):
@@ -121,8 +122,8 @@ class EEGStreamWindow(QMainWindow):
         # Amplitude scale control
         layout.addWidget(QLabel("Amplitude Scale:"))
         self.amplitude_slider = QSlider(Qt.Horizontal)
-        self.amplitude_slider.setRange(.1, 100)
-        self.amplitude_slider.setValue(20)  # Lower value = more sensitive
+        self.amplitude_slider.setRange(1, 100)
+        self.amplitude_slider.setValue(20)
         self.amplitude_slider.valueChanged.connect(self.update_amplitude_scale)
         layout.addWidget(self.amplitude_slider)
 
