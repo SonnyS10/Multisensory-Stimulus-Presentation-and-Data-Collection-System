@@ -107,7 +107,7 @@ def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_num
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Subject Information")
+        self.setWindowTitle(" Multisensory Stimulus Presentation and Data Collection System")
         self.setFixedSize(1000, 700)  # Set a fixed size (width, height)
         # self.setMinimumSize(600, 480)  # Or use this for a minimum size
 

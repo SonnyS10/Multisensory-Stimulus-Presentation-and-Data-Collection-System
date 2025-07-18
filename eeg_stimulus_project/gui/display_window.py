@@ -968,18 +968,10 @@ class DisplayWindow(QMainWindow):
             }
         """)
         self.craving_response = value
-        self.save_craving_response()
+        self.send_message({"action": "crave", "crave": self.craving_response})  # Send label to the server
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
         QTimer.singleShot(500, self.show_post_test_crosshair_instructions)
-
-    def save_craving_response(self):
-        # Save the craving response to a CSV file
-        craving_file = os.path.join(str(self.base_dir), "craving_rating.csv")
-        with open(craving_file, "a", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([self.test_number, self.current_test, self.craving_response])
-        logging.info(f"Craving rating saved: {self.craving_response}")
 
     def show_post_test_crosshair_instructions(self):
         # Remove all widgets and layouts after the persistent instruction and countdown labels

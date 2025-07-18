@@ -31,12 +31,14 @@ class GUI(QMainWindow):
         self.non_alcohol_folder = non_alcohol_folder
         self.randomize_cues = randomize_cues
         self.seed = seed
+        self.eyetracker_connected = False
+        self.labrecorder_connected = False
         
         if connection is not None:
             self.start_listener()
 
         # Set up logging (handled in main process setup)
-        # self.setup_logging(log_queue)
+        #self.setup_logging(log_queue)
 
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -114,7 +116,7 @@ class GUI(QMainWindow):
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue)
+        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue, self.eyetracker_connected, self.labrecorder_connected)
     
     def show_unisensory_neutral_visual(self):
         self.show_test_frame(self.unisensory_neutral_visual)
@@ -328,6 +330,10 @@ class GUI(QMainWindow):
                             current_frame = self.stacked_widget.currentWidget()
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
                                 QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
+                        elif msg.get("action") == "labrecorder_connected":
+                            self.labrecorder_connected = True
+                        elif msg.get("action") == "eyetracker_connected":
+                            self.eyetracker_connected = True
                         elif msg.get("action") == "tactile_connected":
                             self.shared_status['tactile_connected'] = True
                 except Exception as e:
@@ -343,7 +349,7 @@ class GUI(QMainWindow):
         logger.addHandler(queue_handler)
 
 class Frame(QFrame):
-    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None):
         super().__init__(parent)
 
         self.shared_status = shared_status
@@ -356,6 +362,8 @@ class Frame(QFrame):
         self.client = client
         self.log_queue = log_queue
         self.parent = parent
+        self.eyetracker_connected = eyetracker_connected
+        self.labrecorder_connected = labrecorder_connected
 
         # --- Aesthetic Styles ---
         self.setStyleSheet("""
@@ -535,6 +543,18 @@ class Frame(QFrame):
         if not checked:
             QMessageBox.critical(self, "Error", "Please select at least one display mode (VR, Display, or Viewing Booth) before starting.")
             return
+
+        # --- Labrecroder/Eyetracker connection warning ---
+        if self.eyetracker_connected == False or self.labrecorder_connected == False:
+            reply = QMessageBox.question(
+                self,
+                "LabRecorder/Eyetracker Not Connected",
+                "The LabRecorder and/or Eyetracker software is not connected, are you sure you want to proceed?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
 
         # --- Tactile connection warning ---
         is_tactile = "Tactile" in self.parent.get_current_test()
