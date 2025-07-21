@@ -564,6 +564,10 @@ class ControlWindow(QMainWindow):
                                 self.craving_response = message.get("crave", None)
                                 logging.info(f"Host: Received craving response: {self.craving_response}")
                                 self.label_push(f"crave_{self.craving_response}")
+                            elif action == "client_log":
+                                # Handle log messages from client
+                                log_message = message.get("message", "")
+                                logging.info(f"[CLIENT] {log_message}")
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
