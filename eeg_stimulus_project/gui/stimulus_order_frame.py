@@ -324,53 +324,44 @@ class StimulusOrderFrame(QWidget):
         randomizer_row = QHBoxLayout()
         self.randomize_checkbox = QCheckBox("Randomize Alcohol/Non-Alcohol Cues")
         self.randomize_checkbox.setFont(QFont("Segoe UI", 10))
+
+        # Add repetitions checkbox here
+        self.repetition_checkbox = QCheckBox("Specify stimulus repetitions")
+        self.repetition_checkbox.setFont(QFont("Segoe UI", 10))
+        self.repetition_checkbox.setChecked(False)
+
         self.seed_label = QLabel("Seed(1-10000):")
         self.seed_label.setFont(QFont("Segoe UI", 10))
         self.seed_input = QLineEdit()
         self.seed_input.setFont(QFont("Segoe UI", 10))
         self.seed_input.setPlaceholderText("Leave blank for random")
+
         randomizer_row.addWidget(self.randomize_checkbox)
+        randomizer_row.addWidget(self.repetition_checkbox)
         randomizer_row.addWidget(self.seed_label)
         randomizer_row.addWidget(self.seed_input)
         randomization_layout.addLayout(randomizer_row)
 
-        layout.addWidget(randomization_frame)
-
-        # --- Repetitions Section ---
-        repetitions_frame = QFrame()
-        repetitions_frame.setStyleSheet("""
-            QFrame {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 8px;
-                padding: 10px;
-                margin-top: 12px;
+        # --- Add Randomize Now Button ---
+        self.randomize_now_btn = QPushButton("Randomize Now")
+        self.randomize_now_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        self.randomize_now_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #17a2b8;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 18px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #138496;
             }
         """)
-        repetitions_layout = QVBoxLayout(repetitions_frame)
-        repetitions_layout.setSpacing(8)
+        self.randomize_now_btn.clicked.connect(self.on_randomize_now_clicked)
+        randomization_layout.addWidget(self.randomize_now_btn)
 
-        repetitions_label = QLabel("Repetitions Settings:")
-        repetitions_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        repetitions_layout.addWidget(repetitions_label)
-
-        # Repetitions checkbox and button
-        self.repetition_checkbox = QCheckBox("Specify stimulus repetitions")
-        self.repetition_checkbox.setFont(QFont("Segoe UI", 10))
-        self.repetition_checkbox.setChecked(False)
-        repetitions_layout.addWidget(self.repetition_checkbox)
-
-        self.repetition_button = QPushButton("Set Stimulus Repetitions")
-        self.repetition_button.setFont(QFont("Segoe UI", 10))
-        self.repetition_button.setEnabled(False)
-        repetitions_layout.addWidget(self.repetition_button)
-
-        self.repetition_checkbox.stateChanged.connect(
-            lambda state: self.repetition_button.setEnabled(state == Qt.Checked)
-        )
-        self.repetition_button.clicked.connect(self.open_repetition_dialog)
-
-        layout.addWidget(repetitions_frame)
+        layout.addWidget(randomization_frame)
 
     def load_current_assets(self):
         """Load current assets from the asset handler."""
@@ -686,13 +677,23 @@ class StimulusOrderFrame(QWidget):
             self.apply_button.setEnabled(not self.is_current_order_applied())
 
     def open_repetition_dialog(self):
-        """Open dialog to set stimulus repetitions."""
+        """Open dialog to set stimulus repetitions for images currently in the order."""
         dialog = QDialog(self)
         dialog.setWindowTitle("Set Stimulus Repetitions")
         layout = QFormLayout(dialog)
 
-        # Dynamically get stimulus names
-        stimulus_names = self.get_stimulus_names_from_folders(self.alcohol_folder, self.non_alcohol_folder)
+        # Get only images currently in the order
+        if self.current_test_name in self.custom_orders:
+            images = self.custom_orders[self.current_test_name]
+        else:
+            images = self.original_assets.get(self.current_test_name, [])
+
+        # Get display names for those images
+        stimulus_names = []
+        for img in images:
+            fname = getattr(img, 'filename', None)
+            base_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
+            stimulus_names.append(base_name)
 
         edits = {}
         for name in stimulus_names:
@@ -720,7 +721,7 @@ class StimulusOrderFrame(QWidget):
 
         if dialog.exec_() == QDialog.Accepted:
             self.stimulus_repetitions = {
-                name: int(edits[name].text()) if edits[name].text().isdigit() else 1
+                self.normalize_name(name): int(edits[name].text()) if edits[name].text().isdigit() else 1
                 for name in stimulus_names
             }
 
@@ -753,3 +754,73 @@ class StimulusOrderFrame(QWidget):
         if hasattr(self, 'repetition_checkbox') and self.repetition_checkbox.isChecked():
             return self.stimulus_repetitions
         return None
+
+    def on_randomize_now_clicked(self):
+        """Randomize and show the new order, optionally with repetitions."""
+        # Only show repetition dialog if the checkbox is checked
+        if self.repetition_checkbox.isChecked():
+            self.open_repetition_dialog()
+            repetitions = self.stimulus_repetitions
+        else:
+            repetitions = None
+
+        randomize_cues, seed = self.get_randomization_settings()
+        if not self.current_test_name:
+            return
+
+        # Get only images currently in the order
+        if self.current_test_name in self.custom_orders:
+            images = self.custom_orders[self.current_test_name][:]
+        else:
+            images = self.original_assets.get(self.current_test_name, [])[:]
+
+        # Build a mapping from normalized name to image object (first found)
+        name_to_img = {}
+        for img in images:
+            fname = getattr(img, 'filename', None)
+            norm_name = self.normalize_name(os.path.splitext(os.path.basename(fname))[0]) if fname else None
+            if norm_name and norm_name not in name_to_img:
+                name_to_img[norm_name] = img
+
+        # Use default repetitions if not specified
+        if repetitions is None:
+            repeated_images = images[:]
+        else:
+            repeated_images = []
+            for norm_name, count in repetitions.items():
+                img = name_to_img.get(norm_name)
+                if img:
+                    repeated_images.extend([img] * count)
+
+        # Shuffle the repeated images
+        import random
+        if seed is not None:
+            random.seed(seed)
+        random.shuffle(repeated_images)
+
+        # Show randomized order in image_list (do not apply as custom order)
+        self.image_list.clear()
+        for i, image in enumerate(repeated_images):
+            item = QListWidgetItem()
+            if hasattr(image, 'filename'):
+                filename = os.path.basename(image.filename)
+                display_name = os.path.splitext(filename)[0]
+                try:
+                    pixmap = QPixmap(image.filename)
+                    if not pixmap.isNull():
+                        thumbnail = pixmap.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        item.setIcon(QIcon(thumbnail))
+                except Exception as e:
+                    print(f"Error creating thumbnail for {filename}: {e}")
+                item.setText(f"{i+1}. {display_name}")
+            else:
+                item.setText(f"{i+1}. Image {i+1}")
+            item.setData(Qt.UserRole, image)
+            self.image_list.addItem(item)
+        self.update_apply_button_state()
+        QMessageBox.information(
+            self,
+            "Randomized!",
+            "Stimulus order has been randomized and shown. Click 'Apply Custom Order' to save this order if desired.",
+            QMessageBox.Ok
+        )
