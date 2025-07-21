@@ -21,7 +21,7 @@ from logging.handlers import QueueHandler
 
 class GUI(QMainWindow):
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
-                 alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None, repetitions=None):
+                 alcohol_folder=None, non_alcohol_folder=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -29,11 +29,8 @@ class GUI(QMainWindow):
         self.log_queue = log_queue
         self.alcohol_folder = alcohol_folder
         self.non_alcohol_folder = non_alcohol_folder
-        self.randomize_cues = randomize_cues
-        self.seed = seed
         self.eyetracker_connected = False
         self.labrecorder_connected = False
-        self.repetitions = repetitions
         
         if connection is not None:
             self.start_listener()
@@ -210,15 +207,19 @@ class GUI(QMainWindow):
                 return
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
+                # Get randomization and repetitions settings from stimulus_order_frame
+                randomize_cues, seed = self.stimulus_order_frame.get_randomization_settings()
+                repetitions = self.stimulus_order_frame.get_repetitions_settings()
+                
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
                     self.connection, log_queue, label_stream, current_frame, current_test,
                     self.base_dir, self.test_number, eyetracker=eyetracker, shared_status=shared_status, client=self.client,
                     alcohol_folder=self.alcohol_folder,
                     non_alcohol_folder=self.non_alcohol_folder,
-                    randomize_cues=self.randomize_cues,
-                    seed=self.seed,
-                    repetitions=self.repetitions
+                    randomize_cues=randomize_cues,
+                    seed=seed,
+                    repetitions=repetitions
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
