@@ -421,6 +421,7 @@ class ControlWindow(QMainWindow):
             if self.labrecorder.s is not None:
                 self.shared_status['lab_recorder_connected'] = True
                 logging.info("Connected to LabRecorder.")
+                self.connection.sendall((json.dumps({"action": "labrecorder_connected"}) + "\n").encode('utf-8'))
             else:
                 raise Exception()
         except Exception:
@@ -434,6 +435,7 @@ class ControlWindow(QMainWindow):
             time.sleep(2)  # Wait for the Pupil Labs device to initialize
             if self.eyetracker.device is not None:
                 self.shared_status['eyetracker_connected'] = True
+                self.connection.sendall((json.dumps({"action": "eyetracker_connected"}) + "\n").encode('utf-8'))
                 logging.info("Connected to Eye Tracker.")
                 self.eyetracker.estimate_time_offset()  # Estimate time offset
             else:
@@ -558,6 +560,14 @@ class ControlWindow(QMainWindow):
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
                                 self.shared_status['lsl_enabled'] = True
                                 #self.send_lsl_control("touchbox_lsl_true")
+                            elif action == "crave":
+                                self.craving_response = message.get("crave", None)
+                                logging.info(f"Host: Received craving response: {self.craving_response}")
+                                self.label_push(f"crave_{self.craving_response}")
+                            elif action == "client_log":
+                                # Handle log messages from client
+                                log_message = message.get("message", "")
+                                logging.info(f"[CLIENT] {log_message}")
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()

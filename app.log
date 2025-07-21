@@ -2116,4 +2116,58 @@
 =======
 2025-07-16 11:25:50,059 INFO Host: Waiting for client on port 9999...
 2025-07-16 11:26:33,300 INFO Connected to EEG stream: actiCHamp-24020268
+<<<<<<< HEAD
+2025-07-18 10:49:40,389 INFO Host: Waiting for client on port 9999...
+2025-07-18 10:49:42,888 INFO Host: Connected by ('169.254.185.196', 54207)
+2025-07-18 11:05:03,014 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-18 11:05:03,166 INFO Authentication (publickey) failed.
+2025-07-18 11:05:03,202 INFO Authentication (password) successful!
+2025-07-18 11:11:26,939 INFO Connected to EEG stream: actiCHamp-24020268
+2025-07-18 11:22:07,132 INFO Client disconnected.
+2025-07-18 12:41:45,014 INFO Host: Waiting for client on port 9999...
+2025-07-18 12:41:45,691 INFO Host: Connected by ('169.254.185.196', 59066)
+2025-07-18 12:42:39,531 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-18 12:42:41,275 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-18 12:42:41,355 INFO Client disconnected.
+2025-07-18 12:46:49,999 INFO Host: Waiting for client on port 9999...
+2025-07-18 12:46:51,618 INFO Host: Connected by ('169.254.185.196', 59250)
+2025-07-18 12:47:06,648 INFO Client disconnected.
+2025-07-18 12:51:04,460 INFO Host: Waiting for client on port 9999...
+2025-07-18 12:51:04,570 INFO Host: Connected by ('169.254.185.196', 59486)
+2025-07-18 12:52:03,234 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-18 12:53:09,082 INFO Client disconnected.
+2025-07-18 12:57:45,903 INFO Host: Waiting for client on port 9999...
+2025-07-18 12:57:47,086 INFO Host: Connected by ('169.254.185.196', 59675)
+2025-07-18 12:58:25,601 INFO Client disconnected.
+2025-07-18 13:06:14,813 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:06:15,440 INFO Host: Connected by ('169.254.185.196', 60058)
+2025-07-18 13:06:28,444 INFO Client disconnected.
+2025-07-18 13:06:49,534 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:06:52,268 INFO Host: Connected by ('169.254.185.196', 60073)
+2025-07-18 13:07:39,252 INFO Client disconnected.
+2025-07-18 13:10:56,055 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:10:59,651 INFO Host: Connected by ('169.254.185.196', 60163)
+2025-07-18 13:11:42,507 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-18 13:11:45,457 INFO Client disconnected.
+2025-07-18 13:17:07,831 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:17:10,041 INFO Host: Connected by ('169.254.185.196', 60342)
+2025-07-18 13:17:38,859 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-18 13:17:42,733 INFO Client disconnected.
+2025-07-18 13:32:14,136 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:32:27,525 INFO Host: Connected by ('169.254.185.196', 60861)
+2025-07-18 13:33:00,157 INFO Client disconnected.
+2025-07-18 13:39:50,573 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:39:50,868 INFO Host: Connected by ('169.254.185.196', 61129)
+2025-07-18 13:40:51,715 INFO Client disconnected.
+2025-07-18 13:44:03,600 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:44:06,720 INFO Host: Connected by ('169.254.185.196', 61237)
+2025-07-18 13:44:28,434 INFO Client disconnected.
+2025-07-18 13:45:14,372 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:45:15,497 INFO Host: Connected by ('169.254.185.196', 61263)
+2025-07-18 13:45:35,027 INFO Client disconnected.
+2025-07-18 13:46:43,792 INFO Host: Waiting for client on port 9999...
+2025-07-18 13:46:43,890 INFO Host: Connected by ('169.254.185.196', 61336)
+2025-07-18 13:47:11,904 INFO Client disconnected.
+=======
 >>>>>>> 204a246949cb248b1764b783ceff5d762c40cc5d
+>>>>>>> 7738edf88209a29332ff6be686569261799eb702

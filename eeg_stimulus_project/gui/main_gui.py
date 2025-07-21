@@ -205,6 +205,7 @@ class GUI(QMainWindow):
         if state == Qt.Checked:
             if any_display_widget_open():
                 logging.info("A display widget is already open in another frame. Not creating a new one.")
+                self.send_message({"action": "client_log", "message": "A display widget is already open in another frame. Not creating a new one."})
                 return
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
                 current_test = self.get_current_test()
@@ -228,6 +229,7 @@ class GUI(QMainWindow):
                 current_frame.display_widget.show()
             else:
                 logging.info("Display widget already exists, not creating a new one.")
+                self.send_message({"action": "client_log", "message": "Display widget already exists, not creating a new one."})
         else:
             #Remove/hide the widgets when the stop button is pressed
             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
@@ -292,6 +294,7 @@ class GUI(QMainWindow):
                 self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
             except Exception as e:
                 logging.info(f"Error sending ping: {e}")
+                self.send_message({"action": "client_log", "message": f"Error sending ping: {e}"})
             if single_test:
                 self._latency_test_active = False  # For single ping
 
@@ -338,6 +341,7 @@ class GUI(QMainWindow):
                             self.shared_status['tactile_connected'] = True
                 except Exception as e:
                     logging.info(f"Listener error: {e}")
+                    self.send_message({"action": "client_log", "message": f"Listener error: {e}"})
                     break
         threading.Thread(target=listen, daemon=True).start()
 
@@ -582,8 +586,10 @@ class Frame(QFrame):
                     self.labrecorder.Start_Recorder(self.parent.get_current_test())
                 else:
                     logging.info("LabRecorder not connected")
+                    self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
             else:
                 logging.info("LabRecorder not connected in Control Window")
+                self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
             
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
@@ -602,9 +608,11 @@ class Frame(QFrame):
                     self.display_widget.user_data['elapsed_time']
                 )
             else:
-                logging.info("No display_widget found for saving data.")        
+                logging.info("No display_widget found for saving data.")
+                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
         except Exception as e:
             logging.info(f"Error saving data: {e}")
+            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
@@ -628,8 +636,10 @@ class Frame(QFrame):
                 save_data.save_data_passive(self.parent.get_current_test())
             else:
                 logging.info("No display_widget found for saving data.")
+                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
         except Exception as e:
             logging.info(f"Error saving data: {e}")
+            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
             self.labrecorder.Stop_Recorder()
@@ -664,6 +674,9 @@ class Frame(QFrame):
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
+                # Don't call send_message here to avoid infinite recursion
+
+
 
     def on_next_button_clicked(self):
         if hasattr(self, 'display_widget') and self.display_widget is not None:
