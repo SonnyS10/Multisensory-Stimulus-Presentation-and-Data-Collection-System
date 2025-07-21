@@ -90,7 +90,7 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
     sys.exit(app.exec_())
 
 # Launches the main GUI process (client or local)
-def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, randomize_cues=None, seed=None):
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, randomize_cues=None, seed=None, repetitions=None):
     from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.main_gui import GUI
     
@@ -100,7 +100,7 @@ def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_num
     setup_child_process_logging(log_queue, network_connection)
     
     app = QApplication(sys.argv)
-    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, randomize_cues, seed)
+    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, randomize_cues, seed, repetitions)
     window.show()
     sys.exit(app.exec_())
 
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(" Multisensory Stimulus Presentation and Data Collection System")
-        self.setFixedSize(1000, 700)  # Set a fixed size (width, height)
+        self.setFixedSize(1000, 800)  # Set a fixed size (width, height)
         # self.setMinimumSize(600, 480)  # Or use this for a minimum size
 
         # Center the window on the screen
@@ -235,6 +235,24 @@ class MainWindow(QMainWindow):
         randomizer_row.addWidget(self.seed_input)
         asset_layout.addLayout(randomizer_row)
 
+        # Repetitions
+        self.repetition_checkbox = QCheckBox("Specify stimulus repetitions")
+        self.repetition_checkbox.setFont(QFont("Segoe UI", 10))
+        self.repetition_checkbox.setChecked(False)
+        asset_layout.addWidget(self.repetition_checkbox)
+
+        self.repetition_button = QPushButton("Set Stimulus Repetitions")
+        self.repetition_button.setFont(QFont("Segoe UI", 10))
+        self.repetition_button.setEnabled(False)
+        asset_layout.addWidget(self.repetition_button)
+
+        self.repetition_checkbox.stateChanged.connect(
+            lambda state: self.repetition_button.setEnabled(state == Qt.Checked)
+        )
+        self.repetition_button.clicked.connect(self.open_repetition_dialog)
+
+        self.stimulus_repetitions = {}  # Store repetitions here
+
         # --- Documentation Section ---
         documentation_group = QGroupBox("Documentation")
         documentation_layout = QVBoxLayout(documentation_group)
@@ -280,6 +298,7 @@ class MainWindow(QMainWindow):
 
         #Randomization settings
         randomize_cues = self.randomize_checkbox.isChecked()
+        print(f"Randomize cues: {randomize_cues}")
         seed_text = self.seed_input.text().strip()
         seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
 
@@ -303,7 +322,7 @@ class MainWindow(QMainWindow):
             # Directory and shared resources for client (base_dir is None for client)
             base_dir = None
             self.manager, self.shared_status, log_queue = init_shared_resources()
-            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True)) # client=True
+            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True, alcohol_folder, non_alcohol_folder, randomize_cues, seed, repetitions)) # client=True
             self.gui_process.start()
         else:
             # Both: local experiment (host and client on same machine)
@@ -315,9 +334,10 @@ class MainWindow(QMainWindow):
             self.manager, self.shared_status, log_queue = init_shared_resources()
             # Start control and GUI processes
             self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
+            repetitions = self.stimulus_repetitions if self.repetition_checkbox.isChecked() else None
             self.gui_process = Process(
                 target=run_main_gui_client,
-                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, randomize_cues, seed)
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, randomize_cues, seed, repetitions)
             ) # client=False
             self.control_process.start()
             self.gui_process.start()
@@ -409,10 +429,67 @@ class MainWindow(QMainWindow):
         if folder:
             self.non_alcohol_folder_input.setText(folder)
 
-    def randomize_cues(self):
-        randomize_cues = self.randomize_checkbox.isChecked()
-        seed_text = self.seed_input.text().strip()
-        seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
+    #def randomize_cues(self):
+    #    randomize_cues = self.randomize_checkbox.isChecked()
+    #   seed_text = self.seed_input.text().strip()
+    #    seed = int(seed_text) if seed_text.isdigit() else seed_text if seed_text else None
+    #    print("Randomize cues:", randomize_cues)
+
+    def open_repetition_dialog(self):
+        from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QPushButton, QHBoxLayout
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Set Stimulus Repetitions")
+        layout = QFormLayout(dialog)
+
+        # Dynamically get stimulus names
+        alcohol_folder = self.alcohol_folder_input.text().strip()
+        non_alcohol_folder = self.non_alcohol_folder_input.text().strip()
+        stimulus_names = get_stimulus_names_from_folders(alcohol_folder, non_alcohol_folder)
+
+        edits = {}
+        for name in stimulus_names:
+            edit = QLineEdit()
+            edit.setPlaceholderText("Repetitions (default 1)")
+            layout.addRow(name, edit)
+            edits[name] = edit
+
+        # Add Set All button
+        set_all_row = QHBoxLayout()
+        set_all_edit = QLineEdit()
+        set_all_edit.setPlaceholderText("Set all to...")
+        set_all_button = QPushButton("Set All")
+        set_all_button.clicked.connect(lambda: [
+            edit.setText(set_all_edit.text()) for edit in edits.values() if set_all_edit.text().isdigit()
+        ])
+        set_all_row.addWidget(set_all_edit)
+        set_all_row.addWidget(set_all_button)
+        layout.addRow("Set all repetitions:", set_all_row)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        layout.addWidget(buttons)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+
+        if dialog.exec_() == QDialog.Accepted:
+            self.stimulus_repetitions = {
+                name: int(edits[name].text()) if edits[name].text().isdigit() else 1
+                for name in stimulus_names
+            }
+
+def get_stimulus_names_from_folders(alcohol_folder, non_alcohol_folder):
+    import os
+    supported_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')
+    names = set()
+    for folder in [alcohol_folder, non_alcohol_folder]:
+        if folder and os.path.isdir(folder):
+            for fname in os.listdir(folder):
+                if fname.lower().endswith(supported_exts):
+                    base_name = os.path.splitext(fname)[0]
+                    names.add(base_name)
+    # Always include defaults if folders are empty
+    if not names:
+        names.update(["Beer", "Stella"])
+    return sorted(names)
 
 def main():
     """Main entry point for the EEG Stimulus Project."""

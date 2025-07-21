@@ -214,7 +214,7 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None):
+                 randomize_cues=False, seed=None, repetitions=None):  # <-- Add repetitions here
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -226,6 +226,7 @@ class DisplayWindow(QMainWindow):
         self.randomize_cues = randomize_cues
         self.seed = seed
         self.frame = parent_frame  # Store reference to the Frame instance
+        self.repetitions = repetitions
 
         if self.shared_status.get('eyetracker_connected', False):
             # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -353,7 +354,9 @@ class DisplayWindow(QMainWindow):
         self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
         self.waiting_for_initial_touch = False
         # Step 4: Load assets using user folders if provided
-        Display.test_assets = Display.get_assets(alcohol_folder, non_alcohol_folder)
+        Display.test_assets = Display.get_assets(
+            alcohol_folder, non_alcohol_folder, randomize_cues=randomize_cues, seed=seed, repetitions=repetitions
+        )
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
@@ -374,7 +377,8 @@ class DisplayWindow(QMainWindow):
                         alcohol_folder=self.alcohol_folder,
                         non_alcohol_folder=self.non_alcohol_folder,
                         randomize_cues=self.randomize_cues,
-                        seed=self.seed
+                        seed=self.seed,
+                        repetitions=self.repetitions  # <-- Add this line
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time

@@ -21,7 +21,7 @@ from logging.handlers import QueueHandler
 
 class GUI(QMainWindow):
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
-                 alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
+                 alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None, repetitions=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -33,6 +33,7 @@ class GUI(QMainWindow):
         self.seed = seed
         self.eyetracker_connected = False
         self.labrecorder_connected = False
+        self.repetitions = repetitions
         
         if connection is not None:
             self.start_listener()
@@ -216,7 +217,8 @@ class GUI(QMainWindow):
                     alcohol_folder=self.alcohol_folder,
                     non_alcohol_folder=self.non_alcohol_folder,
                     randomize_cues=self.randomize_cues,
-                    seed=self.seed
+                    seed=self.seed,
+                    repetitions=self.repetitions
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)

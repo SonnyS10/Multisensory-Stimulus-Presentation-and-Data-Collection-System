@@ -303,7 +303,8 @@ class StimulusOrderFrame(QWidget):
                 alcohol_folder=self.alcohol_folder,
                 non_alcohol_folder=self.non_alcohol_folder,
                 randomize_cues=False,
-                seed=None
+                seed=None,
+                repetitions=getattr(self.parent, "stimulus_repetitions", None)
             )
             # Gather all unique assets for the available assets list
             asset_dict = {}
