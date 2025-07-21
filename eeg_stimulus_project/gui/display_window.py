@@ -466,15 +466,9 @@ class DisplayWindow(QMainWindow):
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
             QTimer.singleShot(2000, self.hide_image)
         else:
-            # Only show crosshair if next asset is NOT a craving rating
-            if self.next_asset_is_craving():
-                self.stroop_transition_timer.timeout.disconnect()
-                self.stroop_transition_timer.timeout.connect(self._advance_image)
-                self.stroop_transition_timer.start(2000)
-            else:
-                self.stroop_transition_timer.timeout.disconnect()
-                self.stroop_transition_timer.timeout.connect(self.hide_image)
-                self.stroop_transition_timer.start(2000)
+            self.stroop_transition_timer.timeout.disconnect()
+            self.stroop_transition_timer.timeout.connect(self.hide_image)
+            self.stroop_transition_timer.start(2000)
 
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
@@ -495,6 +489,9 @@ class DisplayWindow(QMainWindow):
             print("Current image index is at the last image, waiting for next button is not applicable.")
 
     def show_crosshair_between_images(self, test_type):
+        # --- Clear craving rating widgets (everything after the first two persistent labels) ---
+        self.clear_overlay()
+
         label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         duration_ms = random.randint(800, 1200)
@@ -707,7 +704,10 @@ class DisplayWindow(QMainWindow):
                         # For tactile Stroop, show crosshair after keypress
                         self.show_crosshair_and_wait_tactile(stroop=True)
                     else:
-                        self.show_crosshair_between_images('stroop')
+                        if self.next_asset_is_craving():
+                            self._advance_image()
+                        else:
+                            self.show_crosshair_between_images('stroop')
                     return True
         # Handle craving rating input
         if hasattr(self, 'craving_response') and self.craving_response is None:
@@ -869,7 +869,22 @@ class DisplayWindow(QMainWindow):
                 logging.info(f"Error sending message: {e}")
                 # Don't call send_message here to avoid infinite recursion
 
-
+    def clear_overlay(self):
+        # Clear the overlay layout and widgets
+        for i in reversed(range(2, self.overlay_layout.count())):
+            item = self.overlay_layout.itemAt(i)
+            if item is not None:
+                widget = item.widget()
+                layout = item.layout()
+                if widget is not None:
+                    self.overlay_layout.removeWidget(widget)
+                    widget.deleteLater()
+                elif layout is not None:
+                    while layout.count():
+                        child = layout.takeAt(0)
+                        if child.widget():
+                            child.widget().deleteLater()
+            self.overlay_layout.removeItem(item)
 
     def setup_logging(self, log_queue):
         queue_handler = QueueHandler(log_queue)
@@ -884,21 +899,7 @@ class DisplayWindow(QMainWindow):
         craving_bar_spacing = 40           # Space between instruction and bar
 
         # Now clear overlay and craving_buttons as before
-        for i in reversed(range(2, self.overlay_layout.count())):
-            item = self.overlay_layout.itemAt(i)
-            if item is not None:
-                widget = item.widget()
-                layout = item.layout()
-                if widget is not None:
-                    self.overlay_layout.removeWidget(widget)
-                    widget.deleteLater()
-                elif layout is not None:
-                    # Recursively delete all widgets in the layout
-                    while layout.count():
-                        child = layout.takeAt(0)
-                        if child.widget():
-                            child.widget().deleteLater()
-            self.overlay_layout.removeItem(layout)
+        self.clear_overlay()
 
         self.craving_buttons = []
 
@@ -1035,21 +1036,7 @@ class DisplayWindow(QMainWindow):
 
     def show_post_test_crosshair_instructions(self):
         # Remove all widgets and layouts after the persistent instruction and countdown labels
-        for i in reversed(range(2, self.overlay_layout.count())):
-            item = self.overlay_layout.itemAt(i)
-            if item is not None:
-                widget = item.widget()
-                layout = item.layout()
-                if widget is not None:
-                    self.overlay_layout.removeWidget(widget)
-                    widget.deleteLater()
-                elif layout is not None:
-                    # Recursively delete all widgets in the layout
-                    while layout.count():
-                        child = layout.takeAt(0)
-                        if child.widget():
-                            child.widget().deleteLater()
-            self.overlay_layout.removeItem(layout)
+        self.clear_overlay()
 
         # Now update the instructions as usual
         label = "Post-Test Crosshair Instructions Shown"
