@@ -215,7 +215,7 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None):
+                 randomize_cues=False, seed=None, repetitions=None):  # <-- Add repetitions here
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -227,6 +227,7 @@ class DisplayWindow(QMainWindow):
         self.randomize_cues = randomize_cues
         self.seed = seed
         self.frame = parent_frame  # Store reference to the Frame instance
+        self.repetitions = repetitions
 
         if self.shared_status.get('eyetracker_connected', False):
             # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
@@ -236,8 +237,10 @@ class DisplayWindow(QMainWindow):
                 self.eyetracker.start_recording()
             else:
                 logging.info("Eyetracker not connected")
+                self.send_message({"action": "client_log", "message": "Eyetracker not connected"})
         else:
             logging.info("Eyetracker not connected in Control Window")
+            self.send_message({"action": "client_log", "message": "Eyetracker not connected in Control Window"})
      
         self.current_label = None
 
@@ -353,12 +356,15 @@ class DisplayWindow(QMainWindow):
         self.waiting_for_initial_touch = False
         self.next_is_craving = False  # Flag to indicate if the next image is a craving rating image
         # Step 4: Load assets using user folders if provided
-        Display.test_assets = Display.get_assets(alcohol_folder, non_alcohol_folder)
+        Display.test_assets = Display.get_assets(
+            alcohol_folder, non_alcohol_folder, randomize_cues=randomize_cues, seed=seed, repetitions=repetitions
+        )
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
         logging.info(f"Current test: {current_test}")
+        self.send_message({"action": "client_log", "message": f"Current test: {current_test}"})
         #print(f"Available tests: {list(Display.test_assets.keys())}")
         if current_test:
             try:
@@ -373,7 +379,8 @@ class DisplayWindow(QMainWindow):
                         alcohol_folder=self.alcohol_folder,
                         non_alcohol_folder=self.non_alcohol_folder,
                         randomize_cues=self.randomize_cues,
-                        seed=self.seed
+                        seed=self.seed,
+                        repetitions=self.repetitions  # <-- Add this line
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
@@ -384,6 +391,7 @@ class DisplayWindow(QMainWindow):
                     self.display_images_passive()
             except KeyError as e:
                 logging.info(f"KeyError: {e}")
+                self.send_message({"action": "client_log", "message": f"KeyError: {e}"})
 
     #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
@@ -395,8 +403,10 @@ class DisplayWindow(QMainWindow):
             self.stroop_transition_timer.stop()  # Stop the Stroop timer
         self.paused_time = self.elapsed_time
         logging.info(self.paused_time)
+        self.send_message({"action": "client_log", "message": f"Paused time: {self.paused_time}"})
         self.paused_image_index = self.current_image_index 
         logging.info(self.paused_image_index)
+        self.send_message({"action": "client_log", "message": f"Paused image index: {self.paused_image_index}"})
          # Store the current image index
         self.Paused = True
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -424,6 +434,7 @@ class DisplayWindow(QMainWindow):
             self.send_message({"action": "label", "label": label})  # Send label to the server
             self.label_stream.push_label(label)
             logging.info(f"Current label: {label}")
+            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
             if self.eyetracker is not None:
                 self.eyetracker.send_marker(label)  # Send label to Pupil Labs
             self.current_label = label
@@ -449,6 +460,7 @@ class DisplayWindow(QMainWindow):
             self.send_message({"action": "label", "label": label})
             self.label_stream.push_label(label)
             logging.info(f"Current label: {label}")
+            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
             self.current_label = label
         if "Tactile" in self.current_test:
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
@@ -598,6 +610,7 @@ class DisplayWindow(QMainWindow):
     def poll_label(self):
         # This will print the current label and the current time in ms
         logging.info(f"Polled at {self.elapsed_time} ms: Current label = {self.current_label}")
+        self.send_message({"action": "client_log", "message": f"Polled at {self.elapsed_time} ms: Current label = {self.current_label}"})
 
     #This method is needed to make the image transition timer work, it is called when the image transition timer times out. It is the main way the pause and resume functionality works
     #It is called from the image_transition_timer
@@ -656,6 +669,7 @@ class DisplayWindow(QMainWindow):
               label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
               self.label_stream.push_label(label)
               logging.info(f"Current label: {label}")
+              self.send_message({"action": "client_log", "message": f"Current label: {label}"})
               self.current_label = label
 
     #This method is called to wait for the user input, it installs an event filter to capture the key press events
@@ -676,6 +690,7 @@ class DisplayWindow(QMainWindow):
                             self.send_message({"action": "label", "label": label})
                             self.label_stream.push_label(label)
                             logging.info(f"Current label: {label}")
+                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
                             self.current_label = label  # Push label to LSL stream
                     else:
                         self.user_data['user_inputs'].append('No')  # Store the user input
@@ -684,6 +699,7 @@ class DisplayWindow(QMainWindow):
                             self.send_message({"action": "label", "label": label})
                             self.label_stream.push_label(label)
                             logging.info(f"Current label: {label}")
+                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
                             self.current_label = label  # Push label to LSL stream
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                     self.removeEventFilter(self)
@@ -769,6 +785,7 @@ class DisplayWindow(QMainWindow):
     def closeEvent(self, event):
         if getattr(self, 'stopped', False):
             logging.info("Closing DisplayWindow...")
+            self.send_message({"action": "client_log", "message": "Closing DisplayWindow..."})
             # Allow closing and do cleanup
             if hasattr(self, 'timer') and self.timer.isActive():
                 self.timer.stop()
@@ -788,6 +805,7 @@ class DisplayWindow(QMainWindow):
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
         logging.info("Test has ended, please press the stop button to close the test.")
+        self.send_message({"action": "client_log", "message": "Test has ended, please press the stop button to close the test."})
         #self.instructions_label.setFont(QFont("Arial", 22))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
@@ -849,6 +867,9 @@ class DisplayWindow(QMainWindow):
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
+                # Don't call send_message here to avoid infinite recursion
+
+
 
     def setup_logging(self, log_queue):
         queue_handler = QueueHandler(log_queue)

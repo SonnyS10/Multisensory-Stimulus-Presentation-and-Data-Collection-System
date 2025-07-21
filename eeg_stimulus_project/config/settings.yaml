@@ -123,7 +123,7 @@ lsl:
       name: "EEG"
       type: "EEG"
       channel_count: 32
-      sampling_rate: 256
+      sampling_rate: 2048
     eye_tracker:
       name: "EyeTracker"
       type: "Gaze"

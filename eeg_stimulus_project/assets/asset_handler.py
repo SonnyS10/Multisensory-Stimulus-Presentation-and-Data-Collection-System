@@ -42,8 +42,18 @@ class Display():
     custom_orders = {}  # Class variable to store custom image orders
     
     @staticmethod
-    def randomize_images(images, randomize_cues=False, seed=None):
+    def randomize_images(images, randomize_cues=False, seed=None, repetitions=None):
+        print(f"Randomize called: {randomize_cues}, seed={seed}, images={len(images)}")
         images = images.copy()
+        # Apply repetitions if specified
+        if repetitions:
+            expanded_images = []
+            for img in images:
+                fname = getattr(img, 'filename', None)
+                base_name = os.path.splitext(os.path.basename(fname))[0] if fname else None
+                count = repetitions.get(base_name, 1)
+                expanded_images.extend([img] * count)
+            images = expanded_images
         if randomize_cues:
             if not seed:
                 # Generate a random seed if none is provided
@@ -63,7 +73,15 @@ class Display():
         return Display.custom_orders.copy()
 
     @staticmethod
-    def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None):
+    def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None, repetitions=None):
+        print(
+            f"get_assets called with:\n"
+            f"  alcohol_folder={alcohol_folder}\n"
+            f"  non_alcohol_folder={non_alcohol_folder}\n"
+            f"  randomize_cues={randomize_cues}\n"
+            f"  seed={seed}\n"
+            f"  repetitions={repetitions}\n"
+        )
         # Use user folders if provided, else use defaults
         def_images_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default')
         # Load backup default images
@@ -87,7 +105,6 @@ class Display():
 
         # Build test_assets dict as before, but randomize if needed
         test_assets = {}
-
         for test_name, (general, personalized) in {
             'Unisensory Neutral Visual': (non_alcohol_images, []),
             'Unisensory Alcohol Visual': (alcohol_images, []),
@@ -100,12 +117,11 @@ class Display():
             'Stroop Multisensory Neutral (Visual & Tactile)': (non_alcohol_images, personalized_images),
             'Stroop Multisensory Neutral (Visual & Olfactory)': (non_alcohol_images, personalized_images),
         }.items():
+            print(f"Custom order for {test_name}: {test_name in Display.custom_orders}")
             mixed = get_mixed_images(general, personalized)
-            # Check if there's a custom order for this test
             if test_name in Display.custom_orders:
                 test_assets[test_name] = Display.custom_orders[test_name]
             else:
-                randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed)
+                randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed, repetitions)
                 test_assets[test_name] = randomized
-
         return test_assets
