@@ -340,6 +340,12 @@ class StimulusOrderFrame(QWidget):
             item.setData(Qt.UserRole, img)
             self.available_assets_list.addItem(item)
 
+        # Add the craving rating asset to the available assets list
+        craving_item = QListWidgetItem("Craving Rating")
+        craving_item.setData(Qt.UserRole, CravingRatingAsset())
+        #craving_item.setIcon(QIcon(":/icons/star.png"))  # Optional: use a custom icon if you have one
+        self.available_assets_list.addItem(craving_item)
+
     def on_test_selected(self):
         """Handle test selection change."""
         self.current_test_name = self.test_selector.currentText()
@@ -360,9 +366,12 @@ class StimulusOrderFrame(QWidget):
         
         for i, image in enumerate(images):
             item = QListWidgetItem()
-            
-            # Get image filename for display
-            if hasattr(image, 'filename'):
+            # Check if the image is a CravingRatingAsset
+            if isinstance(image, CravingRatingAsset):
+                item.setText(f"{i+1}. Craving Rating")
+                #item.setIcon(QIcon(":/icons/star.png"))  # Optional: use a custom icon
+            # Check if the image is a Display object
+            elif hasattr(image, 'filename'):
                 filename = os.path.basename(image.filename)
                 display_name = os.path.splitext(filename)[0]
                 
@@ -604,3 +613,8 @@ class StimulusOrderFrame(QWidget):
         """Enable/disable the apply button based on whether the order is applied."""
         if hasattr(self, 'apply_button'):
             self.apply_button.setEnabled(not self.is_current_order_applied())
+
+class CravingRatingAsset:
+    def __init__(self):
+        self.asset_type = "craving_rating"
+        self.display_name = "Craving Rating"

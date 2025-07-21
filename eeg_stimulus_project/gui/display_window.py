@@ -7,13 +7,14 @@ import csv
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout, QApplication
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
 from eeg_stimulus_project.assets.asset_handler import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
+from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
 import threading
 import json
 import time
@@ -350,6 +351,7 @@ class DisplayWindow(QMainWindow):
         self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
         self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
         self.waiting_for_initial_touch = False
+        self.next_is_craving = False  # Flag to indicate if the next image is a craving rating image
         # Step 4: Load assets using user folders if provided
         Display.test_assets = Display.get_assets(alcohol_folder, non_alcohol_folder)
 
@@ -429,7 +431,11 @@ class DisplayWindow(QMainWindow):
             # For tactile, show image for 5 seconds, then show crosshair and wait for touch
             QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
         else:
-            QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
+        # Only show crosshair if next asset is NOT a craving rating
+            if self.next_asset_is_craving():
+                QTimer.singleShot(2000, self._advance_image)
+            else:
+                QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
@@ -448,7 +454,15 @@ class DisplayWindow(QMainWindow):
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
             QTimer.singleShot(2000, self.hide_image)
         else:
-            self.stroop_transition_timer.start(2000)  # Hide image after 2 seconds
+            # Only show crosshair if next asset is NOT a craving rating
+            if self.next_asset_is_craving():
+                self.stroop_transition_timer.timeout.disconnect()
+                self.stroop_transition_timer.timeout.connect(self._advance_image)
+                self.stroop_transition_timer.start(2000)
+            else:
+                self.stroop_transition_timer.timeout.disconnect()
+                self.stroop_transition_timer.timeout.connect(self.hide_image)
+                self.stroop_transition_timer.start(2000)
 
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
@@ -552,10 +566,16 @@ class DisplayWindow(QMainWindow):
     def _advance_image(self):
         self.current_image_index += 1
         if self.current_image_index < len(self.images):
-            if "Stroop" in self.current_test:
-                self.display_images_stroop()
+            current_asset = self.images[self.current_image_index]
+            if isinstance(current_asset, CravingRatingAsset):
+                self.show_craving_rating_screen()
+            elif hasattr(current_asset, 'filename'):
+                if "Stroop" in self.current_test:
+                    self.display_images_stroop()
+                else:
+                    self.display_images_passive()
             else:
-                self.display_images_passive()
+                logging.warning(f"Unknown asset type at index {self.current_image_index}: {type(current_asset)}")
         else:
             # End Logic
             if "Stroop" in self.current_test:
@@ -572,8 +592,8 @@ class DisplayWindow(QMainWindow):
             self.timer.stop()
             #if self.eyetracker and self.eyetracker.device is not None:
             #    self.eyetracker.stop_recording()
-            self.show_craving_rating_screen()
-            #self.show_crosshair_instructions()
+            #self.show_craving_rating_screen()
+            self.show_post_test_crosshair_instructions()
 
     def poll_label(self):
         # This will print the current label and the current time in ms
@@ -842,12 +862,24 @@ class DisplayWindow(QMainWindow):
         craving_bar_vertical_offset = 120  # Pixels from the top of the overlay (increase to move bar lower)
         craving_bar_spacing = 40           # Space between instruction and bar
 
-        # Clear overlay layout except for the persistent instruction and countdown labels
+        # Now clear overlay and craving_buttons as before
         for i in reversed(range(2, self.overlay_layout.count())):
-            widget = self.overlay_layout.itemAt(i).widget()
-            if widget is not None:
-                self.overlay_layout.removeWidget(widget)
-                widget.deleteLater()
+            item = self.overlay_layout.itemAt(i)
+            if item is not None:
+                widget = item.widget()
+                layout = item.layout()
+                if widget is not None:
+                    self.overlay_layout.removeWidget(widget)
+                    widget.deleteLater()
+                elif layout is not None:
+                    # Recursively delete all widgets in the layout
+                    while layout.count():
+                        child = layout.takeAt(0)
+                        if child.widget():
+                            child.widget().deleteLater()
+            self.overlay_layout.removeItem(layout)
+
+        self.craving_buttons = []
 
         # Use the persistent instructions_label for craving instructions
         self.instructions_label.setText(
@@ -971,7 +1003,14 @@ class DisplayWindow(QMainWindow):
         self.send_message({"action": "crave", "crave": self.craving_response})  # Send label to the server
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
-        QTimer.singleShot(500, self.show_post_test_crosshair_instructions)
+        if self.current_image_index < len(self.images) - 1:
+            QTimer.singleShot(500, self._advance_image)
+        else:
+            QTimer.singleShot(500, self.show_post_test_crosshair_instructions)
+
+    def next_asset_is_craving(self):
+        next_idx = self.current_image_index + 1
+        return next_idx < len(self.images) and isinstance(self.images[next_idx], CravingRatingAsset)
 
     def show_post_test_crosshair_instructions(self):
         # Remove all widgets and layouts after the persistent instruction and countdown labels
@@ -989,8 +1028,7 @@ class DisplayWindow(QMainWindow):
                         child = layout.takeAt(0)
                         if child.widget():
                             child.widget().deleteLater()
-                    self.overlay_layout.removeItem(layout)
-                    # No deleteLater for layouts, just remove
+            self.overlay_layout.removeItem(layout)
 
         # Now update the instructions as usual
         label = "Post-Test Crosshair Instructions Shown"
