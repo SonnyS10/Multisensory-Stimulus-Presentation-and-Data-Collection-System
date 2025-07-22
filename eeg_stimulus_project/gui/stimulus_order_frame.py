@@ -29,7 +29,8 @@ class StimulusOrderFrame(QWidget):
         self.alcohol_folder = alcohol_folder
         self.non_alcohol_folder = non_alcohol_folder
         self.current_test_name = None
-        self.custom_orders = {}  # Store custom orders for each test
+        self.custom_orders = {}  # Store applied custom orders for each test (what's actually used for tests)
+        self.working_orders = {}  # Store working orders for each test (what user is currently editing)
         self.original_assets = {}  # Store original asset order
         
         # Add randomization and repetitions settings
@@ -95,7 +96,7 @@ class StimulusOrderFrame(QWidget):
         # Instructions
         instructions = QLabel(
             "Drag and drop images to rearrange their presentation order. "
-            "The first image will be shown first during the test."
+            "Changes are made to your working order. Click 'Apply Custom Order' to save changes for actual test use."
         )
         instructions.setFont(QFont("Segoe UI", 10))
         instructions.setWordWrap(True)
@@ -114,7 +115,7 @@ class StimulusOrderFrame(QWidget):
         """)
         list_layout = QVBoxLayout(list_frame)
         
-        list_label = QLabel("Image Order (drag to rearrange):")
+        list_label = QLabel("Working Order (drag to rearrange):")
         list_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         list_layout.addWidget(list_label)
         
@@ -145,14 +146,14 @@ class StimulusOrderFrame(QWidget):
         """)
         self.image_list.setMinimumHeight(300)
         list_layout.addWidget(self.image_list)
-        self.image_list.model().rowsMoved.connect(lambda *args: self.update_apply_button_state())
+        self.image_list.model().rowsMoved.connect(self.on_rows_moved)
         
         layout.addWidget(list_frame)
         
         # Buttons
         button_layout = QHBoxLayout()
         
-        reset_button = QPushButton("Reset to Original Order")
+        reset_button = QPushButton("Reset Working Order")
         reset_button.setFont(QFont("Segoe UI", 11))
         reset_button.setStyleSheet("""
             QPushButton {
@@ -423,17 +424,21 @@ class StimulusOrderFrame(QWidget):
         self.update_image_list()
     
     def update_image_list(self):
-        """Update the image list widget with current test's images."""
+        """Update the image list widget with current test's working order."""
         if not self.current_test_name or self.current_test_name not in self.original_assets:
             return
         
         self.image_list.clear()
         
-        # Use custom order if available, otherwise use original order
-        if self.current_test_name in self.custom_orders:
-            images = self.custom_orders[self.current_test_name]
-        else:
-            images = self.original_assets[self.current_test_name]
+        # Always use working order, initialize it if it doesn't exist
+        if self.current_test_name not in self.working_orders:
+            # Initialize working order with current applied order or original order
+            if self.current_test_name in self.custom_orders:
+                self.working_orders[self.current_test_name] = self.custom_orders[self.current_test_name].copy()
+            else:
+                self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
+        
+        images = self.working_orders[self.current_test_name]
         
         for i, image in enumerate(images):
             item = QListWidgetItem()
@@ -466,41 +471,36 @@ class StimulusOrderFrame(QWidget):
             self.update_apply_button_state()
 
     def reset_to_original(self):
-        """Reset the current test to its original image order."""
+        """Reset the current test's working order to the original image order."""
         if not self.current_test_name:
             return
         
         reply = QMessageBox.question(
             self,
             "Reset Order",
-            f"Are you sure you want to reset the order for '{self.current_test_name}' to the original order?",
+            f"Are you sure you want to reset the working order for '{self.current_test_name}' to the original order?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
         
         if reply == QMessageBox.Yes:
-            # Remove custom order if it exists
-            if self.current_test_name in self.custom_orders:
-                del self.custom_orders[self.current_test_name]
+            # Reset working order to original order
+            self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
             
             # Update the display
             self.update_image_list()
             self.update_apply_button_state()
             
     def apply_custom_order(self):
-        """Apply the current order as the custom order for the selected test."""
+        """Apply the current working order as the custom order for the selected test."""
         if not self.current_test_name:
             return
         
-        # Get current order from the list widget
-        current_order = []
-        for i in range(self.image_list.count()):
-            item = self.image_list.item(i)
-            image = item.data(Qt.UserRole)
-            current_order.append(image)
+        # Ensure working order exists and is current with UI
+        self.sync_working_order_with_ui()
         
-        # Store the custom order
-        self.custom_orders[self.current_test_name] = current_order
+        # Copy working order to applied custom order
+        self.custom_orders[self.current_test_name] = self.working_orders[self.current_test_name].copy()
         
         # Update the parent's asset handler to use custom order
         if hasattr(self.parent, 'update_custom_orders'):
@@ -512,41 +512,63 @@ class StimulusOrderFrame(QWidget):
             f"Custom order applied for '{self.current_test_name}'. "
             f"This order will be used when running the test."
         )
-        self.update_apply_button_state()  # <-- Step D: Add this line
+        self.update_apply_button_state()
+    
+    def sync_working_order_with_ui(self):
+        """Synchronize the working order with the current UI state."""
+        if not self.current_test_name:
+            return
+        
+        # Get current order from the list widget
+        current_order = []
+        for i in range(self.image_list.count()):
+            item = self.image_list.item(i)
+            image = item.data(Qt.UserRole)
+            current_order.append(image)
+        
+        # Update working order
+        self.working_orders[self.current_test_name] = current_order
+    
+    def on_rows_moved(self, *args):
+        """Handle when rows are moved via drag and drop."""
+        self.sync_working_order_with_ui()
+        self.update_apply_button_state()
     
     def add_selected_asset_to_test(self):
-        """Add the selected asset from the available list to the current test's order."""
+        """Add the selected asset from the available list to the current test's working order."""
         if not self.current_test_name:
             return
         selected_items = self.available_assets_list.selectedItems()
         if not selected_items:
             return
         img = selected_items[0].data(Qt.UserRole)
-        # Add to custom order or original order
-        if self.current_test_name in self.custom_orders:
-            self.custom_orders[self.current_test_name].append(img)
-        else:
-            self.custom_orders[self.current_test_name] = self.original_assets[self.current_test_name] + [img]
+        
+        # Ensure working order exists
+        if self.current_test_name not in self.working_orders:
+            self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
+        
+        # Add to working order
+        self.working_orders[self.current_test_name].append(img)
         self.update_image_list()
         self.update_apply_button_state()
 
     def delete_selected_stimulus_from_test(self):
-        """Delete only the selected stimulus from the current test's order."""
+        """Delete only the selected stimulus from the current test's working order."""
         if not self.current_test_name:
             return
         selected_items = self.image_list.selectedItems()
         if not selected_items:
             return
         selected_row = self.image_list.row(selected_items[0])
-        # Remove from custom order or original order
-        if self.current_test_name in self.custom_orders:
-            order = self.custom_orders[self.current_test_name]
-        else:
-            order = self.original_assets[self.current_test_name].copy()
-        # Remove only the item at the selected position
-        if 0 <= selected_row < len(order):
-            del order[selected_row]
-        self.custom_orders[self.current_test_name] = order
+        
+        # Ensure working order exists
+        if self.current_test_name not in self.working_orders:
+            self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
+        
+        # Remove from working order
+        if 0 <= selected_row < len(self.working_orders[self.current_test_name]):
+            del self.working_orders[self.current_test_name][selected_row]
+        
         self.update_image_list()
         self.update_apply_button_state()
 
@@ -645,10 +667,10 @@ class StimulusOrderFrame(QWidget):
                 )
                 return
 
-            # Update the custom order for the current test
-            self.custom_orders[self.current_test_name] = imported_order
+            # Update the working order for the current test
+            self.working_orders[self.current_test_name] = imported_order
             self.update_image_list()
-            self.apply_custom_order()  # <-- This applies and shows the "Order Applied" message
+            self.update_apply_button_state()  # Update button state to show changes can be applied
 
             QMessageBox.information(
                 self,
@@ -673,12 +695,23 @@ class StimulusOrderFrame(QWidget):
         return name
 
     def is_current_order_applied(self):
-        """Return True if the current order matches the applied custom order."""
+        """Return True if the current working order matches the applied custom order."""
         if not self.current_test_name:
-            return False
-        current_order = [self.image_list.item(i).data(Qt.UserRole) for i in range(self.image_list.count())]
-        applied_order = self.custom_orders.get(self.current_test_name, self.original_assets.get(self.current_test_name, []))
-        return current_order == applied_order
+            return True  # No test selected, consider as "applied"
+        
+        # Ensure working order is synced with UI
+        self.sync_working_order_with_ui()
+        
+        # Get working order
+        working_order = self.working_orders.get(self.current_test_name, [])
+        
+        # Get applied order (custom order if exists, otherwise original order)
+        if self.current_test_name in self.custom_orders:
+            applied_order = self.custom_orders[self.current_test_name]
+        else:
+            applied_order = self.original_assets.get(self.current_test_name, [])
+        
+        return working_order == applied_order
 
     def update_apply_button_state(self):
         """Enable/disable the apply button based on whether the order is applied."""
@@ -686,13 +719,15 @@ class StimulusOrderFrame(QWidget):
             self.apply_button.setEnabled(not self.is_current_order_applied())
 
     def open_repetition_dialog(self):
-        """Open dialog to set stimulus repetitions for images currently in the order."""
+        """Open dialog to set stimulus repetitions for images currently in the working order."""
         dialog = QDialog(self)
         dialog.setWindowTitle("Set Stimulus Repetitions")
         layout = QFormLayout(dialog)
 
-        # Get only images currently in the order
-        if self.current_test_name in self.custom_orders:
+        # Get only images currently in the working order
+        if self.current_test_name in self.working_orders:
+            images = self.working_orders[self.current_test_name]
+        elif self.current_test_name in self.custom_orders:
             images = self.custom_orders[self.current_test_name]
         else:
             images = self.original_assets.get(self.current_test_name, [])
@@ -777,11 +812,15 @@ class StimulusOrderFrame(QWidget):
         if not self.current_test_name:
             return
 
-        # Get only images currently in the order
-        if self.current_test_name in self.custom_orders:
-            images = self.custom_orders[self.current_test_name][:]
+        # Get images from current working order
+        if self.current_test_name in self.working_orders:
+            images = self.working_orders[self.current_test_name][:]
         else:
-            images = self.original_assets.get(self.current_test_name, [])[:]
+            # Initialize working order if it doesn't exist
+            if self.current_test_name in self.custom_orders:
+                images = self.custom_orders[self.current_test_name][:]
+            else:
+                images = self.original_assets.get(self.current_test_name, [])[:]
 
         # Build a mapping from normalized name to image object (first found)
         name_to_img = {}
@@ -807,30 +846,17 @@ class StimulusOrderFrame(QWidget):
             random.seed(seed)
         random.shuffle(repeated_images)
 
-        # Show randomized order in image_list (do not apply as custom order)
-        self.image_list.clear()
-        for i, image in enumerate(repeated_images):
-            item = QListWidgetItem()
-            if hasattr(image, 'filename'):
-                filename = os.path.basename(image.filename)
-                display_name = os.path.splitext(filename)[0]
-                try:
-                    pixmap = QPixmap(image.filename)
-                    if not pixmap.isNull():
-                        thumbnail = pixmap.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                        item.setIcon(QIcon(thumbnail))
-                except Exception as e:
-                    print(f"Error creating thumbnail for {filename}: {e}")
-                item.setText(f"{i+1}. {display_name}")
-            else:
-                item.setText(f"{i+1}. Image {i+1}")
-            item.setData(Qt.UserRole, image)
-            self.image_list.addItem(item)
+        # Update working order with randomized images
+        self.working_orders[self.current_test_name] = repeated_images
+        
+        # Update the UI
+        self.update_image_list()
         self.update_apply_button_state()
+        
         QMessageBox.information(
             self,
             "Randomized!",
-            "Stimulus order has been randomized and shown. Click 'Apply Custom Order' to save this order if desired.",
+            "Stimulus order has been randomized in the working order. Click 'Apply Custom Order' to save this order if desired.",
             QMessageBox.Ok
         )
 
