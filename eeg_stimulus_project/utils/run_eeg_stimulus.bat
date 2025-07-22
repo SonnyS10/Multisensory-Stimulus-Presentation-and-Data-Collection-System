@@ -247,6 +247,30 @@ if errorlevel 1 (
 )
 
 echo.
+REM ==============================
+REM Check for all required packages
+REM ==============================
+
+set PACKAGES=PyQt5 pillow numpy matplotlib openpyxl pylsl pyyaml pandas pupil-labs-realtime-api
+
+echo Checking for required Python packages...
+for %%P in (%PACKAGES%) do (
+    "%PYTHON_EXE%" -c "import %%P" 2>nul
+    if errorlevel 1 (
+        echo [WARNING] Package %%P not found. Installing...
+        "%PYTHON_EXE%" -m pip install %%P
+        if errorlevel 1 (
+            echo [ERROR] Failed to install package %%P
+            pause
+            exit /b 1
+        )
+    ) else (
+        echo [OK] Package %%P is available
+    )
+)
+echo.
+
+echo.
 echo ========================================
 echo Launching EEG Stimulus Application...
 echo Using Python: %PYTHON_EXE%
