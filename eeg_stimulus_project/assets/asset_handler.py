@@ -43,7 +43,7 @@ class Display():
     
     @staticmethod
     def randomize_images(images, randomize_cues=False, seed=None, repetitions=None):
-        print(f"Randomize called: {randomize_cues}, seed={seed}, images={len(images)}")
+        #print(f"Randomize called: {randomize_cues}, seed={seed}, images={len(images)}")
         images = images.copy()
         # Apply repetitions if specified
         if repetitions:
@@ -74,14 +74,14 @@ class Display():
 
     @staticmethod
     def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None, repetitions=None):
-        print(
-            f"get_assets called with:\n"
-            f"  alcohol_folder={alcohol_folder}\n"
-            f"  non_alcohol_folder={non_alcohol_folder}\n"
-            f"  randomize_cues={randomize_cues}\n"
-            f"  seed={seed}\n"
-            f"  repetitions={repetitions}\n"
-        )
+        #print(
+        #   f"get_assets called with:\n"
+        #    f"  alcohol_folder={alcohol_folder}\n"
+        #    f"  non_alcohol_folder={non_alcohol_folder}\n"
+        #    f"  randomize_cues={randomize_cues}\n"
+        #    f"  seed={seed}\n"
+        #    f"  repetitions={repetitions}\n"
+        #)
         # Use user folders if provided, else use defaults
         def_images_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default')
         # Load backup default images
@@ -117,7 +117,7 @@ class Display():
             'Stroop Multisensory Neutral (Visual & Tactile)': (non_alcohol_images, personalized_images),
             'Stroop Multisensory Neutral (Visual & Olfactory)': (non_alcohol_images, personalized_images),
         }.items():
-            print(f"Custom order for {test_name}: {test_name in Display.custom_orders}")
+            #print(f"Custom order for {test_name}: {test_name in Display.custom_orders}")
             mixed = get_mixed_images(general, personalized)
             if test_name in Display.custom_orders:
                 test_assets[test_name] = Display.custom_orders[test_name]

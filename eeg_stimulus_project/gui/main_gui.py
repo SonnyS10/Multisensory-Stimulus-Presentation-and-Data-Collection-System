@@ -355,6 +355,15 @@ class GUI(QMainWindow):
         logger.handlers = []  # Remove other handlers
         logger.addHandler(queue_handler)
 
+    def send_message(self, message_dict):
+        if self.client:
+            # If this is a client, send the message to the server
+            try:
+                self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
+            except Exception as e:
+                logging.info(f"Error sending message: {e}")
+                # Don't call send_message here to avoid infinite recursion
+
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None):
         super().__init__(parent)
