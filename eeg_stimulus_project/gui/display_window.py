@@ -425,28 +425,36 @@ class DisplayWindow(QMainWindow):
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
         img = self.images[self.current_image_index]
-        pixmap = QPixmap(img.filename)
-        self.current_pixmap = pixmap
-        self.update_image_label()
-        # Push the filename (without extension) as label
-        if hasattr(img, 'filename'):
-            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-            self.send_message({"action": "label", "label": label})  # Send label to the server
-            self.label_stream.push_label(label)
-            logging.info(f"Current label: {label}")
-            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-            if self.eyetracker is not None:
-                self.eyetracker.send_marker(label)  # Send label to Pupil Labs
-            self.current_label = label
-        if "Tactile" in self.current_test:
-            # For tactile, show image for 5 seconds, then show crosshair and wait for touch
-            QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
-        else:
-        # Only show crosshair if next asset is NOT a craving rating
-            if self.next_asset_is_craving():
-                QTimer.singleShot(2000, self._advance_image)
+        if hasattr(img, 'filename') and img.filename:
+            pixmap = QPixmap(img.filename)
+            self.current_pixmap = pixmap
+            self.update_image_label()
+            # Push the filename (without extension) as label
+            if hasattr(img, 'filename'):
+                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
+                self.send_message({"action": "label", "label": label})  # Send label to the server
+                self.label_stream.push_label(label)
+                logging.info(f"Current label: {label}")
+                self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                if self.eyetracker is not None:
+                    self.eyetracker.send_marker(label)  # Send label to Pupil Labs
+                self.current_label = label
+            if "Tactile" in self.current_test:
+                # For tactile, show image for 5 seconds, then show crosshair and wait for touch
+                QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
             else:
-                QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
+            # Only show crosshair if next asset is NOT a craving rating
+                if self.next_asset_is_craving():
+                    QTimer.singleShot(2000, self._advance_image)
+                else:
+                    QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
+        elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
+            # Handle the craving rating asset (e.g., show a rating dialog or skip)
+            # Example: show a custom widget or message
+            self.show_craving_rating_screen()
+        else:
+            # Handle other asset types or skip
+            pass
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done

@@ -423,7 +423,7 @@ class StimulusOrderFrame(QWidget):
             self.available_assets_list.addItem(item)
 
         # Add the craving rating asset to the available assets list
-        craving_item = QListWidgetItem("Craving Rating")
+        craving_item = QListWidgetItem("craving_rating")
         craving_item.setData(Qt.UserRole, CravingRatingAsset())
         #craving_item.setIcon(QIcon(":/icons/star.png"))  # Optional: use a custom icon if you have one
         self.available_assets_list.addItem(craving_item)
@@ -463,7 +463,7 @@ class StimulusOrderFrame(QWidget):
             item = QListWidgetItem()
             # Check if the image is a CravingRatingAsset
             if isinstance(image, CravingRatingAsset):
-                item.setText(f"{i+1}. Craving Rating")
+                item.setText(f"{i+1}. craving_rating")
                 # Make only the original unselectable and unmovable
                 if getattr(image, "is_original", False):
                     item.setFlags(item.flags() & ~Qt.ItemIsSelectable & ~Qt.ItemIsDragEnabled)
@@ -676,16 +676,19 @@ class StimulusOrderFrame(QWidget):
             for name in imported_order_names:
                 norm_name = self.normalize_name(name)
                 img_obj = None
-                for img in self.all_asset_objs:
-                    if hasattr(img, 'filename'):
-                        base = os.path.basename(img.filename)
-                        base_no_ext = os.path.splitext(base)[0]
-                        norm_base = self.normalize_name(base)
-                        norm_base_no_ext = self.normalize_name(base_no_ext)
-                        # Accept match if normalized names match
-                        if norm_name == norm_base or norm_name == norm_base_no_ext:
-                            img_obj = img
-                            break
+                if norm_name == self.normalize_name("craving_rating"):
+                    img_obj = CravingRatingAsset()
+                else:
+                    for img in self.all_asset_objs:
+                        if hasattr(img, 'filename'):
+                            base = os.path.basename(img.filename)
+                            base_no_ext = os.path.splitext(base)[0]
+                            norm_base = self.normalize_name(base)
+                            norm_base_no_ext = self.normalize_name(base_no_ext)
+                            # Accept match if normalized names match
+                            if norm_name == norm_base or norm_name == norm_base_no_ext:
+                                img_obj = img
+                                break
                 if img_obj:
                     imported_order.append(img_obj)
                 else:
@@ -774,12 +777,21 @@ class StimulusOrderFrame(QWidget):
         else:
             images = self.original_assets.get(self.current_test_name, [])
 
-        # Get display names for those images
         stimulus_names = []
+        seen = set()
         for img in images:
-            fname = getattr(img, 'filename', None)
-            base_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
-            stimulus_names.append(base_name)
+            if hasattr(img, 'filename') and img.filename:
+                base_name = os.path.splitext(os.path.basename(img.filename))[0]
+                norm = self.normalize_name(base_name)
+            elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
+                base_name = "craving_rating"
+                norm = "craving_rating"
+            else:
+                base_name = "Image"
+                norm = str(img)
+            if norm not in seen:
+                seen.add(norm)
+                stimulus_names.append(base_name)
 
         edits = {}
         for name in stimulus_names:
@@ -842,7 +854,7 @@ class StimulusOrderFrame(QWidget):
         return None
 
     def on_randomize_now_clicked(self):
-        """Randomize and show the new order, optionally with repetitions."""
+        """Randomize and show the new order, including Craving Rating and repetitions."""
         # Only show repetition dialog if the checkbox is checked
         if self.repetition_checkbox.isChecked():
             self.open_repetition_dialog()
@@ -858,7 +870,6 @@ class StimulusOrderFrame(QWidget):
         if self.current_test_name in self.working_orders:
             images = self.working_orders[self.current_test_name][:]
         else:
-            # Initialize working order if it doesn't exist
             if self.current_test_name in self.custom_orders:
                 images = self.custom_orders[self.current_test_name][:]
             else:
@@ -867,14 +878,20 @@ class StimulusOrderFrame(QWidget):
         # Build a mapping from normalized name to image object (first found)
         name_to_img = {}
         for img in images:
-            fname = getattr(img, 'filename', None)
-            norm_name = self.normalize_name(os.path.splitext(os.path.basename(fname))[0]) if fname else None
-            if norm_name and norm_name not in name_to_img:
+            if hasattr(img, 'filename') and img.filename:
+                base_name = os.path.splitext(os.path.basename(img.filename))[0]
+                norm_name = self.normalize_name(base_name)
+            elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
+                norm_name = self.normalize_name("craving_rating")  # <-- FIXED
+            else:
+                norm_name = str(img)
+            if norm_name not in name_to_img:
                 name_to_img[norm_name] = img
 
         # Use default repetitions if not specified
         if repetitions is None:
-            repeated_images = images[:]
+            # Default: one of each unique asset
+            repeated_images = list(name_to_img.values())
         else:
             repeated_images = []
             for norm_name, count in repetitions.items():
@@ -897,11 +914,11 @@ class StimulusOrderFrame(QWidget):
 
         # Update working order with randomized images
         self.working_orders[self.current_test_name] = repeated_images
-        
+
         # Update the UI
         self.update_image_list()
         self.update_apply_button_state()
-        
+
         QMessageBox.information(
             self,
             "Randomized!",
@@ -914,4 +931,4 @@ class StimulusOrderFrame(QWidget):
 class CravingRatingAsset:
     def __init__(self):
         self.asset_type = "craving_rating"
-        self.display_name = "Craving Rating"
+        self.display_name = "craving_rating"

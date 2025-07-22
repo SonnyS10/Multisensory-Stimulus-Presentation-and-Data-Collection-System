@@ -2174,6 +2174,10 @@
 2025-07-22 09:39:42,137 INFO Client: Connection error: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
 2025-07-22 09:39:42,137 INFO Could not connect to host. Check IP and network.
 2025-07-22 09:39:48,543 INFO Client: Connected to host.
+<<<<<<< HEAD
 2025-07-22 11:07:26,244 INFO Host: Waiting for client on port 9999...
 2025-07-22 11:07:46,373 INFO Host: Connected by ('169.254.185.196', 55738)
 2025-07-22 11:09:47,170 INFO Client disconnected.
+=======
+2025-07-22 11:07:46,427 INFO Client: Connected to host.
+>>>>>>> 9bfa8666bf961b1f68504398ac7b8c6e95b83773
