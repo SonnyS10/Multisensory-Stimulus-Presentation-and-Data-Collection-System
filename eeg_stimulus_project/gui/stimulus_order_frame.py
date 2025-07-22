@@ -377,6 +377,16 @@ class StimulusOrderFrame(QWidget):
                 seed=seed,
                 repetitions=repetitions
             )
+            # --- Ensure CravingRatingAsset is last in all passive tests ---
+            for test_name, asset_list in self.original_assets.items():
+                if test_name and not test_name.lower().startswith("stroop"):
+                    # Remove any existing craving rating asset
+                    asset_list = [a for a in asset_list if not isinstance(a, CravingRatingAsset)]
+                    original_craving = CravingRatingAsset()
+                    original_craving.is_original = True
+                    asset_list.append(original_craving)
+                    self.original_assets[test_name] = asset_list
+
             # Gather all unique assets for the available assets list
             asset_dict = {}
             for images in self.original_assets.values():
@@ -437,16 +447,26 @@ class StimulusOrderFrame(QWidget):
                 self.working_orders[self.current_test_name] = self.custom_orders[self.current_test_name].copy()
             else:
                 self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
-        
-        images = self.working_orders[self.current_test_name]
-        
+
+        images = self.working_orders[self.current_test_name][:]
+
+        # --- Passive test: only move the original craving rating to the end ---
+        if self.is_passive_test():
+            orig_idx = next((i for i, img in enumerate(images)
+                             if isinstance(img, CravingRatingAsset) and getattr(img, "is_original", False)), None)
+            if orig_idx is not None and orig_idx != len(images) - 1:
+                orig_craving = images.pop(orig_idx)
+                images.append(orig_craving)
+                self.working_orders[self.current_test_name] = images
+
         for i, image in enumerate(images):
             item = QListWidgetItem()
             # Check if the image is a CravingRatingAsset
             if isinstance(image, CravingRatingAsset):
                 item.setText(f"{i+1}. Craving Rating")
-                #item.setIcon(QIcon(":/icons/star.png"))  # Optional: use a custom icon
-            # Check if the image is a Display object
+                # Make only the original unselectable and unmovable
+                if getattr(image, "is_original", False):
+                    item.setFlags(item.flags() & ~Qt.ItemIsSelectable & ~Qt.ItemIsDragEnabled)
             elif hasattr(image, 'filename'):
                 filename = os.path.basename(image.filename)
                 display_name = os.path.splitext(filename)[0]
@@ -468,7 +488,7 @@ class StimulusOrderFrame(QWidget):
             # Store the original image object in the item data
             item.setData(Qt.UserRole, image)
             self.image_list.addItem(item)
-            self.update_apply_button_state()
+        self.update_apply_button_state()
 
     def reset_to_original(self):
         """Reset the current test's working order to the original image order."""
@@ -532,7 +552,17 @@ class StimulusOrderFrame(QWidget):
     def on_rows_moved(self, *args):
         """Handle when rows are moved via drag and drop."""
         self.sync_working_order_with_ui()
+        # Passive: only force the original craving rating to the end
+        if self.is_passive_test():
+            working = self.working_orders[self.current_test_name]
+            # Find the original craving rating asset
+            orig_idx = next((i for i, asset in enumerate(working)
+                            if isinstance(asset, CravingRatingAsset) and getattr(asset, "is_original", False)), None)
+            if orig_idx is not None and orig_idx != len(working) - 1:
+                orig_craving = working.pop(orig_idx)
+                working.append(orig_craving)
         self.update_apply_button_state()
+        self.update_image_list()
     
     def add_selected_asset_to_test(self):
         """Add the selected asset from the available list to the current test's working order."""
@@ -547,8 +577,15 @@ class StimulusOrderFrame(QWidget):
         if self.current_test_name not in self.working_orders:
             self.working_orders[self.current_test_name] = self.original_assets[self.current_test_name].copy()
         
-        # Add to working order
-        self.working_orders[self.current_test_name].append(img)
+        if self.is_passive_test():
+            working = self.working_orders[self.current_test_name]
+            craving_idx = next((i for i, asset in enumerate(working) if isinstance(asset, CravingRatingAsset)), None)
+            if craving_idx is not None:
+                working.insert(craving_idx, img)
+            else:
+                working.append(img)
+        else:
+            self.working_orders[self.current_test_name].append(img)
         self.update_image_list()
         self.update_apply_button_state()
 
@@ -667,6 +704,11 @@ class StimulusOrderFrame(QWidget):
                 )
                 return
 
+            if self.is_passive_test():
+                imported_order = [img for img in imported_order if not isinstance(img, CravingRatingAsset)]
+                original_craving = CravingRatingAsset()
+                original_craving.is_original = True
+                imported_order.append(original_craving)
             # Update the working order for the current test
             self.working_orders[self.current_test_name] = imported_order
             self.update_image_list()
@@ -846,6 +888,13 @@ class StimulusOrderFrame(QWidget):
             random.seed(seed)
         random.shuffle(repeated_images)
 
+        if self.is_passive_test():
+            # Remove any existing craving asset, then append one
+            repeated_images = [img for img in repeated_images if not isinstance(img, CravingRatingAsset)]
+            original_craving = CravingRatingAsset()
+            original_craving.is_original = True
+            repeated_images.append(original_craving)
+
         # Update working order with randomized images
         self.working_orders[self.current_test_name] = repeated_images
         
@@ -859,6 +908,8 @@ class StimulusOrderFrame(QWidget):
             "Stimulus order has been randomized in the working order. Click 'Apply Custom Order' to save this order if desired.",
             QMessageBox.Ok
         )
+    def is_passive_test(self):
+        return self.current_test_name and not self.current_test_name.lower().startswith("stroop")
 
 class CravingRatingAsset:
     def __init__(self):
