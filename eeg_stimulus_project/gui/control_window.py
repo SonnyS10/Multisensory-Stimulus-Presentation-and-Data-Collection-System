@@ -649,62 +649,6 @@ class ControlWindow(QMainWindow):
         self.label_stream.push_label(label)
         #print(f"Label pushed: {label}")
         
-    # To send status updates, periodically or on change:
-        #status_msg = {
-        #    "action": "host_status",
-        #    "status": f"LabRecorder: {'Connected' if self.shared_status['lab_recorder_connected'] else 'Not Connected'}, "
-        #              f"Eyetracker: {'Connected' if self.shared_status['eyetracker_connected'] else 'Not Connected'}"
-        #}
-        #self.connection.sendall((json.dumps(status_msg) + "\n").encode('utf-8'))
-
-    # TO MAYBE BE IMPLEMENTED LATER
-
-    #def setup_logging(self, log_queue):
-    #    queue_handler = QueueHandler(log_queue)
-    #    logger = logging.getLogger()
-    #    logger.setLevel(logging.INFO)
-    #    logger.handlers = []
-    #    logger.addHandler(queue_handler)
-
-    '''
-    def init_lsl(self):
-        """
-        Initialize LSL and update the status icon.
-        """
-        try:
-            if LSL.init_lsl_stream() == True:  # Call the LSL initialization method
-                self.update_lsl_status_icon(True)
-                self.start_button.setEnabled(True)
-                self.retry_button.setEnabled(False)
-            else:
-                self.show_error_message("Failed to initialize LSL: No stream found.")
-                self.update_lsl_status_icon(False)
-                self.start_button.setEnabled(True)
-                self.retry_button.setEnabled(True)
-        except Exception as e:
-            self.show_error_message(f"Failed to initialize LSL because of an Error: {str(e)}")
-            self.update_lsl_status_icon(False)
-            self.start_button.setEnabled(False)
-            self.retry_button.setEnabled(True)
-
-    def update_lsl_status_icon(self, is_streaming):
-        """
-        Update the LSL status icon to show a red or green light.
-        """
-        pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.green if is_streaming else Qt.red)
-        self.lsl_status_icon.setPixmap(pixmap)
-
-    def show_error_message(self, message):
-        """
-        Show an error message in a popup dialog.
-        """
-        error_dialog = QMessageBox(self)
-        error_dialog.setIcon(QMessageBox.Critical)
-        error_dialog.setWindowTitle("Error")
-        error_dialog.setText(message)
-        error_dialog.exec_()
-    '''
 
 class ControlInstructionsFrame(QWidget):
     def __init__(self, parent=None):
