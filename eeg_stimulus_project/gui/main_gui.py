@@ -236,9 +236,11 @@ class GUI(QMainWindow):
         else:
             #Remove/hide the widgets when the stop button is pressed
             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
+                current_frame.display_widget.close()  # Properly close the window
                 current_frame.display_widget.setParent(None)
                 current_frame.display_widget = None
             if hasattr(current_frame, 'mirror_display_widget') and current_frame.mirror_display_widget is not None:
+                current_frame.mirror_display_widget.close()  # Properly close the window
                 current_frame.mirror_display_widget.setParent(None)
                 current_frame.mirror_display_widget = None
 
@@ -368,6 +370,7 @@ class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None):
         super().__init__(parent)
 
+        self.tests_run = set()
         self.shared_status = shared_status
         self.base_dir = base_dir
         self.test_number = test_number
@@ -585,6 +588,19 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
 
+        current_test = self.parent.get_current_test()
+        if current_test in self.tests_run:
+            reply = QMessageBox.question(
+                self,
+                "Test Already Run",
+                f"The test '{current_test}' has already been run in this session.\n"
+                "Are you sure you want to continue? This will overwrite any previously saved data for this test.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+
         if hasattr(self, 'display_button') and self.display_button.isChecked():
             self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
             if self.label_stream is None:                
@@ -605,6 +621,9 @@ class Frame(QFrame):
             
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
+
+        # After successfully starting the test, add it to the set
+        self.tests_run.add(current_test)
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
@@ -636,6 +655,7 @@ class Frame(QFrame):
             self.display_widget.close()  # Close the display widget
         time.sleep(2)  # Give some time for the display widget to stop
         self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
+        self.label_stream = None  # Reset the label stream after stopping
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
@@ -663,6 +683,7 @@ class Frame(QFrame):
             self.display_widget.close()
         time.sleep(2)
         self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
+        self.label_stream = None  # Reset the label stream after stopping
 
     #Pauses the display window and the mirror display window
     def pause_display_window(self):

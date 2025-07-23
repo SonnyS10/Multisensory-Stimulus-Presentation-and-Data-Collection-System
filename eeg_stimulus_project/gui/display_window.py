@@ -393,6 +393,13 @@ class DisplayWindow(QMainWindow):
                 logging.info(f"KeyError: {e}")
                 self.send_message({"action": "client_log", "message": f"KeyError: {e}"})
 
+        # After loading self.images:
+        if "stroop" not in self.current_test.lower():
+            if not self.images or not isinstance(self.images[-1], CravingRatingAsset):
+                craving = CravingRatingAsset()
+                craving.is_original = True
+                self.images.append(craving)
+
     #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
         label = "Paused Trial"
@@ -445,7 +452,7 @@ class DisplayWindow(QMainWindow):
             else:
             # Only show crosshair if next asset is NOT a craving rating
                 if self.next_asset_is_craving():
-                    QTimer.singleShot(2000, self._advance_image)
+                    QTimer.singleShot(2000, lambda: self.show_crosshair_before_craving())
                 else:
                     QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
         elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
@@ -852,7 +859,7 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
-        # After 2 Minutes, show the main instructions (for pre-test crosshair period)
+        # After 2 Minutes, show the main instructions (not restart the experiment)
         QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
@@ -1033,10 +1040,39 @@ class DisplayWindow(QMainWindow):
         self.send_message({"action": "crave", "crave": self.craving_response})  # Send label to the server
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
+        QTimer.singleShot(500, self.show_crosshair_after_craving)
+
+    def show_crosshair_after_craving(self):
+        # Show crosshair for a short period after craving rating
+        self.clear_overlay()
+        self.instructions_label.setText("+")
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_period()
+        # Advance after crosshair
         if self.current_image_index < len(self.images) - 1:
-            QTimer.singleShot(500, self._advance_image)
+            QTimer.singleShot(1000, self._advance_image)
         else:
-            QTimer.singleShot(500, self.show_post_test_crosshair_instructions)
+            QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
+
+    def show_crosshair_before_craving(self):
+        # Show crosshair for a short period before craving rating
+        self.clear_overlay()
+        self.instructions_label.setText("+")
+        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setVisible(True)
+        self.countdown_label.setVisible(False)
+        self.overlay_widget.setVisible(True)
+        self.stacked_layout.setCurrentWidget(self.overlay_widget)
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.show_crosshair_period()
+        QTimer.singleShot(1000, self._advance_image)  # 1 second crosshair before craving rating
 
     def next_asset_is_craving(self):
         next_idx = self.current_image_index + 1
