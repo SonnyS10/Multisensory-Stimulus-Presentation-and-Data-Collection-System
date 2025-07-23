@@ -990,6 +990,9 @@ class DisplayWindow(QMainWindow):
 
         self.overlay_layout.addLayout(vcenter_layout)
 
+        label = "Craving Rating Instructions Shown"
+        self.send_message({"action": "label", "label": label})  # Send label to the server
+
         # Mirror widget update
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(
