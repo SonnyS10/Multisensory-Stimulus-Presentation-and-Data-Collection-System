@@ -21,7 +21,7 @@ from logging.handlers import QueueHandler
 
 class GUI(QMainWindow):
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
-                 alcohol_folder=None, non_alcohol_folder=None):
+                 alcohol_folder=None, non_alcohol_folder=None, local_mode=False):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -31,6 +31,7 @@ class GUI(QMainWindow):
         self.non_alcohol_folder = non_alcohol_folder
         self.eyetracker_connected = False
         self.labrecorder_connected = False
+        self.local_mode = local_mode
         
         if connection is not None:
             self.start_listener()
@@ -219,7 +220,7 @@ class GUI(QMainWindow):
                     non_alcohol_folder=self.non_alcohol_folder,
                     randomize_cues=randomize_cues,
                     seed=seed,
-                    repetitions=repetitions
+                    repetitions=repetitions, local_mode=self.local_mode
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
@@ -340,7 +341,9 @@ class GUI(QMainWindow):
                                 QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
                         elif msg.get("action") == "labrecorder_connected":
                             self.labrecorder_connected = True
+                            self.shared_status['lab_recorder_connected'] = True
                         elif msg.get("action") == "eyetracker_connected":
+                            self.shared_status['eyetracker_connected'] = True
                             self.eyetracker_connected = True
                         elif msg.get("action") == "tactile_connected":
                             self.shared_status['tactile_connected'] = True
@@ -550,6 +553,8 @@ class Frame(QFrame):
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
+        print(self.shared_status['lab_recorder_connected'])
+        print(self.shared_status['eyetracker_connected'])
         # Check if at least one of the checkboxes is checked
         checked = False
         # Defensive: check if the attributes exist (they may not in all test types)
@@ -564,7 +569,7 @@ class Frame(QFrame):
             return
 
         # --- Labrecroder/Eyetracker connection warning ---
-        if self.eyetracker_connected == False or self.labrecorder_connected == False:
+        if not self.shared_status.get('lab_recorder_connected', False) or not self.shared_status.get('eyetracker_connected', False):
             reply = QMessageBox.question(
                 self,
                 "LabRecorder/Eyetracker Not Connected",

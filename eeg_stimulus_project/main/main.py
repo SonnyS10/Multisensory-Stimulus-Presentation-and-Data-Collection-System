@@ -78,14 +78,14 @@ def init_shared_resources():
     return manager, shared_status, log_queue
 
 # Launches the control window process (host)
-def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number, host):
+def run_control_window_host(connection, shared_status, log_queue, base_dir, test_number, host, subject_id):
     from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.control_window import ControlWindow
     
     # Setup logging for this child process
     setup_child_process_logging(log_queue)
     app = QApplication(sys.argv)
-    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host)
+    window = ControlWindow(connection, shared_status, log_queue, base_dir, test_number, host, subject_id)
     window.show()
     sys.exit(app.exec_())
 
@@ -247,6 +247,7 @@ class MainWindow(QMainWindow):
         self.shared_status = None
         self.connection = None
         self.client_connected = False
+        self.local_mode = False 
 
     # Main logic for starting the experiment in host, client, or both/local mode
     def start_experiment(self, client=False, host=False):
@@ -288,6 +289,7 @@ class MainWindow(QMainWindow):
             self.gui_process.start()
         else:
             # Both: local experiment (host and client on same machine)
+            self.local_mode = True
             if not subject_id or test_number not in ['1', '2']:
                 logging.info("Please enter a valid Subject ID and Test Number (1 or 2).")
                 self._reset_buttons()
@@ -295,10 +297,10 @@ class MainWindow(QMainWindow):
             base_dir = create_data_dirs(subject_id, test_number)
             self.manager, self.shared_status, log_queue = init_shared_resources()
             # Start control and GUI processes
-            self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False)) # host=False
+            self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, subject_id)) # host=False
             self.gui_process = Process(
                 target=run_main_gui_client,
-                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder)
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, self.local_mode) 
             ) # client=False
             self.control_process.start()
             self.gui_process.start()
@@ -335,7 +337,7 @@ class MainWindow(QMainWindow):
             # Start the control window process only after connection
             self.control_process = Process(
                 target=run_control_window_host,
-                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True)  # host=True
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True, subject_id)  # host=True
             )
             self.control_process.start()
         except Exception as e:

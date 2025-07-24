@@ -26,20 +26,20 @@ class TurntableWidget(QWidget):
         r_inner = min(cx, cy) * 0.55
         r_outer = min(cx, cy) * 0.80
 
+        # Inner buttons: odd numbers 1-15
         for i in range(8):
-            # Inner buttons: odd numbers 1, 3, ..., 15
-            odd_num = 2 * i + 1
-            angle = -90 + (i + 0.5) * (360 / 8)
+            odd_num = 2 * i + 1  # 1, 3, 5, ..., 15
+            angle = -90 + (i + 0.5) * (360 / 8)  # Centered between dividers
             rad = math.radians(angle)
             x = cx + r_inner * math.cos(rad)
             y = cy + r_inner * math.sin(rad)
             btn = QPushButton(str(odd_num), self)
-            btn.setFixedSize(40, 40)
-            btn.move(int(x - 20), int(y - 20))
+            btn.setFixedSize(36, 36)
+            btn.move(int(x - 18), int(y - 18))
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e0e0e0;
-                    border-radius: 20px;
+                    border-radius: 18px;
                 }
                 QPushButton:hover {
                     background-color: #ffd700;
@@ -49,11 +49,15 @@ class TurntableWidget(QWidget):
                     border: 2px inset #888888;
                 }
             """)
-            btn.clicked.connect(lambda checked, n=odd_num: self.controller.move_to_position(n-1))
+            btn.clicked.connect(lambda checked, bay=odd_num-1: self.controller.move_to_bay(bay))
             self.inner_buttons.append(btn)
 
-            # Outer buttons: rotated so top is 16, then 2, 4, ..., 14
-            even_num = 16 if i == 0 else 2 * i
+        # Outer buttons: 16 at top, then 2, 4, ..., 14 clockwise
+        for i in range(8):
+            if i == 0:
+                even_num = 16
+            else:
+                even_num = (2 * i)
             angle_outer = -90 + i * (360 / 8)
             rad_outer = math.radians(angle_outer)
             x2 = cx + r_outer * math.cos(rad_outer)
@@ -74,7 +78,7 @@ class TurntableWidget(QWidget):
                     border: 2px inset #555555;
                 }
             """)
-            btn2.clicked.connect(lambda checked, n=even_num: self.controller.move_to_position(n-1))
+            btn2.clicked.connect(lambda checked, bay=even_num-1: self.controller.move_to_bay(bay))
             self.outer_buttons.append(btn2)
 
     def resizeEvent(self, event):

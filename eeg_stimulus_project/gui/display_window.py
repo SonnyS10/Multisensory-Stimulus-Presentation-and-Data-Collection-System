@@ -215,7 +215,7 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None, repetitions=None):  # <-- Add repetitions here
+                 randomize_cues=False, seed=None, repetitions=None, local_mode=None):  # <-- Add repetitions here
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -228,19 +228,21 @@ class DisplayWindow(QMainWindow):
         self.seed = seed
         self.frame = parent_frame  # Store reference to the Frame instance
         self.repetitions = repetitions
+        self.local_mode = local_mode
 
-        if self.shared_status.get('eyetracker_connected', False):
-            # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
-            if self.eyetracker is None or self.eyetracker.device is None:
-                self.eyetracker = PupilLabs()
-            if self.eyetracker and self.eyetracker.device is not None:
-                self.eyetracker.start_recording()
+        if self.local_mode:
+            if self.shared_status.get('eyetracker_connected', False):
+                # Eye tracker is connected, uses same instance of eye tracker or creates a new one if needed
+                if self.eyetracker is None or self.eyetracker.device is None:
+                    self.eyetracker = PupilLabs()
+                if self.eyetracker and self.eyetracker.device is not None:
+                    self.eyetracker.start_recording()
+                else:
+                    logging.info("Eyetracker not connected")
+                    self.send_message({"action": "client_log", "message": "Eyetracker not connected"})
             else:
-                logging.info("Eyetracker not connected")
-                self.send_message({"action": "client_log", "message": "Eyetracker not connected"})
-        else:
-            logging.info("Eyetracker not connected in Control Window")
-            self.send_message({"action": "client_log", "message": "Eyetracker not connected in Control Window"})
+                logging.info("Eyetracker not connected in Control Window")
+                self.send_message({"action": "client_log", "message": "Eyetracker not connected in Control Window"})
      
         self.current_label = None
 
@@ -292,11 +294,11 @@ class DisplayWindow(QMainWindow):
         self.experiment_layout.addWidget(bottom_frame)
 
         # Timer label
-        self.timer_label = QLabel("00:00:00", self.experiment_widget)
-        self.timer_label.setFont(QFont("Arial", 20))
-        self.timer_label.setAlignment(Qt.AlignCenter)
-        self.timer_label.setMaximumHeight(50)
-        self.experiment_layout.addWidget(self.timer_label)
+        #self.timer_label = QLabel("00:00:00", self.experiment_widget)
+        #self.timer_label.setFont(QFont("Arial", 20))
+        #self.timer_label.setAlignment(Qt.AlignCenter)
+        #self.timer_label.setMaximumHeight(50)
+        #self.experiment_layout.addWidget(self.timer_label)
 
         # Add both widgets to the stacked layout
         self.stacked_layout.addWidget(self.overlay_widget)      # index 0
@@ -739,9 +741,9 @@ class DisplayWindow(QMainWindow):
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         timer_text = f"{minutes:02}:{seconds:02}:{milliseconds:03}"
-        self.timer_label.setText(timer_text)
+        # Only update the mirror's timer label
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.set_timer(self.timer_label.text())
+            self.mirror_widget.set_timer(timer_text)
 
     #This method is called to handle the key press events, it checks if the overlay widget is visible and if the space bar is pressed, it starts the countdown    
     def keyPressEvent(self, event):

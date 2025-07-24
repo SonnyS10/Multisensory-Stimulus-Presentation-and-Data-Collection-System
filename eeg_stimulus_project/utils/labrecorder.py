@@ -3,6 +3,7 @@ import os
 import time
 import sys
 from pathlib import Path
+import datetime
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
@@ -12,8 +13,9 @@ from eeg_stimulus_project.config import config
 
 
 class LabRecorder:
-    def __init__(self, base_dir):
+    def __init__(self, base_dir, subject_id=None):
         self.base_dir = base_dir
+        self.subject_id = subject_id
         
         # Get LabRecorder configuration
         labrecorder_host = config.get('hardware.eeg.labrecorder_host', 'localhost')
@@ -34,18 +36,24 @@ class LabRecorder:
         if not self.s:
             print("No LabRecorder connection.")
             return
-        
+
         # Create save directory using relative path
         save_dir = Path(self.base_dir) / current_test
         save_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        # --- Compose filename with subject ID, test name, and timestamp ---
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        subject_str = f"subj_{self.subject_id}_" if self.subject_id else ""
+        test_str = current_test.replace(" ", "_")
+        filename = f"{subject_str}{test_str}_{timestamp}.xdf"
+
         # Use the save directory path for recording
-        xdf_path = str(save_dir.resolve())
-        
+        xdf_path = str(save_dir.resolve() / filename)
+
         self.s.sendall(b"update\n")
         time.sleep(3)
         self.s.sendall(b"select all\n")
-        self.s.sendall(f'filename {{root:{xdf_path}\\}} {{template:eeg_data.xdf}}\n'.encode('utf-8'))
+        self.s.sendall(f'filename {{root:{save_dir.resolve()}}} {{template:{filename}}}\n'.encode('utf-8'))
         self.s.sendall(b"start\n")
         print(f"LabRecorder started recording: {xdf_path}")
 

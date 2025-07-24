@@ -62,7 +62,7 @@ from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 
 class ControlWindow(QMainWindow):
-    def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False):
+    def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False, subject_id=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -72,6 +72,7 @@ class ControlWindow(QMainWindow):
         
         self.base_dir = base_dir
         self.test_number = test_number
+        self.subject_id = subject_id
         self.label_stream = None
         self.labrecorder = None
         self.lab_recorder_connected = False
@@ -417,7 +418,7 @@ class ControlWindow(QMainWindow):
     #Connect the LabRecorder application to the Actichamp stream.
     def connect_labrecorder(self):
         try:
-            self.labrecorder = LabRecorder(self.base_dir)
+            self.labrecorder = LabRecorder(self.base_dir, subject_id=self.subject_id)
             if self.labrecorder.s is not None:
                 self.shared_status['lab_recorder_connected'] = True
                 logging.info("Connected to LabRecorder.")
