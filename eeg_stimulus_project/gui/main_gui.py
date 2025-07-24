@@ -141,7 +141,7 @@ class GUI(QMainWindow):
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
-        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue, self.eyetracker_connected, self.labrecorder_connected)
+        return Frame(self, title, self.connection, is_stroop_test, self.shared_status, self.base_dir, self.test_number, self.client, self.log_queue, self.eyetracker_connected, self.labrecorder_connected, self.local_mode)
     
     def show_unisensory_neutral_visual(self):
         self.show_test_frame(self.unisensory_neutral_visual)
@@ -396,7 +396,7 @@ class GUI(QMainWindow):
                 # Don't call send_message here to avoid infinite recursion
 
 class Frame(QFrame):
-    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None):
+    def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):
         super().__init__(parent)
 
         self.tests_run = set()
@@ -412,6 +412,7 @@ class Frame(QFrame):
         self.parent = parent
         self.eyetracker_connected = eyetracker_connected
         self.labrecorder_connected = labrecorder_connected
+        self.local_mode = local_mode
 
         # --- Aesthetic Styles ---
         self.setStyleSheet("""
@@ -638,17 +639,18 @@ class Frame(QFrame):
                 self.label_stream = LSLLabelStream()
                 self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
                 self.start_button.setEnabled(False)  # Disable the start button after starting the stream
-            if self.shared_status.get('lab_recorder_connected', False):
-                if self.labrecorder is None or self.labrecorder.s is None:
-                    self.labrecorder = LabRecorder(self.base_dir)
-                if self.labrecorder and self.labrecorder.s is not None:
-                    self.labrecorder.Start_Recorder(self.parent.get_current_test())
+            if self.local_mode:
+                if self.shared_status.get('lab_recorder_connected', False):
+                    if self.labrecorder is None or self.labrecorder.s is None:
+                        self.labrecorder = LabRecorder(self.base_dir)
+                    if self.labrecorder and self.labrecorder.s is not None:
+                        self.labrecorder.Start_Recorder(self.parent.get_current_test())
+                    else:
+                        logging.info("LabRecorder not connected")
+                        self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
                 else:
-                    logging.info("LabRecorder not connected")
-                    self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
-            else:
-                logging.info("LabRecorder not connected in Control Window")
-                self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
+                    logging.info("LabRecorder not connected in Control Window")
+                    self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
             
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)

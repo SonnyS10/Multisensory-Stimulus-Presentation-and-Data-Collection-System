@@ -10,7 +10,7 @@ class TurntableController:
         self.num_bays = num_bays
         self.current_bay = 0
         self.ticcmd_path = r'C:\Program Files (x86)\Pololu\Tic\Bin\ticcmd.exe'
-        #self.home()
+        self.home()
 
         print("Setting motor parameters...")
         #self.ticcmd('--reset-command-timeout')
@@ -28,8 +28,8 @@ class TurntableController:
 
     def home(self):
         # Home to position 0
-        self.ticcmd('--exit-safe-start', '--position', '0')
-        time.sleep(2)
+        #self.ticcmd('--exit-safe-start', '--position', '0')
+        #time.sleep(2)
         self.ticcmd('--halt-and-set-position', '0')
         self.current_bay = 0
 
@@ -71,3 +71,11 @@ class TurntableController:
 
     def move_by_bays(self, num_bays):
         self.move_to_bay((self.current_bay + num_bays) % self.num_bays)
+
+    def de_energize(self):
+        print("De-energizing motor...")
+        self.ticcmd("--deenergize")
+
+    def energize(self):
+        print("Energizing motor...")
+        self.ticcmd("--energize")

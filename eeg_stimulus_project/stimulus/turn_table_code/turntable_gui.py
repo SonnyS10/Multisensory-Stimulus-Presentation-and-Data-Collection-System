@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 from PyQt5.QtCore import Qt, QPoint
 from turntable_controller import TurntableController
+from doorcode import DoorController
 
 class TurntableWidget(QWidget):
     def __init__(self, parent=None, controller=None):
@@ -110,16 +111,23 @@ class TurntableWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.controller = TurntableController()
+        self.door_controller = DoorController()
         self.setWindowTitle("Turntable GUI")
 
         # Top bar with Connection and Zero buttons
         top_bar = QHBoxLayout()
-        self.connection_btn = QPushButton("Connection")
-        self.zero_btn = QPushButton("Zero")
-        self.connection_btn.clicked.connect(lambda: print("Connection Button Pressed"))
-        self.zero_btn.clicked.connect(lambda: print("Zero Button Pressed"))
-        top_bar.addWidget(self.connection_btn)
-        top_bar.addWidget(self.zero_btn)
+        self.open_btn = QPushButton("Open")
+        self.close_btn = QPushButton("Close")
+        self.de_energize_btn = QPushButton("De-energize")
+        self.energize_btn = QPushButton("Energize")
+        self.open_btn.clicked.connect(self.door_controller.open)
+        self.close_btn.clicked.connect(self.door_controller.close)
+        self.de_energize_btn.clicked.connect(self.controller.de_energize)
+        self.energize_btn.clicked.connect(self.controller.energize)
+        top_bar.addWidget(self.open_btn)
+        top_bar.addWidget(self.close_btn)
+        top_bar.addWidget(self.de_energize_btn)
+        top_bar.addWidget(self.energize_btn)
         top_bar.addStretch()
 
         # Centered turntable

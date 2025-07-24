@@ -4,66 +4,48 @@
 # in order to set the target position over USB.
 
 import subprocess
-import yaml   
-import keyboard
+import yaml
 import time
 
-def ticcmd(*args):
-    return subprocess.check_output(['ticcmd', '-d', '00475502'] + list(args))
+class DoorController:
+    def __init__(self, device_id='00475502', move_steps=-400):
+        self.device_id = device_id
+        self.move_steps = move_steps
+        self.set_motor_parameters()
+        self.home()
 
-def get_position():
-    status = yaml.safe_load(ticcmd('-s', '--full'))
-    return status['Current position']
+    def ticcmd(self, *args):
+        return subprocess.check_output(['ticcmd', '-d', self.device_id] + list(args))
 
-move_steps = 200  # <-- Set your desired number of steps here
-     
-print("Setting motor parameters...")
-ticcmd('--current', '1860')                # Set motor current to 1760 mA
-ticcmd('--step-mode', '4')                 # 1/16 step mode (4 = 1/16 for Tic controllers)
-ticcmd('--max-speed', '60000000')             # M   ax speed: 20000 pulses/sec
-ticcmd('--max-accel', '50000000')               # Max acceleration: 500 pulses/sec^2
+    def get_position(self):
+        status = yaml.safe_load(self.ticcmd('-s', '--full'))
+        return status['Current position']
 
-print("Homing to position 0...")
-ticcmd('--exit-safe-start', '--position', '0')  
-time.sleep(3)
-ticcmd('--halt-and-set-position', '0')
-current_pos = get_position()
-print(f"Current motor position after homing: {current_pos}")
+    def set_motor_parameters(self):
+        print("Setting motor parameters...")
+        self.ticcmd('--current', '1920')
+        self.ticcmd('--step-mode', '8')
+        self.ticcmd('--max-speed', '500000000')
+        self.ticcmd('--max-accel', '100000') # Max of 100000, DON'T GO HIGHER THAN THIS
 
-at_home = True
-current_pos = get_position()  # Always track the current position
+    def home(self):
+        print("Homing to position 0...")
+        self.ticcmd('--halt-and-set-position', '0')
+        current_pos = self.get_position()
+        print(f"Current motor position after homing: {current_pos}")
 
-print("Press SPACE to move out, SPACE again to return. Press ESC to exit.")
+    def open(self):
+        self.ticcmd('--energize')
+        print(f"Opening by {self.move_steps} steps...")
+        self.ticcmd('--exit-safe-start', '--position', str(self.move_steps))
+        time.sleep(2)
+        self.ticcmd('--deenergize')
+        print("Motor de-energized.")
 
-while True:
-    if keyboard.is_pressed('esc'):
-        print("Exiting.") 
-        break
-    if keyboard.is_pressed('0'):
-        ticcmd('--energize')
+    def close(self):
+        self.ticcmd('--energize')
         print("Closing (moving to 0)...")
-        ticcmd('--exit-safe-start', '--position', '0')
+        self.ticcmd('--exit-safe-start', '--position', '0')
         time.sleep(2)
-        ticcmd('--deenergize')
+        self.ticcmd('--deenergize')
         print("Motor de-energized.")
-        while keyboard.is_pressed('0'):
-            time.sleep(0.1)
-    if keyboard.is_pressed('1'):
-        ticcmd('--energize')
-        print(f"Opening by {move_steps} steps...")
-        ticcmd('--exit-safe-start', '--position', str(move_steps))
-        time.sleep(2)
-        ticcmd('--deenergize')
-        print("Motor de-energized.")
-        while keyboard.is_pressed('1'):
-            time.sleep(0.1)
-    if keyboard.is_pressed('2'):
-        ticcmd('--energize')
-        print(f"Opening by {2 * move_steps} steps...")
-        ticcmd('--exit-safe-start', '--position', str(2 * move_steps))
-        time.sleep(2)
-        ticcmd('--deenergize')
-        print("Motor de-energized.")
-        while keyboard.is_pressed('2'):
-            time.sleep(0.1)
-    time.sleep(0.05)

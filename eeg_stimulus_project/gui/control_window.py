@@ -195,7 +195,7 @@ class ControlWindow(QMainWindow):
             }
         """)
         touchbox_row, self.touchbox_connected_icon = device_row(
-            "Touchbox",
+            "Tactile Box",
             self.open_tactile_box,
             "Connection Status:",
             "touchbox_connected_icon",
