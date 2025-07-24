@@ -1,3 +1,10 @@
+"""
+Control Window Module
+
+Provides experiment control interface and logging for distributed experiment systems.
+Manages hardware connections, experiment coordination, and network communication.
+"""
+
 from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
@@ -15,13 +22,13 @@ from logging.handlers import QueueListener #QueueHandler
 import socket
 from multiprocessing import Process, Manager
 
-# Add the project root to Python path
+# Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from eeg_stimulus_project.config import config
 
-# Platform-specific imports
+# Platform-specific imports for Windows automation
 if platform.system() == 'Windows':
     try:
         from pywinauto import Application
@@ -32,6 +39,7 @@ else:
     Application = None
 
 class QTextEditLogger(logging.Handler, QObject):
+    """Custom logging handler that outputs to QTextEdit widget."""
     append_text = pyqtSignal(str)
 
     def __init__(self, text_edit):
@@ -50,6 +58,7 @@ class QTextEditLogger(logging.Handler, QObject):
         self.text_edit.moveCursor(self.text_edit.textCursor().End)
 
 def excepthook(type, value, tb):
+    """Global exception handler for logging uncaught exceptions."""
     logging.info("Uncaught exception:", value)
     traceback.print_exception(type, value, tb)
 
@@ -62,7 +71,14 @@ from eeg_stimulus_project.lsl.labels import LSLLabelStream
 
 
 class ControlWindow(QMainWindow):
+    """
+    Main control window for experiment host system.
+    
+    Manages hardware connections (EEG, eye tracking), coordinates distributed
+    experiments, and provides logging interface for experiment monitoring.
+    """
     def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False):
+        """Initialize control window with hardware and network management."""
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -113,8 +129,9 @@ class ControlWindow(QMainWindow):
         self.device_frame_layout.setContentsMargins(18, 18, 18, 18)
         self.device_frame_layout.setSpacing(14)
 
-        # --- Device Rows Helper ---
+        # Device control interface helper function
         def device_row(button_text, button_func, status_text, icon_ref, extra_widgets=None):
+            """Create standardized device control row with button and status indicator."""
             row = QHBoxLayout()
             row.setSpacing(10)
             btn = QPushButton(button_text, self)
@@ -347,8 +364,8 @@ class ControlWindow(QMainWindow):
         else:
             QMetaObject.invokeMethod(self.log_text_edit, append(), Qt.QueuedConnection)
 
-    # Start the Actichamp application and automatically link to the EEG stream.
     def start_actichamp(self):
+        """Launch Actichamp EEG amplifier application."""
         def worker():
             try:
                 # Get actichamp path from configuration based on platform
@@ -371,8 +388,8 @@ class ControlWindow(QMainWindow):
                 traceback.print_exc()
         threading.Thread(target=worker, daemon=True).start()
 
-    # Link to the EEG stream through the Actichamp application.
     def link_actichamp(self):
+        """Automatically click Link button in Actichamp application."""
         try:
             app = Application(backend="uia").connect(title_re="actiCHamp Connector")
             window_spec = app.window(title_re="actiCHamp Connector")
@@ -391,8 +408,8 @@ class ControlWindow(QMainWindow):
             self.actichamp_linked = False
             self.update_app_status_icon(self.actichamp_linked_icon, False)
 
-    #Start the LabRecorder application.
     def start_labrecorder(self):
+        """Launch LabRecorder application for EEG data recording."""
         def worker():
             try:
                 # Get labrecorder path from configuration based on platform

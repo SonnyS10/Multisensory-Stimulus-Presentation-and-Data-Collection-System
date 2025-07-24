@@ -20,8 +20,10 @@ import openpyxl
 
 class StimulusOrderFrame(QWidget):
     """
-    A frame that allows users to view and rearrange the order of stimulus presentation
-    for each test using drag-and-drop functionality.
+    Stimulus order management interface with drag-and-drop functionality.
+    
+    Allows users to customize stimulus presentation order, repetitions,
+    and randomization settings for each experiment test condition.
     """
     
     def __init__(self, parent=None, alcohol_folder=None, non_alcohol_folder=None):

@@ -1,13 +1,20 @@
+"""
+Asset Handler Module
+
+Manages image loading, randomization, and display functionality for stimulus presentation.
+Provides the Display class for handling custom orders, repetitions, and randomization.
+"""
+
 from PIL import Image
 import os
 import random
 
-# Global Variables
+# Load default images
 Beer = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Beer.jpg'))
 Stella = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Stella.jpg'))
 
-# Function to load images from a folder
 def load_images_from_folder(folder):
+    """Load all supported image files from specified folder."""
     supported_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')
     images = []
     for fname in os.listdir(folder):
@@ -26,7 +33,7 @@ personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Persona
 personalized_images = load_images_from_folder(personalized_folder)
 
 def get_mixed_images(general_images, personalized_images):
-    # Avoid duplicates by using a set of filenames
+    """Combine general and personalized images, avoiding duplicates."""
     seen = set()
     mixed_images = []
     for img in general_images + personalized_images:
@@ -39,11 +46,17 @@ def get_mixed_images(general_images, personalized_images):
     return mixed_images
 
 class Display():
-    custom_orders = {}  # Class variable to store custom image orders
+    """
+    Manages stimulus image display, ordering, and randomization.
+    
+    Provides static methods for handling custom orders, repetitions,
+    and randomization of stimulus images for experiments.
+    """
+    custom_orders = {}  # Store custom image orders
     
     @staticmethod
     def randomize_images(images, randomize_cues=False, seed=None, repetitions=None):
-        #print(f"Randomize called: {randomize_cues}, seed={seed}, images={len(images)}")
+        """Apply repetitions and randomization to image list."""
         images = images.copy()
         # Apply repetitions if specified
         if repetitions:
@@ -74,14 +87,12 @@ class Display():
 
     @staticmethod
     def get_assets(alcohol_folder=None, non_alcohol_folder=None, randomize_cues=False, seed=None, repetitions=None):
-        #print(
-        #   f"get_assets called with:\n"
-        #    f"  alcohol_folder={alcohol_folder}\n"
-        #    f"  non_alcohol_folder={non_alcohol_folder}\n"
-        #    f"  randomize_cues={randomize_cues}\n"
-        #    f"  seed={seed}\n"
-        #    f"  repetitions={repetitions}\n"
-        #)
+        """
+        Load and configure assets for all experiment tests.
+        
+        Returns organized image sets for each test condition with optional
+        randomization and repetitions applied.
+        """
         # Use user folders if provided, else use defaults
         def_images_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default')
         # Load backup default images

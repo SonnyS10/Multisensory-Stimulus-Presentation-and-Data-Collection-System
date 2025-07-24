@@ -1,3 +1,10 @@
+"""
+Tactile System Setup and Control Module
+
+Manages SSH connections and communication with remote tactile hardware system.
+Provides GUI interface for tactile system configuration and data collection.
+"""
+
 import paramiko
 import threading
 import subprocess
@@ -12,15 +19,14 @@ from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QTextEdit, QLabel, QSpinBox, QDesktopWidget
 from PyQt5.QtCore import QTimer
 
-# Add project root to path for imports
+# Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from eeg_stimulus_project.config import config
 
-# SSH connection info - load from configuration
 def get_ssh_config():
-    """Get SSH configuration from settings."""
+    """Load SSH configuration from settings."""
     return {
         'host': config.get('network.tactile_system.host', '10.115.12.225'),
         'username': config.get('network.tactile_system.username', 'benja'),
@@ -43,6 +49,7 @@ remote_channel = None
 output_queue = queue.Queue()
 
 def start_remote_script(local_script_callback): 
+    """Start remote tactile data collection script via SSH.""" 
     def task():
         global ssh_client, remote_channel
         try:
@@ -74,6 +81,7 @@ def start_remote_script(local_script_callback):
     local_script_callback()
 
 def stop_remote_script():
+    """Stop the remote tactile data collection script."""
     global remote_channel
     if remote_channel is not None:
         try:
@@ -83,7 +91,14 @@ def stop_remote_script():
         output_queue.put("[INFO] Remote script manually stopped.\n")
 
 class RemoteScriptGUI(QMainWindow):
+    """
+    GUI for tactile system control and monitoring.
+    
+    Provides interface for connecting to remote tactile hardware,
+    controlling data collection, and monitoring system status.
+    """
     def __init__(self, shared_status, connection=None):
+        """Initialize tactile control GUI with status monitoring."""
         super().__init__()
         self.shared_status = shared_status
         #self.connection = connection

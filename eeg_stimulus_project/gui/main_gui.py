@@ -1,22 +1,10 @@
 """
 EEG Stimulus Project - Main Experiment GUI
 
-This module contains the primary GUI class for experiment execution. The GUI class
-manages stimulus presentation, user interactions, and coordinates with the control
-window for distributed experiments.
+Primary GUI for multisensory experiment execution with network communication,
+hardware integration, and stimulus presentation coordination.
 
-Key Features:
-- Experiment frame management and navigation
-- Network communication with host/client systems
-- Hardware integration status monitoring
-- Real-time experiment control and data collection
-- Multi-modal stimulus presentation coordination
-
-The GUI supports both passive viewing and stroop task experiments with
-multiple sensory modalities (visual, tactile, olfactory).
-
-Author: Research Team
-Last Modified: 2024
+Supports passive viewing (Test 1) and stroop task (Test 2) experiments.
 """
 
 import sys
@@ -55,62 +43,17 @@ from eeg_stimulus_project.assets.asset_handler import Display
 
 class GUI(QMainWindow):
     """
-    Main experiment GUI window for stimulus presentation and control.
+    Main experiment GUI for multisensory stimulus presentation and control.
     
-    This class provides the primary interface for conducting multisensory experiments.
-    It manages experiment frames, handles user interactions, coordinates with hardware
-    systems, and communicates with distributed components via network connections.
+    Manages experiment frames, network communication, hardware status monitoring,
+    and coordinates distributed experiments across client/host systems.
     
-    The GUI supports two main experiment types:
-    1. Passive viewing experiments (Test 1) - 6 different sensory combinations
-    2. Stroop task experiments (Test 2) - 4 different sensory combinations
-    
-    Key Responsibilities:
-    - Initialize and manage experiment frames for different test conditions
-    - Handle network communication for distributed experiments
-    - Monitor hardware connection status (EEG, eye tracking, tactile)
-    - Coordinate stimulus presentation timing and data collection
-    - Provide user interface for experiment navigation and control
-    
-    Attributes:
-        shared_status (dict): Shared status dictionary for hardware connections
-        connection: Network connection object for client/host communication
-        client (bool): Flag indicating if running in client mode
-        base_dir (str): Base directory for data storage
-        test_number (str): Current test number ('1' or '2')
-        alcohol_folder (str): Path to custom alcohol images (optional)
-        non_alcohol_folder (str): Path to custom non-alcohol images (optional)
-        eyetracker_connected (bool): Eye tracker connection status
-        labrecorder_connected (bool): EEG recording connection status
-        
-    Network Communication:
-        - Receives commands from host in client mode
-        - Processes experiment control messages
-        - Handles stimulus synchronization across distributed systems
+    Supports Test 1 (passive viewing - 6 conditions) and Test 2 (stroop task - 4 conditions).
     """
     
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
                  alcohol_folder=None, non_alcohol_folder=None):
-        """
-        Initialize the main experiment GUI.
-        
-        Sets up the complete experiment interface including:
-        - Window layout and geometry
-        - Experiment frames for all test conditions
-        - Network communication listeners
-        - Hardware status monitoring
-        - Asset management for custom stimuli
-        
-        Args:
-            connection: Network connection object (None for local mode)
-            shared_status (dict): Shared dictionary for hardware status tracking
-            log_queue (Queue): Queue for centralized logging
-            base_dir (str): Base directory path for data storage
-            test_number (str): Test number ('1' for passive, '2' for stroop)
-            client (bool): True if running in client mode
-            alcohol_folder (str, optional): Path to custom alcohol images
-            non_alcohol_folder (str, optional): Path to custom non-alcohol images
-        """
+        """Initialize main experiment GUI with network, hardware status, and asset management."""
         super().__init__()
         
         # Store configuration and state variables
@@ -145,15 +88,7 @@ class GUI(QMainWindow):
         self._populate_stacked_widget()
 
     def _setup_window_layout(self):
-        """
-        Configure window geometry, title, and basic layout structure.
-        
-        Sets up:
-        - Window title and dimensions
-        - Screen positioning (left half of screen)
-        - Main horizontal layout with sidebar and content area
-        - Minimum size constraints
-        """
+        """Configure window geometry, layout, and positioning."""
         # Get primary screen geometry for window positioning
         screen = QApplication.primaryScreen()
         screen_geometry = screen.geometry()
@@ -180,29 +115,7 @@ class GUI(QMainWindow):
         self.main_layout.addWidget(self.main_frame)
         self.stacked_widget = self.main_frame.stacked_widget
     def _create_experiment_frames(self):
-        """
-        Create all experiment frames for different test conditions.
-        
-        Initializes frames for both passive viewing and stroop task experiments.
-        Each frame represents a specific combination of sensory modalities:
-        
-        Passive Test Frames (Test 1):
-        - Unisensory Neutral Visual
-        - Unisensory Alcohol Visual  
-        - Multisensory Neutral Visual & Olfactory
-        - Multisensory Alcohol Visual & Olfactory
-        - Multisensory Neutral Visual, Tactile & Olfactory
-        - Multisensory Alcohol Visual, Tactile & Olfactory
-        
-        Stroop Test Frames (Test 2):
-        - Stroop Multisensory Alcohol (Visual & Tactile)
-        - Stroop Multisensory Neutral (Visual & Tactile)
-        - Stroop Multisensory Alcohol (Visual & Olfactory)
-        - Stroop Multisensory Neutral (Visual & Olfactory)
-        
-        Each frame is configured with appropriate stimulus parameters and
-        interaction modes based on the experiment type.
-        """
+        """Create experiment frames for Test 1 (passive viewing) and Test 2 (stroop task)."""
         # PASSIVE TEST FRAMES (Test 1)
         # Create frames for passive viewing experiments
         self.unisensory_neutral_visual = self.create_frame("Unisensory Neutral Visual", is_stroop_test=False)
@@ -220,17 +133,7 @@ class GUI(QMainWindow):
         self.multisensory_neutral_visual_olfactory2 = self.create_frame("Stroop Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
 
     def _setup_additional_frames(self):
-        """
-        Initialize additional UI frames for instructions and utilities.
-        
-        Creates supplementary frames that support the main experiment:
-        - Instruction frame: Displays experiment instructions to participants
-        - Latency checker: Tools for testing system timing and responsiveness  
-        - Stimulus order frame: Manages stimulus presentation sequences
-        
-        These frames provide essential supporting functionality for
-        experiment setup, calibration, and participant guidance.
-        """
+        """Initialize instruction frame, latency checker, and stimulus order frame."""
         # Instructions frame for participant guidance
         self.instruction_frame = InstructionFrame(self)
         
@@ -245,20 +148,7 @@ class GUI(QMainWindow):
         )
 
     def _populate_stacked_widget(self):
-        """
-        Add all experiment frames to the stacked widget for navigation.
-        
-        The stacked widget allows switching between different experiment
-        conditions while maintaining state and layout consistency.
-        
-        Frame Order:
-        1. Passive test frames (6 conditions)
-        2. Stroop test frames (4 conditions)  
-        3. Instruction and utility frames
-        
-        Navigation between frames is controlled by the sidebar and
-        experiment flow logic.
-        """
+        """Add all experiment frames to stacked widget for navigation."""
         # Add passive test frames
         self.stacked_widget.addWidget(self.unisensory_neutral_visual)
         self.stacked_widget.addWidget(self.unisensory_alcohol_visual)
@@ -288,21 +178,7 @@ class GUI(QMainWindow):
         self._latency_test_count = 0
 
     def show_test_frame(self, frame_or_name):
-        """
-        Display a specific test frame in the main content area.
-        
-        This method handles navigation to different experiment frames, supporting
-        both frame objects and string-based frame names for flexibility.
-        
-        Args:
-            frame_or_name: Either a frame object or string name of the test
-            
-        Frame Name Mapping:
-            Maps string names to corresponding frame objects for all
-            passive and stroop test conditions. This allows external
-            components to trigger frame changes using standardized names.
-            
-        UI Updates:
+        """Display specific test frame by object or name."""
             - Sets the current widget in the stacked widget
             - Updates the last test frame reference
             - Resets instructions button text
@@ -341,21 +217,7 @@ class GUI(QMainWindow):
             self.sidebar.instructions_button.setText("Show Instructions")
 
     def create_frame(self, title, is_stroop_test=False):
-        """
-        Factory method for creating experiment frames.
-        
-        Creates a standardized Frame object with all necessary parameters
-        for experiment execution and data collection.
-        
-        Args:
-            title (str): Title/name of the experiment condition
-            is_stroop_test (bool): True if this is a stroop task frame
-            
-        Returns:
-            Frame: Configured frame object ready for experiment use
-            
-        Frame Configuration:
-            Each frame is initialized with:
+        """Factory method for creating experiment frames with standard configuration."""
             - Parent GUI reference
             - Experiment title and type
             - Network connection for distributed experiments
@@ -417,18 +279,7 @@ class GUI(QMainWindow):
         self.show_test_frame(self.unisensory_neutral_visual)
 
     def toggle_instruction_frame(self):
-        """
-        Toggle between the instruction frame and the last active test frame.
-        
-        This method switches the display between showing experiment instructions
-        and returning to the previously active test. Updates button text to
-        reflect current state.
-        
-        UI State Management:
-        - Tracks the last active test frame
-        - Updates instruction button text accordingly
-        - Maintains user's place in experiment flow
-        """
+        """Toggle between instruction frame and last active test frame."""
         if self.stacked_widget.currentWidget() == self.instruction_frame:
             self.stacked_widget.setCurrentWidget(self.last_test_frame)
             self.sidebar.instructions_button.setText("Show Instructions")
