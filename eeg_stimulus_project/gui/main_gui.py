@@ -9,6 +9,7 @@ import threading
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
+from eeg_stimulus_project.stimulus.turn_table_code.auto_turntable_window import AutoTurntableWindow
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
@@ -270,6 +271,59 @@ class GUI(QMainWindow):
                 current_frame.mirror_display_widget.close()  # Properly close the window
                 current_frame.mirror_display_widget.setParent(None)
                 current_frame.mirror_display_widget = None
+
+    # Function to open the turntable GUI for viewing booth tests
+    def open_turntable_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None):
+        def any_turntable_widget_open():
+            # Check all frames for an open turntable_widget
+            frames = [
+                self.unisensory_neutral_visual,
+                self.unisensory_alcohol_visual,
+                self.multisensory_neutral_visual_olfactory,
+                self.multisensory_alcohol_visual_olfactory,
+                self.multisensory_neutral_visual_tactile_olfactory,
+                self.multisensory_alcohol_visual_tactile_olfactory,
+                self.multisensory_alcohol_visual_tactile,
+                self.multisensory_neutral_visual_tactile,
+                self.multisensory_alcohol_visual_olfactory2,
+                self.multisensory_neutral_visual_olfactory2,
+            ]
+            return any(getattr(f, 'turntable_widget', None) is not None for f in frames)
+
+        current_frame = self.stacked_widget.currentWidget()  # Get the active Frame
+        if state == Qt.Checked:
+            if any_turntable_widget_open():
+                logging.info("A turntable widget is already open in another frame. Not creating a new one.")
+                self.send_message({"action": "client_log", "message": "A turntable widget is already open in another frame. Not creating a new one."})
+                return
+            if not hasattr(current_frame, 'turntable_widget') or current_frame.turntable_widget is None:
+                current_test = self.get_current_test()
+                # Get randomization and repetitions settings from stimulus_order_frame
+                randomize_cues, seed = self.stimulus_order_frame.get_randomization_settings()
+                repetitions = self.stimulus_order_frame.get_repetitions_settings()
+                
+                # Create turntable widget
+                current_frame.turntable_widget = AutoTurntableWindow(
+                    self.connection, log_queue, label_stream, current_frame, current_test,
+                    self.base_dir, self.test_number, eyetracker=eyetracker, shared_status=shared_status, client=self.client,
+                    alcohol_folder=self.alcohol_folder,
+                    non_alcohol_folder=self.non_alcohol_folder,
+                    randomize_cues=randomize_cues,
+                    seed=seed,
+                    repetitions=repetitions, local_mode=self.local_mode
+                )
+                current_frame.turntable_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
+                # Show the turntable window
+                current_frame.turntable_widget.show()
+            else:
+                logging.info("Turntable widget already exists, not creating a new one.")
+                self.send_message({"action": "client_log", "message": "Turntable widget already exists, not creating a new one."})
+        else:
+            #Remove/hide the turntable widget when the stop button is pressed
+            if hasattr(current_frame, 'turntable_widget') and current_frame.turntable_widget is not None:
+                current_frame.turntable_widget.close()  # Properly close the window
+                current_frame.turntable_widget.setParent(None)
+                current_frame.turntable_widget = None
 
     #A function to get the current test name
     def get_current_test(self):
@@ -651,9 +705,28 @@ class Frame(QFrame):
                 else:
                     logging.info("LabRecorder not connected in Control Window")
                     self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
-            
+        elif hasattr(self, 'viewing_booth_button') and self.viewing_booth_button.isChecked():
+            self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
+            if self.label_stream is None:                
+                self.label_stream = LSLLabelStream()
+                self.parent.open_turntable_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
+                self.start_button.setEnabled(False)  # Disable the start button after starting the stream
+            if self.local_mode:
+                if self.shared_status.get('lab_recorder_connected', False):
+                    if self.labrecorder is None or self.labrecorder.s is None:
+                        self.labrecorder = LabRecorder(self.base_dir)
+                    if self.labrecorder and self.labrecorder.s is not None:
+                        self.labrecorder.Start_Recorder(self.parent.get_current_test())
+                    else:
+                        logging.info("LabRecorder not connected")
+                        self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
+                else:
+                    logging.info("LabRecorder not connected in Control Window")
+                    self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})            
         else:
             self.parent.open_secondary_gui(Qt.Unchecked)
+            if hasattr(self, 'viewing_booth_button'):
+                self.parent.open_turntable_gui(Qt.Unchecked)
 
         # After successfully starting the test, add it to the set
         self.tests_run.add(current_test)
@@ -686,8 +759,13 @@ class Frame(QFrame):
         if hasattr(self, 'display_widget') and self.display_widget is not None:
             self.display_widget.stopped = True
             self.display_widget.close()  # Close the display widget
-        time.sleep(2)  # Give some time for the display widget to stop
+        if hasattr(self, 'turntable_widget') and self.turntable_widget is not None:
+            self.turntable_widget.stopped = True
+            self.turntable_widget.close()  # Close the turntable widget
+        time.sleep(2)  # Give some time for the widgets to stop
         self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
+        if hasattr(self, 'viewing_booth_button'):
+            self.parent.open_turntable_gui(Qt.Unchecked, self.log_queue, label_stream=None)
         self.label_stream = None  # Reset the label stream after stopping
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
@@ -714,19 +792,32 @@ class Frame(QFrame):
         if hasattr(self, 'display_widget') and self.display_widget is not None:
             self.display_widget.stopped = True
             self.display_widget.close()
+        if hasattr(self, 'turntable_widget') and self.turntable_widget is not None:
+            self.turntable_widget.stopped = True
+            self.turntable_widget.close()  # Close the turntable widget
         time.sleep(2)
         self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
+        if hasattr(self, 'viewing_booth_button'):
+            self.parent.open_turntable_gui(Qt.Unchecked, self.log_queue, label_stream=None)
         self.label_stream = None  # Reset the label stream after stopping
 
     #Pauses the display window and the mirror display window
     def pause_display_window(self):
-        self.display_widget.pause_trial()
-        self.mirror_display_widget.pause_trial()
+        if hasattr(self, 'display_widget') and self.display_widget is not None:
+            self.display_widget.pause_trial()
+        if hasattr(self, 'mirror_display_widget') and self.mirror_display_widget is not None:
+            self.mirror_display_widget.pause_trial()
+        if hasattr(self, 'turntable_widget') and self.turntable_widget is not None:
+            self.turntable_widget.pause_trial()
 
     #Resumes the display window and the mirror display window
     def resume_display_window(self):
-        self.display_widget.resume_trial()
-        self.mirror_display_widget.resume_trial()
+        if hasattr(self, 'display_widget') and self.display_widget is not None:
+            self.display_widget.resume_trial()
+        if hasattr(self, 'mirror_display_widget') and self.mirror_display_widget is not None:
+            self.mirror_display_widget.resume_trial()
+        if hasattr(self, 'turntable_widget') and self.turntable_widget is not None:
+            self.turntable_widget.resume_trial()
 
     # Function to enable the pause and resume buttons(So they are not greyed out)
     def enable_pause_resume_buttons(self):
@@ -747,6 +838,8 @@ class Frame(QFrame):
     def on_next_button_clicked(self):
         if hasattr(self, 'display_widget') and self.display_widget is not None:
             QMetaObject.invokeMethod(self.display_widget, "proceed_from_next_button", Qt.QueuedConnection)
+        if hasattr(self, 'turntable_widget') and self.turntable_widget is not None:
+            QMetaObject.invokeMethod(self.turntable_widget, "proceed_from_next_button", Qt.QueuedConnection)
 
 class InstructionFrame(QWidget):
     def __init__(self, parent=None):
