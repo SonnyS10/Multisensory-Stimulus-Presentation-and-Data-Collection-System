@@ -1,4 +1,4 @@
-# EEG Stimulus Project - Developer Documentation
+# EEG Stimulus Project - Developer Documentation (Updated)
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
@@ -11,14 +11,17 @@
 8. [Network Architecture](#network-architecture)
 9. [Hardware Integration](#hardware-integration)
 10. [Development Guidelines](#development-guidelines)
-11. [Troubleshooting](#troubleshooting)
-12. [Future Enhancements](#future-enhancements)
+11. [API Reference](#api-reference)
+12. [Testing and Quality Assurance](#testing-and-quality-assurance)
+13. [Deployment and Distribution](#deployment-and-distribution)
+14. [Troubleshooting](#troubleshooting)
+15. [Future Enhancements](#future-enhancements)
 
 ---
 
 ## Project Overview
 
-The EEG Stimulus Project is a comprehensive multisensory research platform designed for synchronized presentation of visual, tactile, and olfactory stimuli while collecting EEG, eye tracking, and behavioral data. This system is built using Python with PyQt5 for the GUI framework and integrates with multiple hardware systems for data collection.
+The EEG Stimulus Project is a comprehensive multisensory research platform designed for synchronized presentation of visual, tactile, and olfactory stimuli while collecting EEG, eye tracking, and behavioral data. This system has been extensively documented and commented for maintainability and extensibility.
 
 ### Key Features
 - **Multi-modal Stimulus Presentation**: Visual (VR/screen), tactile, and olfactory stimuli
@@ -27,17 +30,20 @@ The EEG Stimulus Project is a comprehensive multisensory research platform desig
 - **Synchronization**: Lab Streaming Layer (LSL) for precise timing
 - **Experiment Management**: Automated trial sequencing and data saving
 - **Hardware Integration**: Support for HTC VIVE Pro Eye, EMOTIV EEG, Eyelink eye tracker
+- **Cross-Platform Compatibility**: Windows, Linux, and macOS support
+- **Comprehensive Documentation**: Fully commented codebase with detailed guides
 
 ### Target Users
 - **Researchers**: Running multisensory experiments
 - **Developers**: Maintaining and extending the system
 - **Technicians**: Setting up and troubleshooting hardware
+- **System Administrators**: Deploying and managing installations
 
 ---
 
 ## System Architecture
 
-The system follows a modular architecture with clear separation of concerns:
+The system follows a modular, distributed architecture with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────┐
