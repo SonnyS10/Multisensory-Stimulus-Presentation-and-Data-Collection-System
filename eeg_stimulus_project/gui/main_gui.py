@@ -69,6 +69,7 @@ class GUI(QMainWindow):
         # Initialize hardware connection status flags
         self.eyetracker_connected = False
         self.labrecorder_connected = False
+        self.local_mode = local_mode
         
         # Start network listener if connection exists (client mode)
         if connection is not None:
@@ -398,7 +399,7 @@ class GUI(QMainWindow):
                     non_alcohol_folder=self.non_alcohol_folder,
                     randomize_cues=randomize_cues,
                     seed=seed,
-                    repetitions=repetitions
+                    repetitions=repetitions, local_mode=self.local_mode
                 )
                 
                 # Connect experiment control signals
@@ -529,7 +530,9 @@ class GUI(QMainWindow):
                                 QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
                         elif msg.get("action") == "labrecorder_connected":
                             self.labrecorder_connected = True
+                            self.shared_status['lab_recorder_connected'] = True
                         elif msg.get("action") == "eyetracker_connected":
+                            self.shared_status['eyetracker_connected'] = True
                             self.eyetracker_connected = True
                         elif msg.get("action") == "tactile_connected":
                             self.shared_status['tactile_connected'] = True
@@ -739,6 +742,8 @@ class Frame(QFrame):
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
+        print(self.shared_status['lab_recorder_connected'])
+        print(self.shared_status['eyetracker_connected'])
         # Check if at least one of the checkboxes is checked
         checked = False
         # Defensive: check if the attributes exist (they may not in all test types)
@@ -753,7 +758,7 @@ class Frame(QFrame):
             return
 
         # --- Labrecroder/Eyetracker connection warning ---
-        if self.eyetracker_connected == False or self.labrecorder_connected == False:
+        if not self.shared_status.get('lab_recorder_connected', False) or not self.shared_status.get('eyetracker_connected', False):
             reply = QMessageBox.question(
                 self,
                 "LabRecorder/Eyetracker Not Connected",
