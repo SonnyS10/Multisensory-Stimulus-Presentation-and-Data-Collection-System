@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(" Multisensory Stimulus Presentation and Data Collection System")
-        self.setFixedSize(1000, 800)  # Set a fixed size (width, height)
+        self.setFixedSize(1000, 700)  # Set a fixed size (width, height)
         # self.setMinimumSize(600, 480)  # Or use this for a minimum size
 
         # Center the window on the screen
@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(18)
 
         # --- Subject Section ---
-        subject_group = QGroupBox("Subject Information")
+        subject_group = QGroupBox("Subject Information: Only Fill this out if you are on the Data Collection Computer (Host)")
         subject_layout = QVBoxLayout(subject_group)
         subject_layout.setSpacing(8)
 
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
         self.subject_id_input.setFont(QFont("Segoe UI", 11))
         self.subject_id_input.setPlaceholderText("Enter subject ID...")
 
-        self.test_number_label = QLabel("Test Number (1 or 2):")
+        self.test_number_label = QLabel("Test Number: 1(Passive Viewing) or 2(Stroop Task)")
         self.test_number_label.setFont(QFont("Segoe UI", 11))
         self.test_number_input = QLineEdit()
         self.test_number_input.setFont(QFont("Segoe UI", 11))
@@ -151,12 +151,12 @@ class MainWindow(QMainWindow):
         host_layout = QHBoxLayout(host_group)
         host_layout.setSpacing(12)
 
-        self.start_as_host_button = QPushButton("Start as Host")
+        self.start_as_host_button = QPushButton("Start as Data Collection Computer (Host)")
         self.start_as_host_button.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.start_as_host_button.setStyleSheet("background-color: #7E57C2; color: white; padding: 6px 18px; border-radius: 6px;")
         self.start_as_host_button.clicked.connect(lambda: self.start_experiment(client=False, host=True))
 
-        self.start_button = QPushButton("Start Local")
+        self.start_button = QPushButton("Developer Mode")
         self.start_button.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.start_button.setStyleSheet("background-color: #26A69A; color: white; padding: 6px 18px; border-radius: 6px;")
         self.start_button.clicked.connect(lambda: self.start_experiment(client=False, host=False))
@@ -165,7 +165,7 @@ class MainWindow(QMainWindow):
         host_layout.addWidget(self.start_button)
 
         # --- Client Section ---
-        client_group = QGroupBox("Client Connection")
+        client_group = QGroupBox("Experimenter Computer (Client)")
         client_layout = QHBoxLayout(client_group)
         client_layout.setSpacing(8)
 
@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
         self.host_ip_input.setText("169.254.37.25")
         self.host_ip_input.setPlaceholderText("Enter host IP...")
 
-        self.start_as_client_button = QPushButton("Start as Client")
+        self.start_as_client_button = QPushButton("Start Experimenter Computer (Client)")
         self.start_as_client_button.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.start_as_client_button.setStyleSheet("background-color: #42A5F5; color: white; padding: 6px 18px; border-radius: 6px;")
         self.start_as_client_button.clicked.connect(lambda: self.start_experiment(client=True, host=False))
@@ -257,8 +257,8 @@ class MainWindow(QMainWindow):
         self.start_as_client_button.setEnabled(False)
 
         # Get folder paths for images
-        alcohol_folder = self.alcohol_folder_input.text().strip()
-        non_alcohol_folder = self.non_alcohol_folder_input.text().strip()
+        alcohol_folder = os.path.abspath(self.alcohol_folder_input.text().strip())
+        non_alcohol_folder = os.path.abspath(self.non_alcohol_folder_input.text().strip())
 
         # Get user input values
         subject_id = self.subject_id_input.text() if host or (not host and not client) else None

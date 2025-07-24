@@ -159,3 +159,49 @@ class Sidebar(QFrame):
             """)
             button.clicked.connect(option_func)
             self.submenu_layout.addWidget(button)
+
+    def highlight_tests(self, test_number):
+        # Collect all test buttons in order of creation
+        # Passive: first 6, Stroop: next 4
+        buttons = []
+        for i in range(self.submenu_layout.count()):
+            widget = self.submenu_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                buttons.append(widget)
+        # Passive: buttons[0:6], Stroop: buttons[6:10]
+        passive_buttons = buttons[0:6]
+        stroop_buttons = buttons[6:10]
+        default_style = """
+            QPushButton {
+                background-color: #ede7f6;
+                color: #53366b;
+                border-radius: 7px;
+                padding: 7px 0px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #d1b3ff;
+            }
+        """
+        highlight_style = """
+            QPushButton {
+                background-color: #ffe082;
+                color: #53366b;
+                border-radius: 7px;
+                padding: 7px 0px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #ffd54f;
+            }
+        """
+        # Reset all
+        for btn in passive_buttons + stroop_buttons:
+            btn.setStyleSheet(default_style)
+        # Highlight relevant
+        if str(test_number) == '1':
+            for btn in passive_buttons:
+                btn.setStyleSheet(highlight_style)
+        elif str(test_number) == '2':
+            for btn in stroop_buttons:
+                btn.setStyleSheet(highlight_style)

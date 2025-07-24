@@ -362,6 +362,24 @@ class DisplayWindow(QMainWindow):
             alcohol_folder, non_alcohol_folder, randomize_cues=randomize_cues, seed=seed, repetitions=repetitions
         )
 
+        # Move to monitor two and fullscreen
+        app = QApplication.instance()
+        if app is not None:
+            screens = app.screens()
+            if len(screens) > 1:
+                screen = screens[1]  # Second monitor (index 1)
+                geometry = screen.geometry()
+                self.move(geometry.left(), geometry.top())
+                self.showFullScreen()
+            else:
+                # Only one monitor, just move to default position and size (not fullscreen)
+                self.move(100, 100)
+                self.resize(700, 700)
+        else:
+            # Fallback: just move to default position and size
+            self.move(100, 100)
+            self.resize(700, 700)
+
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -718,8 +736,12 @@ class DisplayWindow(QMainWindow):
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                     self.removeEventFilter(self)
                     if "Tactile" in self.current_test:
-                        # For tactile Stroop, show crosshair after keypress
-                        self.show_crosshair_and_wait_tactile(stroop=True)
+                        if self.next_asset_is_craving():
+                            # Show crosshair, then craving rating, then crosshair and wait for next button
+                            self.show_crosshair_before_craving()
+                        else:
+                            # Standard tactile: show crosshair and wait for next button
+                            self.show_crosshair_and_wait_tactile(stroop=True)
                     else:
                         if self.next_asset_is_craving():
                             self._advance_image()
@@ -1061,10 +1083,17 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.show_crosshair_period()
         # Advance after crosshair
         if self.current_image_index < len(self.images) - 1:
-            QTimer.singleShot(1000, self._advance_image)
+            next_asset = self.images[self.current_image_index + 1]
+            if "Tactile" in self.current_test and hasattr(self.frame, 'next_button'):
+                # After craving rating, show crosshair and enable next button for tactile
+                self.waiting_for_next = True
+                self.frame.next_button.setEnabled(True)
+                # Optionally, keep crosshair showing until next button is pressed
+            else:
+                QTimer.singleShot(1000, self._advance_image)
         else:
             QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
-
+        
     def show_crosshair_before_craving(self):
         # Show crosshair for a short period before craving rating
         self.clear_overlay()

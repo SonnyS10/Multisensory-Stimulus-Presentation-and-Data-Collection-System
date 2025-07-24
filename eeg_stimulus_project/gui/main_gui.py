@@ -55,6 +55,9 @@ class GUI(QMainWindow):
         
         self.sidebar = Sidebar(self)
         self.main_layout.addWidget(self.sidebar)
+
+        # Highlight tests based on test_number
+        self.sidebar.highlight_tests(self.test_number)
         
         self.main_frame = MainFrame(self)
         self.main_layout.addWidget(self.main_frame)
@@ -108,10 +111,33 @@ class GUI(QMainWindow):
         self._latency_rtts = []
         self._latency_test_count = 0
 
-    def show_test_frame(self, frame):
-        self.last_test_frame = frame
-        self.stacked_widget.setCurrentWidget(frame)
-        self.sidebar.instructions_button.setText("Show Instructions")
+    def show_test_frame(self, frame_or_name):
+        # If a string is passed, map it to the correct frame
+        if isinstance(frame_or_name, str):
+            test_name_to_frame = {
+                'Unisensory Neutral Visual': self.unisensory_neutral_visual,
+                'Unisensory Alcohol Visual': self.unisensory_alcohol_visual,
+                'Multisensory Neutral Visual & Olfactory': self.multisensory_neutral_visual_olfactory,
+                'Multisensory Alcohol Visual & Olfactory': self.multisensory_alcohol_visual_olfactory,
+                'Multisensory Neutral Visual, Tactile & Olfactory': self.multisensory_neutral_visual_tactile_olfactory,
+                'Multisensory Alcohol Visual, Tactile & Olfactory': self.multisensory_alcohol_visual_tactile_olfactory,
+                'Stroop Multisensory Alcohol (Visual & Tactile)': self.multisensory_alcohol_visual_tactile,
+                'Stroop Multisensory Neutral (Visual & Tactile)': self.multisensory_neutral_visual_tactile,
+                'Stroop Multisensory Alcohol (Visual & Olfactory)': self.multisensory_alcohol_visual_olfactory2,
+                'Stroop Multisensory Neutral (Visual & Olfactory)': self.multisensory_neutral_visual_olfactory2,
+            }
+            frame = test_name_to_frame.get(frame_or_name)
+            if frame is not None:
+                self.last_test_frame = frame
+                self.stacked_widget.setCurrentWidget(frame)
+                self.sidebar.instructions_button.setText("Show Instructions")
+            else:
+                QMessageBox.warning(self, "Test Not Found", f"No frame found for test: {frame_or_name}")
+        else:
+            # Assume it's a frame object
+            self.last_test_frame = frame_or_name
+            self.stacked_widget.setCurrentWidget(frame_or_name)
+            self.sidebar.instructions_button.setText("Show Instructions")
 
     #Functions to show different frames
     def create_frame(self, title, is_stroop_test=False):
@@ -762,6 +788,7 @@ class InstructionFrame(QWidget):
             "<li><b>Sidebar:</b> Select different experimental tests and modalities.</li>"
             "<li><b>Instructions Button:</b> Open/close this guide.</li>"
             "<li><b>Latency Checker:</b> Measure network latency (see next page).</li>"
+            "<li><b>Stimulus Order Management:</b> View and edit the order of stimuli for each test.</li>"
             "<li><b>Main Area:</b> Controls and status for the selected experiment.</li>"
             "</ul>"
             "<p>Use the <b>Start</b>, <b>Stop</b>, <b>Pause</b>, <b>Resume</b>, and <b>Next</b> buttons to control the experiment flow.</p>"
@@ -792,6 +819,36 @@ class InstructionFrame(QWidget):
             "</ol>"
             "<p><i>The Latency Checker runs for 5 seconds, sending 10 pings per second, and displays the average latency for 50 total pings.</i></p>"
         )
+        self.add_instruction_page(
+            "<h2>🗂️ Stimulus Order Management Frame</h2>"
+            "<ul>"
+            "<li>🔽 <b>Test Picker (Top Dropdown):</b><br>"
+            "Select which test's stimulus order you want to view or edit.</li><br>"
+            "<li>🖼️ <b>Current Order Window:</b><br>"
+            "Shows the current working order of images for the selected test.<br>"
+            "You can drag and drop images to rearrange their order.</li><br>"
+            "<li>🖱️ <b>Drag and Drop:</b><br>"
+            "Click and drag images within the list to change their presentation order.</li><br>"
+            "<li>📁 <b>Available Assets:</b><br>"
+            "Shows all images that can be added to the current test.<br>"
+            "Select an asset and click <b>Add Selected Asset</b> to add it to the working order.</li><br>"
+            "<li>➕ <b>Add Assets:</b><br>"
+            "Use the <b>Add Selected Asset</b> button to insert the chosen asset into the current order.</li><br>"
+            "<li>🗑️ <b>Delete Assets:</b><br>"
+            "Select an image in the current order and click <b>Delete Selected Stimulus</b> to remove it.</li><br>"
+            "<li>📄 <b>Import from CSV/XLSX:</b><br>"
+            "Use <b>Import Order from CSV</b> to load a custom order from a CSV or Excel file.<br>"
+            "The file should list image names in the desired order (one per row).</li><br>"
+            "<li>🔄 <b>Reset Order:</b><br>"
+            "Click <b>Reset Working Order</b> to revert to the original order for the selected test.</li><br>"
+            "<li>✅ <b>Apply Order:</b><br>"
+            "Click <b>Apply Custom Order</b> to save your changes. This order will be used during the experiment.</li><br>"
+            "<li>🎲 <b>Randomizer & Repetitions:</b><br>"
+            "Use the randomization options to shuffle cues and/or set how many times each image appears.<br>"
+            "Click <b>Randomize Now</b> to apply these settings to the working order.</li>"
+            "</ul>"
+            "<p><b>Remember:</b> Changes are only used in the experiment after you click <b>Apply Custom Order</b>.</p>"
+        )        
         self.add_instruction_page(
             "<h2>🧪 Running a Test</h2>"
             "<ol>"

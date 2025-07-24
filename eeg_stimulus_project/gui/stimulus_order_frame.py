@@ -7,6 +7,7 @@ for each test. Users can view and rearrange the order of images through drag-and
 import os
 import csv
 import re
+import time
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, 
     QListWidget, QListWidgetItem, QFrame, QMessageBox, QSizePolicy, QFileDialog,
@@ -51,6 +52,7 @@ class StimulusOrderFrame(QWidget):
     
     def setup_ui(self):
         """Setup the user interface components."""
+        print("Setting up Stimulus Order Frame UI...")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
@@ -70,7 +72,6 @@ class StimulusOrderFrame(QWidget):
         self.test_selector = QComboBox()
         self.test_selector.setFont(QFont("Segoe UI", 11))
         self.test_selector.setMinimumWidth(400)
-        self.test_selector.currentTextChanged.connect(self.on_test_selected)
         
         # Populate test selector with available tests
         test_names = [
@@ -91,6 +92,27 @@ class StimulusOrderFrame(QWidget):
         
         test_layout.addWidget(self.test_selector)
         test_layout.addStretch()
+
+        # --- Go to Selected Test Button (top right) ---
+        self.goto_test_btn = QPushButton("Go to Selected Test")
+        self.goto_test_btn.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.goto_test_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff7043;
+                color: white;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 16px;
+                min-width: 180px;
+                min-height: 44px;
+            }
+            QPushButton:hover {
+                background-color: #d84315;
+            }
+        """)
+        self.goto_test_btn.clicked.connect(self.goto_selected_test)
+        test_layout.addWidget(self.goto_test_btn)
+
         layout.addLayout(test_layout)
         
         # Instructions
@@ -98,9 +120,10 @@ class StimulusOrderFrame(QWidget):
             "Drag and drop images to rearrange their presentation order. "
             "Changes are made to your working order. Click 'Apply Custom Order' to save changes for actual test use."
         )
-        instructions.setFont(QFont("Segoe UI", 10))
+        instructions.setFont(QFont("Segoe UI", 14))
+        instructions.setTextFormat(Qt.RichText)
         instructions.setWordWrap(True)
-        instructions.setStyleSheet("color: #666; margin: 10px 0;")
+        instructions.setStyleSheet("color: #000000; margin: 10px 0;")
         layout.addWidget(instructions)
         
         # Image list
@@ -229,12 +252,13 @@ class StimulusOrderFrame(QWidget):
         assets_layout = QVBoxLayout(assets_frame)
         assets_layout.setSpacing(8)
 
-        assets_label = QLabel("Available Assets (click to add):")
+        assets_label = QLabel("Available Assets (Select then hit the Add Selected Asset Button to Add):")
         assets_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         assets_label.setAlignment(Qt.AlignLeft)
         assets_layout.addWidget(assets_label)
 
         self.available_assets_list = QListWidget()
+        print("available_assets_list created:", hasattr(self, "available_assets_list"))
         self.available_assets_list.setSelectionMode(QListWidget.SingleSelection)
         self.available_assets_list.setMinimumHeight(120)
         self.available_assets_list.setStyleSheet("""
@@ -363,9 +387,14 @@ class StimulusOrderFrame(QWidget):
         randomization_layout.addWidget(self.randomize_now_btn)
 
         layout.addWidget(randomization_frame)
+        self.setLayout(layout)
+
+        # Now connect the signal, after all widgets are created!
+        self.test_selector.currentTextChanged.connect(self.on_test_selected)
 
     def load_current_assets(self):
         """Load current assets from the asset handler."""
+        print("Loading current assets...")
         try:
             randomize_cues, seed = self.get_randomization_settings()
             repetitions = self.get_repetitions_settings()
@@ -387,12 +416,22 @@ class StimulusOrderFrame(QWidget):
                     asset_list.append(original_craving)
                     self.original_assets[test_name] = asset_list
 
-            # Gather all unique assets for the available assets list
+            # Gather all unique assets for the available assets list, tagging by origin
             asset_dict = {}
+            alcohol_folder = os.path.abspath(self.alcohol_folder) if self.alcohol_folder else None
+            non_alcohol_folder = os.path.abspath(self.non_alcohol_folder) if self.non_alcohol_folder else None
             for images in self.original_assets.values():
                 for img in images:
                     fname = getattr(img, 'filename', None)
                     if fname:
+                        fname_abs = os.path.abspath(fname)
+
+                        if alcohol_folder and fname_abs.startswith(alcohol_folder):
+                            img.asset_origin = "alcohol"
+                        elif non_alcohol_folder and fname_abs.startswith(non_alcohol_folder):
+                            img.asset_origin = "neutral"
+                        else:
+                            img.asset_origin = "unknown"
                         norm = self.normalize_name(os.path.basename(fname))
                         asset_dict[norm] = img
             self.all_asset_objs = list(asset_dict.values())
@@ -404,9 +443,24 @@ class StimulusOrderFrame(QWidget):
             self.update_available_assets_list()
 
     def update_available_assets_list(self):
-        """Update the available assets list widget."""
+        """Update the available assets list widget, filtering by test type."""
+        print("update_available_assets_list called, has available_assets_list:", hasattr(self, "available_assets_list"))
         self.available_assets_list.clear()
+        if not self.current_test_name:
+            return
+
+        test_name = self.current_test_name.lower()
+        if "neutral" in test_name and "alcohol" not in test_name:
+            cue_type = "neutral"
+        elif "alcohol" in test_name:
+            cue_type = "alcohol"
+        else:
+            cue_type = None  # Show all if not specified
+
         for img in self.all_asset_objs:
+            # Only show assets from the correct folder
+            if cue_type and getattr(img, "asset_origin", None) != cue_type:
+                continue
             item = QListWidgetItem()
             fname = getattr(img, 'filename', None)
             display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
@@ -425,14 +479,14 @@ class StimulusOrderFrame(QWidget):
         # Add the craving rating asset to the available assets list
         craving_item = QListWidgetItem("craving_rating")
         craving_item.setData(Qt.UserRole, CravingRatingAsset())
-        #craving_item.setIcon(QIcon(":/icons/star.png"))  # Optional: use a custom icon if you have one
         self.available_assets_list.addItem(craving_item)
 
     def on_test_selected(self):
         """Handle test selection change."""
         self.current_test_name = self.test_selector.currentText()
         self.update_image_list()
-    
+        self.update_available_assets_list()
+
     def update_image_list(self):
         """Update the image list widget with current test's working order."""
         if not self.current_test_name or self.current_test_name not in self.original_assets:
@@ -817,11 +871,14 @@ class StimulusOrderFrame(QWidget):
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
 
-        if dialog.exec_() == QDialog.Accepted:
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
             self.stimulus_repetitions = {
                 self.normalize_name(name): int(edits[name].text()) if edits[name].text().isdigit() else 1
                 for name in stimulus_names
             }
+            return True
+        return False
 
     def get_stimulus_names_from_folders(self, alcohol_folder, non_alcohol_folder):
         """Get stimulus names from the specified folders."""
@@ -855,9 +912,21 @@ class StimulusOrderFrame(QWidget):
 
     def on_randomize_now_clicked(self):
         """Randomize and show the new order, including Craving Rating and repetitions."""
+        if not self.randomize_checkbox.isChecked():
+            QMessageBox.critical(
+                self,
+                "Randomization Disabled",
+                "Please check the 'Randomize Alcohol/Non-Alcohol Cues' box before randomizing.",
+                QMessageBox.Ok
+            )
+            return
+
         # Only show repetition dialog if the checkbox is checked
         if self.repetition_checkbox.isChecked():
-            self.open_repetition_dialog()
+            accepted = self.open_repetition_dialog()
+            if not accepted:
+                # User cancelled, do NOT randomize, keep working order unchanged
+                return
             repetitions = self.stimulus_repetitions
         else:
             repetitions = None
@@ -927,6 +996,37 @@ class StimulusOrderFrame(QWidget):
         )
     def is_passive_test(self):
         return self.current_test_name and not self.current_test_name.lower().startswith("stroop")
+
+    def goto_selected_test(self):
+        """Ask for confirmation, then go to the selected test if confirmed."""
+        if not self.current_test_name:
+            QMessageBox.warning(
+                self,
+                "No Test Selected",
+                "Please select a test from the dropdown first.",
+                QMessageBox.Ok
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Continue to Test",
+            f"Are you sure you want to continue to the test:\n{self.current_test_name}\n"
+            "Any unsaved changes to the stimulus order will be lost.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            # Call a method on the parent to show the selected test, if available
+            if hasattr(self.parent, "show_test_frame"):
+                self.parent.show_test_frame(self.current_test_name)
+            else:
+                QMessageBox.information(
+                    self,
+                    "Go to Test",
+                    f"Would go to test: {self.current_test_name}\n(Implement show_test_frame in parent to enable navigation.)",
+                    QMessageBox.Ok
+                )
 
 class CravingRatingAsset:
     def __init__(self):
