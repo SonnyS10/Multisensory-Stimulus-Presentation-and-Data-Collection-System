@@ -90,7 +90,7 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
     sys.exit(app.exec_())
 
 # Launches the main GUI process (client or local)
-def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None):
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, local_mode=False):
     from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.main_gui import GUI
     

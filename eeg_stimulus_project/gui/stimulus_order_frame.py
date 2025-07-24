@@ -52,7 +52,7 @@ class StimulusOrderFrame(QWidget):
     
     def setup_ui(self):
         """Setup the user interface components."""
-        print("Setting up Stimulus Order Frame UI...")
+        #print("Setting up Stimulus Order Frame UI...")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
@@ -258,7 +258,7 @@ class StimulusOrderFrame(QWidget):
         assets_layout.addWidget(assets_label)
 
         self.available_assets_list = QListWidget()
-        print("available_assets_list created:", hasattr(self, "available_assets_list"))
+        #print("available_assets_list created:", hasattr(self, "available_assets_list"))
         self.available_assets_list.setSelectionMode(QListWidget.SingleSelection)
         self.available_assets_list.setMinimumHeight(120)
         self.available_assets_list.setStyleSheet("""
@@ -394,7 +394,7 @@ class StimulusOrderFrame(QWidget):
 
     def load_current_assets(self):
         """Load current assets from the asset handler."""
-        print("Loading current assets...")
+        #print("Loading current assets...")
         try:
             randomize_cues, seed = self.get_randomization_settings()
             repetitions = self.get_repetitions_settings()
@@ -444,7 +444,7 @@ class StimulusOrderFrame(QWidget):
 
     def update_available_assets_list(self):
         """Update the available assets list widget, filtering by test type."""
-        print("update_available_assets_list called, has available_assets_list:", hasattr(self, "available_assets_list"))
+        #print("update_available_assets_list called, has available_assets_list:", hasattr(self, "available_assets_list"))
         self.available_assets_list.clear()
         if not self.current_test_name:
             return
