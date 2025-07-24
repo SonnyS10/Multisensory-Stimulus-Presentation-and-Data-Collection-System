@@ -1,9 +1,16 @@
+"""
+Display Window Module
+
+Manages stimulus presentation windows for participants and experimenters.
+Provides both main display and mirrored preview windows with experiment control.
+"""
+
 import sys
 import os
 from pathlib import Path
 import csv
 
-# Add the project root to Python path
+# Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -22,10 +29,13 @@ import logging
 import random
 from logging.handlers import QueueHandler
 
-#This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
-#It contains the same layout and functionality as the main display window, but it is not interactive
-#It is used to show the experimenter what the subject is seeing
 class MirroredDisplayWindow(QWidget):
+    """
+    Mirror display for experimenter monitoring.
+    
+    Shows the same content as participant display in the main experiment window,
+    allowing experimenters to monitor experiment progress without interaction.
+    """
     def __init__(self, parent=None, current_test=None):
         super().__init__(parent)
 
@@ -207,15 +217,20 @@ class MirroredDisplayWindow(QWidget):
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
 
-#This is the main display window that contains the experiment and the logic to make the mirror display function 
-#It is the main window that the subject sees and interacts with
 class DisplayWindow(QMainWindow):
+    """
+    Main participant display window for stimulus presentation.
+    
+    Handles experiment execution, stimulus display, user interaction,
+    and data collection coordination across hardware systems.
+    """
     experiment_started = pyqtSignal()
-    proceed_after_crosshair = pyqtSignal()  # Add this at class level
+    proceed_after_crosshair = pyqtSignal()  
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None, repetitions=None, local_mode=None):  # <-- Add repetitions here
+                 randomize_cues=False, seed=None, repetitions=None):
+        """Initialize display window with experiment parameters and hardware connections."""
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
