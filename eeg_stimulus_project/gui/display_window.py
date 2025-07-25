@@ -2,6 +2,7 @@ import sys
 import os
 from pathlib import Path
 import csv
+from pynput import keyboard
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -698,11 +699,12 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(text, font)
         if hasattr(img, 'filename'):
-              label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
-              self.label_stream.push_label(label)
-              logging.info(f"Current label: {label}")
-              self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-              self.current_label = label
+            label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
+            self.label_stream.push_label(label)
+            logging.info(f"Current label: {label}")
+            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+            self.current_label = label
+        self.waiting_for_stroop_response = True  # <--- Add this line
 
     #This method is called to wait for the user input, it installs an event filter to capture the key press events
     def wait_for_input(self):
@@ -710,6 +712,11 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
+        if event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Y:
+                return self.handle_stroop_key('Y')
+            elif event.key() == Qt.Key_N:
+                return self.handle_stroop_key('N')
         # Only handle image input if index is valid
         if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
             if event.type() == QEvent.KeyPress:
@@ -813,8 +820,9 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentIndex(1)
         if hasattr(self, 'mirror_widget'):
             self.mirror_widget.begin_experiment()
-        self.experiment_started.emit()  # Emit the signal to start the experiment
+        self.experiment_started.emit()
         self.run_trial()
+        self.start_global_key_listener()
 
     #This method is called to set the mirror widget, it sets the mirror widget to the passed widget
     def set_mirror(self, mirror_widget):
@@ -825,6 +833,7 @@ class DisplayWindow(QMainWindow):
         if getattr(self, 'stopped', False):
             logging.info("Closing DisplayWindow...")
             self.send_message({"action": "client_log", "message": "Closing DisplayWindow..."})
+            self.stop_global_key_listener()
             # Allow closing and do cleanup
             if hasattr(self, 'timer') and self.timer.isActive():
                 self.timer.stop()
@@ -1144,3 +1153,71 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.show_crosshair_period()
         # After 2 minutes, show the end screen (not restart the experiment)
         QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
+
+    def start_global_key_listener(self):
+        # Start listening for global key presses
+        self.global_key_listener = keyboard.Listener(on_press=self.handle_global_key)
+        self.global_key_listener.start()
+
+    def stop_global_key_listener(self):
+        # Stop the global key listener
+        if hasattr(self, 'global_key_listener') and self.global_key_listener is not None:
+            self.global_key_listener.stop()
+            self.global_key_listener = None
+
+    def handle_global_key(self, key):
+        try:
+            if hasattr(key, 'char') and key.char is not None:
+                key_name = key.char.upper()
+                if key_name in ['Y', 'N'] and getattr(self, 'waiting_for_stroop_response', False):
+                    print(f"[DEBUG] Global key pressed: {key_name}")
+                    self.handle_stroop_key(key_name)
+        except Exception as e:
+            print(f"Error in global key handler: {e}")
+
+    def process_stroop_answer(self, answer):
+        # Your logic to handle the answer
+        self.user_data['user_inputs'].append(answer)
+        self.user_data['elapsed_time'].append(self.elapsed_time)
+        self.waiting_for_next = False
+        if hasattr(self.frame, 'next_button'):
+            self.frame.next_button.setEnabled(False)
+        self.show_touch_instruction()
+
+    def handle_stroop_key(self, key_name):
+        # Only handle image input if index is valid
+        if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
+            img = self.images[self.current_image_index]
+            if key_name == 'Y':
+                self.user_data['user_inputs'].append('Yes')
+                if hasattr(img, 'filename'):
+                    label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
+                    self.send_message({"action": "label", "label": label})
+                    self.label_stream.push_label(label)
+                    logging.info(f"Current label: {label}")
+                    self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                    self.current_label = label  # Push label to LSL stream
+            elif key_name == 'N':
+                self.user_data['user_inputs'].append('No')
+                if hasattr(img, 'filename'):
+                    label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
+                    self.send_message({"action": "label", "label": label})
+                    self.label_stream.push_label(label)
+                    logging.info(f"Current label: {label}")
+                    self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                    self.current_label = label  # Push label to LSL stream
+            self.user_data['elapsed_time'].append(self.elapsed_time)
+            self.removeEventFilter(self)
+            self.waiting_for_stroop_response = False  # <--- Add this line
+            if "Tactile" in self.current_test:
+                if self.next_asset_is_craving():
+                    self.show_crosshair_before_craving()
+                else:
+                    self.show_crosshair_and_wait_tactile(stroop=True)
+            else:
+                if self.next_asset_is_craving():
+                    self._advance_image()
+                else:
+                    self.show_crosshair_between_images('stroop')
+            return True
+        return False
