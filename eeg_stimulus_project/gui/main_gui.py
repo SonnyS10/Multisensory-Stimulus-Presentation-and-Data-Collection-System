@@ -668,8 +668,20 @@ class Frame(QFrame):
             test_order_names = [os.path.splitext(os.path.basename(img.filename))[0] for img in test_order if hasattr(img, 'filename')]
 
             from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
+            def send_message_from_turntable(msg):
+                if self.client:
+                    try:
+                        self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+                    except Exception as e:
+                        logging.info(f"Error sending message: {e}")
+
             if "Tactile" in test_name:
-                self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={}, tactile_mode=True)
+                self.turntable_window = TurntableWindow(
+                    test_order=test_order_names,
+                    object_to_bay={},
+                    tactile_mode=True,
+                    send_message=send_message_from_turntable  # <-- pass this function
+                )
             else:
                 self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={}, tactile_mode=False)
             self.turntable_window.show()
