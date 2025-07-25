@@ -2236,6 +2236,7 @@
 2025-07-24 14:06:08,110 INFO Host: Waiting for client on port 9999...
 2025-07-24 14:06:08,944 INFO Host: Connected by ('169.254.185.196', 56784)
 2025-07-24 14:06:56,403 INFO Client disconnected.
+<<<<<<< HEAD
 2025-07-25 14:27:19,028 INFO Host: Waiting for client on port 9999...
 2025-07-25 14:30:56,043 INFO Host: Waiting for client on port 9999...
 2025-07-25 14:32:39,042 INFO Host: Waiting for client on port 9999...
@@ -2244,3 +2245,39 @@
 2025-07-25 14:46:50,440 INFO Client: Connected to host.
 2025-07-25 15:02:31,019 INFO Client: Connected to host.
 2025-07-25 15:07:18,674 INFO Client: Connected to host.
+=======
+2025-07-25 14:27:42,914 INFO Client: Connection error: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+2025-07-25 14:27:42,915 INFO Could not connect to host. Check IP and network.
+2025-07-25 14:31:19,017 INFO Client: Connection error: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+2025-07-25 14:31:19,017 INFO Could not connect to host. Check IP and network.
+2025-07-25 14:33:00,423 INFO Client: Connection error: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+2025-07-25 14:33:00,423 INFO Could not connect to host. Check IP and network.
+2025-07-25 14:34:36,175 INFO Client: Connection error: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+2025-07-25 14:34:36,176 INFO Could not connect to host. Check IP and network.
+2025-07-25 14:40:38,776 INFO Host: Waiting for client on port 9999...
+2025-07-25 14:40:41,351 INFO Host: Connected by ('169.254.185.196', 53601)
+2025-07-25 14:40:53,693 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-25 14:40:53,922 INFO Authentication (publickey) failed.
+2025-07-25 14:40:53,990 INFO Authentication (password) successful!
+2025-07-25 14:43:43,738 INFO Client disconnected.
+2025-07-25 14:46:44,440 INFO Host: Waiting for client on port 9999...
+2025-07-25 14:46:50,390 INFO Host: Connected by ('169.254.185.196', 53777)
+2025-07-25 14:46:55,777 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-25 14:46:55,918 INFO Authentication (publickey) failed.
+2025-07-25 14:46:55,951 INFO Authentication (password) successful!
+2025-07-25 14:48:21,475 INFO Client disconnected.
+2025-07-25 15:02:26,322 INFO Host: Waiting for client on port 9999...
+2025-07-25 15:02:30,969 INFO Host: Connected by ('169.254.185.196', 54271)
+2025-07-25 15:02:41,965 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-25 15:02:42,076 INFO Authentication (publickey) failed.
+2025-07-25 15:02:42,109 INFO Authentication (password) successful!
+2025-07-25 15:03:55,428 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-25 15:07:01,973 INFO Client disconnected.
+2025-07-25 15:07:13,055 INFO Host: Waiting for client on port 9999...
+2025-07-25 15:07:18,624 INFO Host: Connected by ('169.254.185.196', 54447)
+2025-07-25 15:07:35,553 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-07-25 15:07:35,654 INFO Authentication (publickey) failed.
+2025-07-25 15:07:35,690 INFO Authentication (password) successful!
+2025-07-25 15:09:35,277 INFO Cannot close host while client is connected. Please close the client first.
+2025-07-25 15:09:37,392 INFO Client disconnected.
+>>>>>>> 53f409a8e6379b2f2fdefeff97d31006b8a4e3d4

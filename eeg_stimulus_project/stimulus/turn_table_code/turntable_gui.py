@@ -295,11 +295,12 @@ class TurntableWindow(QWidget):
                 self.assignment_list.item(row, 1).setFont(font)
 
     def run_test_sequence(self):
-        # Reset state if starting again after stop
-        if self._stopped or self.current_index >= len(self.test_order):
+        # Only reset if stopped, not at end
+        if self._stopped:
             self._stopped = False
             self._paused = False
             self.current_index = 0
+
         if self._stopped:
             print("Test stopped.")
             return
