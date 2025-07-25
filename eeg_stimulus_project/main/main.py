@@ -9,8 +9,8 @@ sys.path.insert(0, str(project_root))
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox, QFileDialog, QGroupBox, QSizePolicy, QSpacerItem, QCheckBox
 )
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QIcon, QDesktopServices
+from PyQt5.QtCore import Qt, QUrl
 from multiprocessing import Manager, Process, Queue
 import socket
 import threading
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(" Multisensory Stimulus Presentation and Data Collection System")
-        self.setFixedSize(1000, 700)  # Set a fixed size (width, height)
+        self.setFixedSize(1000, 950)  # Set a fixed size (width, height)
         # self.setMinimumSize(600, 480)  # Or use this for a minimum size
 
         # Center the window on the screen
@@ -226,11 +226,26 @@ class MainWindow(QMainWindow):
         documentation_layout = QVBoxLayout(documentation_group)
         documentation_layout.setSpacing(8)
 
-        # Placeholder label for future documentation
-        documentation_label = QLabel("Documentation and usage instructions will appear here in the future.")
+        # List of (title, GitHub URL) pairs
+        doc_links = [
+            ("Getting Started", "https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System/blob/main/GETTING_STARTED.md"),
+            ("Experimenter Client Setup", "https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System/blob/main/EXPERIMENTER_CLIENT_GUIDE.md"),
+            ("Data Collection", "https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System/blob/main/DATA_COLLECTION_HOST_GUIDE.md"),
+            ("Developer Documentation", "https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System/blob/main/DEVELOPER_DOCUMENTATION.md"),
+            ("Troubleshooting", "https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System/blob/main/TROUBLESHOOTING.md"),
+        ]
+
+        documentation_label = QLabel("Click a button below to view documentation on GitHub.")
         documentation_label.setFont(QFont("Segoe UI", 10))
         documentation_label.setWordWrap(True)
         documentation_layout.addWidget(documentation_label)
+
+        for title, url in doc_links:
+            btn = QPushButton(title)
+            btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
+            btn.setStyleSheet("background-color: #e0e0e0; color: #333; padding: 6px 18px; border-radius: 6px;")
+            btn.clicked.connect(lambda checked, link=url: QDesktopServices.openUrl(QUrl(link)))
+            documentation_layout.addWidget(btn)
 
         # --- Add all groups to main layout ---
         main_layout.addWidget(subject_group)
