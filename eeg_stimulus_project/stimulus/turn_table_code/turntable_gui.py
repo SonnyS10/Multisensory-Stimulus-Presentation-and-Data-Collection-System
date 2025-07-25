@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
 from PyQt5.QtCore import Qt, QPoint, QTimer
-
+from PyQt5.QtCore import pyqtSlot
 from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
 
@@ -125,9 +125,11 @@ class AssignmentTableWidget(QTableWidget):
         painter.end()
 
 class TurntableWindow(QWidget):
-    def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False):
+    def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None):
         super().__init__()
         print(test_order)
+        self.tactile_mode = tactile_mode
+        self.send_message = send_message
         self.controller = TurntableController()
         self.door_controller = DoorController()
         self.setWindowTitle("Turntable GUI")
@@ -293,11 +295,12 @@ class TurntableWindow(QWidget):
                 self.assignment_list.item(row, 1).setFont(font)
 
     def run_test_sequence(self):
-        # Reset state if starting again after stop
-        if self._stopped or self.current_index >= len(self.test_order):
+        # Only reset if stopped, not at end
+        if self._stopped:
             self._stopped = False
             self._paused = False
             self.current_index = 0
+
         if self._stopped:
             print("Test stopped.")
             return
@@ -319,11 +322,14 @@ class TurntableWindow(QWidget):
         if self.tactile_mode:
             print("Waiting for touch signal from tactile box...")
             self.waiting_for_touch = True
+            if self.send_message:
+                self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
             self.door_controller.open()
             self._start_timer(2000, self.close_doors_and_continue)
 
+    @pyqtSlot()
     def on_object_touched(self):
         if self.tactile_mode and self.waiting_for_touch:
             print("Touch detected! Opening doors.")
