@@ -21,6 +21,7 @@ class DoorController:
         status = yaml.safe_load(self.ticcmd('-s', '--full'))
         return status['Current position']
 
+    #DO NOT MODIFY THESE PARAMETERS WITHOUT DEEP UNDERSTANING OF THE MOTOR AND CONTROLLER
     def set_motor_parameters(self):
         print("Setting motor parameters...")
         self.ticcmd('--current', '1920')

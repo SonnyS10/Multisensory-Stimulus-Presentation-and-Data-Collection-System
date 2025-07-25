@@ -13,6 +13,7 @@ class TurntableController:
         self.home()
 
         print("Setting motor parameters...")
+        #DO NOT MODIFY THESE PARAMETERS WITHOUT DEEP UNDERSTANING OF THE MOTOR AND CONTROLLER
         #self.ticcmd('--reset-command-timeout')
         self.ticcmd('--current', '1000')                # Set motor current to 1760 mA
         self.ticcmd('--step-mode', '16')                 # 1/16 step mode (4 = 1/16 for Tic controllers)
