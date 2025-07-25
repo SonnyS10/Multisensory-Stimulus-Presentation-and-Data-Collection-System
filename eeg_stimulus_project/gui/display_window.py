@@ -9,8 +9,8 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout, QApplication
-from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QCoreApplication
 from eeg_stimulus_project.assets.asset_handler import Display
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
@@ -712,49 +712,46 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
     def eventFilter(self, source, event):
-        if event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Y:
-                return self.handle_stroop_key('Y')
-            elif event.key() == Qt.Key_N:
-                return self.handle_stroop_key('N')
-        # Only handle image input if index is valid
-        if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
-            if event.type() == QEvent.KeyPress:
-                if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
-                    img = self.images[self.current_image_index]
-                    if event.key() == Qt.Key_Y:
-                        self.user_data['user_inputs'].append('Yes') # Store the user input
-                        if hasattr(img, 'filename'):
-                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
-                            self.send_message({"action": "label", "label": label})
-                            self.label_stream.push_label(label)
-                            logging.info(f"Current label: {label}")
-                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-                            self.current_label = label  # Push label to LSL stream
+        # Handle Y/N keys for Stroop responses
+        if event.type() == QEvent.KeyPress and (event.key() == Qt.Key_Y or event.key() == Qt.Key_N):
+            if getattr(self, 'waiting_for_stroop_response', False):
+                key_name = 'Y' if event.key() == Qt.Key_Y else 'N'
+                return self.handle_stroop_key(key_name)
+            # Handle legacy logic for non-stroop or other tests
+            elif self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
+                img = self.images[self.current_image_index]
+                if event.key() == Qt.Key_Y:
+                    self.user_data['user_inputs'].append('Yes')
+                    if hasattr(img, 'filename'):
+                        label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
+                        self.send_message({"action": "label", "label": label})
+                        self.label_stream.push_label(label)
+                        logging.info(f"Current label: {label}")
+                        self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                        self.current_label = label
+                elif event.key() == Qt.Key_N:
+                    self.user_data['user_inputs'].append('No')
+                    if hasattr(img, 'filename'):
+                        label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
+                        self.send_message({"action": "label", "label": label})
+                        self.label_stream.push_label(label)
+                        logging.info(f"Current label: {label}")
+                        self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                        self.current_label = label
+                self.user_data['elapsed_time'].append(self.elapsed_time)
+                self.removeEventFilter(self)
+                if "Tactile" in self.current_test:
+                    if self.next_asset_is_craving():
+                        self.show_crosshair_before_craving()
                     else:
-                        self.user_data['user_inputs'].append('No')  # Store the user input
-                        if hasattr(img, 'filename'):
-                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
-                            self.send_message({"action": "label", "label": label})
-                            self.label_stream.push_label(label)
-                            logging.info(f"Current label: {label}")
-                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-                            self.current_label = label  # Push label to LSL stream
-                    self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
-                    self.removeEventFilter(self)
-                    if "Tactile" in self.current_test:
-                        if self.next_asset_is_craving():
-                            # Show crosshair, then craving rating, then crosshair and wait for next button
-                            self.show_crosshair_before_craving()
-                        else:
-                            # Standard tactile: show crosshair and wait for next button
-                            self.show_crosshair_and_wait_tactile(stroop=True)
+                        self.show_crosshair_and_wait_tactile(stroop=True)
+                else:
+                    if self.next_asset_is_craving():
+                        self._advance_image()
                     else:
-                        if self.next_asset_is_craving():
-                            self._advance_image()
-                        else:
-                            self.show_crosshair_between_images('stroop')
-                    return True
+                        self.show_crosshair_between_images('stroop')
+                return True
+        
         # Handle craving rating input
         if hasattr(self, 'craving_response') and self.craving_response is None:
             if event.type() == QEvent.KeyPress:
@@ -1169,23 +1166,20 @@ class DisplayWindow(QMainWindow):
         try:
             if hasattr(key, 'char') and key.char is not None:
                 key_name = key.char.upper()
-                if key_name in ['Y', 'N'] and getattr(self, 'waiting_for_stroop_response', False):
-                    print(f"[DEBUG] Global key pressed: {key_name}")
-                    self.handle_stroop_key(key_name)
+                if key_name in ['Y', 'N']:
+                    # Only process global keys when window doesn't have focus
+                    if not self.hasFocus() and not self.isActiveWindow():
+                        print(f"[DEBUG] Global key pressed (window not focused): {key_name}")
+                        # Create a synthetic Qt KeyPress event and route it through eventFilter
+                        qt_key = Qt.Key_Y if key_name == 'Y' else Qt.Key_N
+                        synthetic_event = QKeyEvent(QEvent.KeyPress, qt_key, Qt.NoModifier, key_name.lower())
+                        # Use QCoreApplication.sendEvent to properly route the event
+                        QCoreApplication.sendEvent(self, synthetic_event)
         except Exception as e:
             print(f"Error in global key handler: {e}")
 
-    def process_stroop_answer(self, answer):
-        # Your logic to handle the answer
-        self.user_data['user_inputs'].append(answer)
-        self.user_data['elapsed_time'].append(self.elapsed_time)
-        self.waiting_for_next = False
-        if hasattr(self.frame, 'next_button'):
-            self.frame.next_button.setEnabled(False)
-        self.show_touch_instruction()
-
     def handle_stroop_key(self, key_name):
-        # Only handle image input if index is valid
+        # Route stroop key handling through eventFilter for consistency
         if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
             img = self.images[self.current_image_index]
             if key_name == 'Y':
@@ -1196,7 +1190,7 @@ class DisplayWindow(QMainWindow):
                     self.label_stream.push_label(label)
                     logging.info(f"Current label: {label}")
                     self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-                    self.current_label = label  # Push label to LSL stream
+                    self.current_label = label
             elif key_name == 'N':
                 self.user_data['user_inputs'].append('No')
                 if hasattr(img, 'filename'):
@@ -1205,10 +1199,10 @@ class DisplayWindow(QMainWindow):
                     self.label_stream.push_label(label)
                     logging.info(f"Current label: {label}")
                     self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-                    self.current_label = label  # Push label to LSL stream
+                    self.current_label = label
             self.user_data['elapsed_time'].append(self.elapsed_time)
             self.removeEventFilter(self)
-            self.waiting_for_stroop_response = False  # <--- Add this line
+            self.waiting_for_stroop_response = False
             if "Tactile" in self.current_test:
                 if self.next_asset_is_craving():
                     self.show_crosshair_before_craving()
