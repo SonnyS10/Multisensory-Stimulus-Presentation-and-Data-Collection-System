@@ -1,12 +1,12 @@
 import sys
 import math
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy
+    QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QDialog, QMessageBox
 )
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
-from PyQt5.QtCore import Qt, QPoint
-from turntable_controller import TurntableController
-from doorcode import DoorController
+from PyQt5.QtCore import Qt, QPoint, QTimer
+from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
+from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
 
 class TurntableWidget(QWidget):
     def __init__(self, parent=None, controller=None):
@@ -108,9 +108,11 @@ class TurntableWidget(QWidget):
         painter.drawEllipse(QPoint(cx, cy), int(radius * 1.23), int(radius * 1.23))
 
 class TurntableWindow(QWidget):
-    def __init__(self):
+    def __init__(self, test_order=None, object_to_bay=None):
         super().__init__()
+        print(test_order)
         self.controller = TurntableController()
+        #self.controller = None
         self.door_controller = DoorController()
         self.setWindowTitle("Turntable GUI")
 
@@ -120,14 +122,20 @@ class TurntableWindow(QWidget):
         self.close_btn = QPushButton("Close")
         self.de_energize_btn = QPushButton("De-energize")
         self.energize_btn = QPushButton("Energize")
+        self.start_btn = QPushButton("Start Test")
+        self.assign_bays_btn = QPushButton("Assign Bays")
         self.open_btn.clicked.connect(self.door_controller.open)
         self.close_btn.clicked.connect(self.door_controller.close)
         self.de_energize_btn.clicked.connect(self.controller.de_energize)
         self.energize_btn.clicked.connect(self.controller.energize)
+        self.start_btn.clicked.connect(self.run_test_sequence)
+        self.assign_bays_btn.clicked.connect(self.open_assign_bays_dialog)
         top_bar.addWidget(self.open_btn)
         top_bar.addWidget(self.close_btn)
         top_bar.addWidget(self.de_energize_btn)
         top_bar.addWidget(self.energize_btn)
+        top_bar.addWidget(self.start_btn)
+        top_bar.addWidget(self.assign_bays_btn)
         top_bar.addStretch()
 
         # Centered turntable
@@ -139,6 +147,42 @@ class TurntableWindow(QWidget):
         main_layout.addWidget(self.turntable, alignment=Qt.AlignCenter)
         self.setLayout(main_layout)
         self.resize(650, 700)
+
+        self.test_order = test_order or []
+        self.object_to_bay = object_to_bay or {}
+        self.current_index = 0
+
+    def run_test_sequence(self):
+        if self.current_index >= len(self.test_order):
+            print("Test complete!")
+            return
+        object_name = self.test_order[self.current_index]
+        bay = self.object_to_bay.get(object_name)
+        if bay is None:
+            print(f"No bay assigned for object: {object_name}")
+            self.current_index += 1
+            QTimer.singleShot(1000, self.run_test_sequence)
+            return
+        print(f"Moving to bay {bay} for object {object_name}")
+        self.controller.move_to_bay(bay - 1, wait=True)  # bay-1 if 0-based
+        self.door_controller.open()
+        QTimer.singleShot(2000, self.close_doors_and_continue)
+
+    def close_doors_and_continue(self):
+        self.door_controller.close()
+        self.current_index += 1
+        QTimer.singleShot(1000, self.run_test_sequence)
+
+    def open_assign_bays_dialog(self):
+        from eeg_stimulus_project.stimulus.turn_table_code.object_to_bay_dialog import ObjectToBayDialog
+        # Use self.test_order as the object list
+        dlg = ObjectToBayDialog(self.test_order, num_bays=16, parent=self)
+        if dlg.exec_() == QDialog.Accepted:
+            self.object_to_bay = dlg.get_assignments()
+            # Optionally, show a message or update the UI
+            QMessageBox.information(self, "Assignments Saved", "Object-to-bay assignments have been saved.")
+        else:
+            QMessageBox.information(self, "Cancelled", "No changes made to object-to-bay assignments.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

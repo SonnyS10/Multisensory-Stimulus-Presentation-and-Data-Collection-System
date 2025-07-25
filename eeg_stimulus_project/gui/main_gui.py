@@ -1,10 +1,11 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
 import json
+import os
 import threading
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
@@ -653,10 +654,30 @@ class Frame(QFrame):
                     self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
             
         else:
-            self.parent.open_secondary_gui(Qt.Unchecked)
+            self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
 
         # After successfully starting the test, add it to the set
         self.tests_run.add(current_test)
+
+        if hasattr(self, 'viewing_booth_button') and self.viewing_booth_button.isChecked():
+            test_name = self.parent.get_current_test()
+            test_order = self.parent.stimulus_order_frame.working_orders.get(test_name, [])
+            test_order_names = [os.path.splitext(os.path.basename(img.filename))[0] for img in test_order if hasattr(img, 'filename')]
+
+            # Prompt for object-to-bay assignment
+            #from eeg_stimulus_project.stimulus.turn_table_code.object_to_bay_dialog import ObjectToBayDialog
+            #dlg = ObjectToBayDialog(test_order_names, num_bays=16, parent=self)
+            #if dlg.exec_() == QDialog.Accepted:
+            #    object_to_bay = dlg.get_assignments()
+            #    from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
+            #    self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay=object_to_bay)
+            #    self.turntable_window.show()
+            #else:
+            #    QMessageBox.information(self, "Cancelled", "Test cancelled: you must assign all objects to bays.")
+
+            from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
+            self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={})
+            self.turntable_window.show()
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
