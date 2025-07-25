@@ -173,17 +173,24 @@ python test_configuration.py
 
 ## Troubleshooting
 
-### Common Issues
+🆘 **For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+
+### Quick Fixes
 1. **Import errors**: Install dependencies with `pip install -r requirements.txt`
-2. **Connection issues**: Check firewall settings and network connectivity
+2. **Connection issues**: Check firewall settings and network connectivity  
 3. **Hardware issues**: Verify device connections and driver installations
-4. **Path issues**: The system now uses relative paths automatically
+4. **Application hangs**: Run `./test_troubleshooting.sh` for system diagnostics
+
+### Emergency Procedures
+- **System failure during experiment**: See [Emergency Procedures](TROUBLESHOOTING.md#emergency-procedures)
+- **Data collection issues**: See [Data Collection Failures](TROUBLESHOOTING.md#data-collection-failures)
+- **Network problems**: See [Network Communication Issues](TROUBLESHOOTING.md#network-communication-issues)
 
 ### Getting Help
-- Check `INSTALLATION.md` for detailed setup instructions
-- Review `DEVELOPER_DOCUMENTATION.md` for technical details
-- Check the project's GitHub issues
-- View log files for debugging information
+- **Primary**: Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solutions
+- **Setup**: Review [GETTING_STARTED.md](GETTING_STARTED.md) for installation help
+- **Technical**: See [DEVELOPER_DOCUMENTATION.md](DEVELOPER_DOCUMENTATION.md) for system details
+- **Support**: Check the project's GitHub issues or view `app.log` for debugging information
 
 ## License
 
