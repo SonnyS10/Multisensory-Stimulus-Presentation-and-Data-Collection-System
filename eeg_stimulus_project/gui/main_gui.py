@@ -366,6 +366,9 @@ class GUI(QMainWindow):
                             current_frame = self.stacked_widget.currentWidget()
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
                                 QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
+                            # Notify turntable window if present and in tactile mode
+                            if hasattr(current_frame, 'turntable_window') and current_frame.turntable_window is not None:
+                                QMetaObject.invokeMethod(current_frame.turntable_window, "on_object_touched", Qt.QueuedConnection)
                         elif msg.get("action") == "labrecorder_connected":
                             self.labrecorder_connected = True
                             self.shared_status['lab_recorder_connected'] = True
@@ -664,19 +667,11 @@ class Frame(QFrame):
             test_order = self.parent.stimulus_order_frame.working_orders.get(test_name, [])
             test_order_names = [os.path.splitext(os.path.basename(img.filename))[0] for img in test_order if hasattr(img, 'filename')]
 
-            # Prompt for object-to-bay assignment
-            #from eeg_stimulus_project.stimulus.turn_table_code.object_to_bay_dialog import ObjectToBayDialog
-            #dlg = ObjectToBayDialog(test_order_names, num_bays=16, parent=self)
-            #if dlg.exec_() == QDialog.Accepted:
-            #    object_to_bay = dlg.get_assignments()
-            #    from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
-            #    self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay=object_to_bay)
-            #    self.turntable_window.show()
-            #else:
-            #    QMessageBox.information(self, "Cancelled", "Test cancelled: you must assign all objects to bays.")
-
             from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
-            self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={})
+            if "Tactile" in test_name:
+                self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={}, tactile_mode=True)
+            else:
+                self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={}, tactile_mode=False)
             self.turntable_window.show()
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
