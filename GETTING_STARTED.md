@@ -128,26 +128,71 @@ The system includes default images for testing. Custom assets can be imported la
 ### Quick Start (Developer Mode)
 The easiest way to test the system is using Developer Mode, which runs everything on one computer:
 
-1. **Launch the Application**:
+#### 1. **Launch the Application**
+
+There are three main ways to launch the application:
+
+**a. Using the Terminal/Command Prompt**
+1. Open your terminal or command prompt
+2. Navigate to the project directory:
+   ```bash
+   cd Multisensory-Stimulus-Presentation-and-Data-Collection-System
+   ```
+3. Activate your virtual environment (if using one):
+   ```bash
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   ```
+4. Run the application:
    ```bash
    python -m eeg_stimulus_project.main.main
    ```
 
-2. **Fill in Subject Information**:
+**b. Using the .bat File (Windows Only)**
+1. Navigate to the project directory in File Explorer
+2. Go to the `eeg_stimulus_project/utils/` folder
+3. Double-click on `run_eeg_stimulus.bat`
+4. The batch file will:
+   - Automatically detect your Python installation (system or conda)
+   - Install any missing dependencies
+   - Launch the application
+5. Follow the on-screen prompts to select your Python environment if multiple are available
+
+**c. Creating a Desktop Shortcut with Custom Brain Icon**
+1. **Create the shortcut**:
+   - Right-click on your desktop and select "New" → "Shortcut"
+   - Browse to your project directory and select `eeg_stimulus_project/utils/run_eeg_stimulus.bat`
+   - Click "Next" and give it a name like "EEG Stimulus Application"
+   - Click "Finish"
+
+2. **Set the custom brain icon**:
+   - Right-click on the newly created shortcut and select "Properties"
+   - Click on the "Change Icon..." button
+   - Click "Browse..." and navigate to `eeg_stimulus_project/utils/Brain_icon.ico`
+   - Select the brain icon and click "OK"
+   - Click "OK" again to apply the changes
+
+3. **Launch the application**:
+   - Double-click the desktop shortcut to start the application
+   - The custom brain icon will be visible both on the desktop and in the taskbar
+
+#### 2. **Fill in Subject Information**:
    - Subject ID: Enter a test ID (e.g., "test001")
    - Test Number: Enter "1" for passive viewing test
 
-3. **Start Developer Mode**:
+#### 3. **Start Developer Mode**:
    - Click the green "Developer Mode" button
    - Two windows will open:
      - **Control Window**: For managing the experiment
      - **Experiment Window**: For running the actual experiment
 
-4. **Navigate to a Test**:
+#### 4. **Navigate to a Test**:
    - In the Experiment Window, use the sidebar to select a test
    - Try "Unisensory Neutral Visual" first
 
-5. **Run a Simple Test**:
+#### 5. **Run a Simple Test**:
    - Check the "Start Display" checkbox in the test frame
    - A stimulus presentation window will open
    - Click through the experiment to see how it works
