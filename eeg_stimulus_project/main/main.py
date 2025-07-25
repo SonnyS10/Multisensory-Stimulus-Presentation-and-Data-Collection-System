@@ -100,7 +100,7 @@ def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_num
     setup_child_process_logging(log_queue, network_connection)
     
     app = QApplication(sys.argv)
-    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder)
+    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, local_mode)
     window.show()
     sys.exit(app.exec_())
 
