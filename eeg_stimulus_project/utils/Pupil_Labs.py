@@ -17,7 +17,8 @@ class PupilLabs():
         #self.device = discover_one_device(max_search_duration_seconds=5)
 
         #ip = "172.20.10.2"
-        ip = "10.117.59.253"
+        #ip = "10.117.59.253"
+        ip = "10.117.17.21"
         self.device = Device(address=ip, port="8080")
         
         print(f"Phone IP address: {self.device.phone_ip}")

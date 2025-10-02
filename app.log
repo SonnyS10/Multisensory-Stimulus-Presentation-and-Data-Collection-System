@@ -2281,3 +2281,9 @@
 2025-07-25 15:09:35,277 INFO Cannot close host while client is connected. Please close the client first.
 2025-07-25 15:09:37,392 INFO Client disconnected.
 >>>>>>> 53f409a8e6379b2f2fdefeff97d31006b8a4e3d4
+2025-10-01 13:32:55,914 INFO Host: Waiting for client on port 9999...
+2025-10-01 13:33:05,801 INFO Host: Connected by ('169.254.185.196', 58224)
+2025-10-01 13:33:53,598 INFO Client disconnected.
+2025-10-02 13:37:04,552 INFO Host: Waiting for client on port 9999...
+2025-10-02 13:37:06,823 INFO Host: Connected by ('169.254.185.196', 49706)
+2025-10-02 13:37:46,639 INFO Client disconnected.
