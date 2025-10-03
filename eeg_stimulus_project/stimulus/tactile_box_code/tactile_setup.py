@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QTextEdit, QLabel, QSpinBox, QDesktopWidget
 from PyQt5.QtCore import QTimer
+from eeg_stimulus_project.lsl.labels import LSLTactileStream
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent
@@ -161,6 +162,8 @@ class RemoteScriptGUI(QMainWindow):
 
         self.connected = False
 
+        self.lsl_tactile_stream = LSLTactileStream()
+
     #def connect_label_socket(self):
     #    """Establish a persistent connection to the control window for label sending."""
     #    while self.label_sock is None:
@@ -226,11 +229,12 @@ class RemoteScriptGUI(QMainWindow):
                             timestamp, force = float(parts[0]), int(parts[1])
                             self.last_force = force
                             adjusted_force = self.last_force - self.baseline_force
+                            touched = int(adjusted_force > self.threshold)
+                            # --- Push binary touch state to LSL stream ---
+                            self.lsl_tactile_stream.push_touch(touched)
                             self.force_label.setText(f"Current Force: {force} (Adj: {adjusted_force})")
-                            touched = adjusted_force > self.threshold
                             # Only send label on rising edge
                             if self.lsl_enabled and touched and not self.last_touch_state:
-                                #event_time = datetime.datetime.now().isoformat()
                                 self.send_label_to_control("tactile_touch")
                                 self.status_label.setText("Status: Force exceeds threshold!")
                             elif not touched:
