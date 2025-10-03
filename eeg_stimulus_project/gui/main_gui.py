@@ -1,6 +1,6 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
@@ -986,6 +986,8 @@ class InstructionFrame(QWidget):
         self.update_nav_buttons()
 
     def add_instruction_page(self, html_text):
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
         label = QLabel()
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignTop)
@@ -993,9 +995,10 @@ class InstructionFrame(QWidget):
         label.setMargin(20)
         label.setText(html_text)
         label.setTextFormat(Qt.RichText)
-        self.stacked.addWidget(label)
-        self.pages.append(label)
-
+        scroll.setWidget(label)
+        self.stacked.addWidget(scroll)
+        self.pages.append(scroll)
+    
     def next_page(self):
         idx = self.stacked.currentIndex()
         if idx < self.stacked.count() - 1:
