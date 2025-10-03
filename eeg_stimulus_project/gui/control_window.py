@@ -672,19 +672,19 @@ class ControlInstructionsFrame(QWidget):
         )
         self.add_instruction_page(
             "Device Buttons & Status Icons:\n\n"
-            "- Each row represents a device (Actichamp, LabRecorder, Eye Tracker, Touchbox, VR, Turntable, Olfactory System).\n"
+            "- Each row represents a device (Actichamp, LabRecorder, Eye Tracker, Tactile Box, VR, Turntable, Olfactory System).\n"
             "- The button on each row will attempt to connect or launch the corresponding device/software.\n"
             "- The red/green icon next to each device shows its connection status:\n"
             "    • Red = Not connected\n"
             "    • Green = Connected\n"
-            "- Some devices (like Touchbox) have additional indicators for LSL stream readiness.\n"
-            "    • This icon turns green when the experiment is ready to receive touch input via LSL to continue.\n"
+            "- Some devices (like Tactile Box) have additional indicators for LSL stream readiness.\n"
+            "    • This icon turns green when the experiment is ready to receive tactile input via LSL to continue.\n"
         )
         self.add_instruction_page(
             "How to Use:\n\n"
             "1. Click each device's button to connect or launch its software.\n"
             "2. Watch the status icon to confirm successful connection (icon turns green).\n"
-            "   Note: The touchbox will require you to manually connect by clicking the 'Start Remote Script' button after it has been launched.\n"
+            "   Note: The Tactile Box will require you to manually connect by clicking the 'Start Remote Script' button after it has been launched.\n"
             "3. If a device fails to connect, check cables, power, and software, then try again."
         )
         self.add_instruction_page(
@@ -697,7 +697,7 @@ class ControlInstructionsFrame(QWidget):
             "Tips & Troubleshooting:\n\n"
             "- If a device does not connect, restart its software and check all connections.\n"
             "- Ensure all devices are powered on and properly configured before starting the experiment.\n"
-            "- For the touchbox, it may require you to start the remote script multiple times before it connects.\n"
+            "- For the Tactile Box, it may require you to start the remote script multiple times before it connects.\n"
             "    • If it still does not connect, try closing the application and relaunching it before messing with the hardware.\n"
             "- For persistent issues, refer to the experiment documentation or contact technical support.\n"
             "- You can close these instructions at any time and return to the main Control Window."
