@@ -2350,3 +2350,9 @@
 2025-10-07 13:23:17,114 INFO Connected (version 2.0, client OpenSSH_9.2p1)
 2025-10-07 13:23:17,510 INFO Authentication (publickey) failed.
 2025-10-07 13:23:17,572 INFO Authentication (password) successful!
+2025-10-07 13:40:20,760 INFO Host: Waiting for client on port 9999...
+2025-10-07 13:40:22,584 INFO Host: Connected by ('169.254.185.196', 50994)
+2025-10-07 13:40:29,587 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-10-07 13:40:29,720 INFO Authentication (publickey) failed.
+2025-10-07 13:40:30,040 INFO Authentication (password) successful!
+2025-10-07 13:42:42,382 INFO Cannot close host while client is connected. Please close the client first.
