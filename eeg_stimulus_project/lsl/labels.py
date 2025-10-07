@@ -35,7 +35,7 @@ class LSLTactileStream:
             type=stream_type,
             channel_count=channel_count,
             nominal_srate=nominal_srate,
-            channel_format='int8',  # Binary integer
+            channel_format='float32',  # Binary integer
             source_id=source_id
         )
         self.outlet = StreamOutlet(self.info)
