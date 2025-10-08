@@ -318,6 +318,8 @@ class ControlWindow(QMainWindow):
         self.toggle_instructions_button.clicked.connect(self.toggle_instructions)
         self.control_layout.addWidget(self.toggle_instructions_button, alignment=Qt.AlignCenter)
 
+        self.label_log = []
+
     def toggle_instructions(self):
         if self.instructions_frame.isVisible():
             self.instructions_frame.setVisible(False)
@@ -521,7 +523,7 @@ class ControlWindow(QMainWindow):
                     buffer += data
                     while "\n" in buffer:
                         line, buffer = buffer.split("\n", 1)
-                        logging.info(f'Host: Received line: {repr(line)}')
+                        #logging.info(f'Host: Received line: {repr(line)}')
                         if not line.strip():
                             continue
                         try:
@@ -548,11 +550,12 @@ class ControlWindow(QMainWindow):
                             elif action == "stop_button":
                                 self.stop_test()
                                 logging.info("Host: Stopping test...")
+                                self.save_label_log()
                                 pass
                             elif action == "label":
                                 label = message.get("label", None)
                                 self.label_push(label)
-                                logging.info(f"Host: Pushing label: {label}")
+                                #logging.info(f"Host: Pushing label: {label}")
                                 pass
                             elif action == "latency_ping":
                                 pong = {"action": "latency_pong", "timestamp": message.get("timestamp")}
@@ -569,6 +572,8 @@ class ControlWindow(QMainWindow):
                                 # Handle log messages from client
                                 log_message = message.get("message", "")
                                 logging.info(f"[CLIENT] {log_message}")
+                                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                self.label_log.append((label, timestamp))
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
@@ -648,8 +653,18 @@ class ControlWindow(QMainWindow):
         if self.label_stream is None:
             self.label_stream = LSLLabelStream()
         self.label_stream.push_label(label)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        self.label_log.append((label, timestamp))
         #print(f"Label pushed: {label}")
         
+    def save_label_log(self):
+        # Determine the test directory
+        test_dir = os.path.join(self.base_dir, self.current_test)
+        os.makedirs(test_dir, exist_ok=True)
+        log_path = os.path.join(test_dir, "label_timestamps.txt")
+        with open(log_path, "w", encoding="utf-8") as f:
+            for label, timestamp in self.label_log:
+                f.write(f"{timestamp}\t{label}\n")
 
 class ControlInstructionsFrame(QWidget):
     def __init__(self, parent=None):
