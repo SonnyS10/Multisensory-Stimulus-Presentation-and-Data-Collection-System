@@ -238,6 +238,8 @@ class GUI(QMainWindow):
                 # Get randomization and repetitions settings from stimulus_order_frame
                 randomize_cues, seed = self.stimulus_order_frame.get_randomization_settings()
                 repetitions = self.stimulus_order_frame.get_repetitions_settings()
+
+                scent_numbers = self.stimulus_order_frame.scent_numbers
                 
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
@@ -247,7 +249,7 @@ class GUI(QMainWindow):
                     non_alcohol_folder=self.non_alcohol_folder,
                     randomize_cues=randomize_cues,
                     seed=seed,
-                    repetitions=repetitions, local_mode=self.local_mode
+                    repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
@@ -584,8 +586,8 @@ class Frame(QFrame):
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
     def start_button_clicked(self):
-        print(self.shared_status['lab_recorder_connected'])
-        print(self.shared_status['eyetracker_connected'])
+        #print(self.shared_status['lab_recorder_connected'])
+        #print(self.shared_status['eyetracker_connected'])
         # Check if at least one of the checkboxes is checked
         checked = False
         # Defensive: check if the attributes exist (they may not in all test types)
