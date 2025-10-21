@@ -16,6 +16,7 @@ from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
+from eeg_stimulus_project.stimulus.olfactory_controller import OlfactoryController
 import threading
 import json
 import time
@@ -385,6 +386,9 @@ class DisplayWindow(QMainWindow):
             self.move(100, 100)
             self.resize(700, 700)
 
+        self.olfactory_controller = OlfactoryController()
+        self.olfactory_connected = self.olfactory_controller.connect()
+
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -458,6 +462,8 @@ class DisplayWindow(QMainWindow):
     def display_images_passive(self):
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
+            if "Olfactory" in self.current_test:
+                self.scent_function()
             pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
@@ -471,15 +477,9 @@ class DisplayWindow(QMainWindow):
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 self.current_label = label
-            if "Tactile" in self.current_test and "Olfactory" in self.current_test:
-                # Show image for 2 seconds, then show crosshair and wait for touch and smell
-                pass
-            elif "Tactile" in self.current_test:
+            if "Tactile" in self.current_test:
                 # For tactile, show image for 2 seconds, then show crosshair and wait for touch
                 QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
-            elif "Olfactory" in self.current_test:
-                # Show image for 2 seconds, then show crosshair and wait for smell
-                pass
             else:
             # Only show crosshair if next asset is NOT a craving rating
                 if self.next_asset_is_craving():
@@ -498,6 +498,8 @@ class DisplayWindow(QMainWindow):
     #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
         img = self.images[self.current_image_index]
+        if "Olfactory" in self.current_test:
+            self.scent_function()
         pixmap = QPixmap(img.filename)
         self.current_pixmap = pixmap
         self.update_image_label()
@@ -1217,8 +1219,8 @@ class DisplayWindow(QMainWindow):
         img = self.images[self.current_image_index]
         key = getattr(img, "filename", None)
         scent_number = self.scent_numbers.get(key, None)
-        if scent_number:
-            self.send_olfactory_command(scent_number)
-            QTimer.singleShot(1000, self.show_image)  # Wait 1 second before showing image
-        else:
-            self.show_image()
+        if self.olfactory_connected and scent_number:
+            # Send scent command to olfactory controller
+            self.olfactory_controller.trigger_scent(scent_number)
+            QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent())  # Stop scent after 3 seconds
+
