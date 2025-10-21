@@ -53,7 +53,8 @@ class OlfactoryController:
                 self.ser2.write(command.encode())
                 _, response = self.safe_readline(self.ser2)
 
-            print(f"Triggered scent {scent_number}, response: {response}")
+            #print(f"Triggered scent {scent_number}, response: {response}")
+            print(f"Triggered scent {scent_number}")
             return True
 
         except Exception as e:

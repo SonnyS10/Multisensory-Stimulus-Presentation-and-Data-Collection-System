@@ -464,6 +464,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(img, 'filename') and img.filename:
             if "Olfactory" in self.current_test:
                 self.scent_function()
+                time.sleep(3)
             pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
@@ -500,6 +501,7 @@ class DisplayWindow(QMainWindow):
         img = self.images[self.current_image_index]
         if "Olfactory" in self.current_test:
             self.scent_function()
+            time.sleep(3)
         pixmap = QPixmap(img.filename)
         self.current_pixmap = pixmap
         self.update_image_label()
@@ -559,9 +561,9 @@ class DisplayWindow(QMainWindow):
                     QTimer.singleShot(duration_ms, self._advance_image)
                 else:
                     pass  # Wait for next button
-            elif "Olfactory" in self.current_test:
-                # Probably same as tactile + olfactory
-                pass  # Wait for smell
+            #elif "Olfactory" in self.current_test:
+            #    # Probably same as tactile + olfactory
+            #    pass  # Wait for smell
             else:
                 QTimer.singleShot(duration_ms, self._advance_image)
         elif test_type == 'stroop':
@@ -621,9 +623,9 @@ class DisplayWindow(QMainWindow):
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
-        if "Olfactory" in self.current_test:
-            # send scent and wait for 1 second?
-            pass
+        #if "Olfactory" in self.current_test:
+        #    # send scent and wait for 1 second?
+        #    pass
         if self.waiting_for_initial_touch:
             self.waiting_for_initial_touch = False
             self.showing_touch_instruction = False
@@ -836,9 +838,9 @@ class DisplayWindow(QMainWindow):
     def after_countdown(self):
         if "Tactile" in self.current_test:
             self.show_touch_instruction(initial=True)
-        elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
-            # For olfactory only, probably need to wait for smell
-            pass
+        #elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
+        #    # For olfactory only, probably need to wait for smell
+        #    pass
         else:
             self.begin_experiment()
 
@@ -1124,9 +1126,9 @@ class DisplayWindow(QMainWindow):
                 # After craving rating, show crosshair and enable next button for tactile
                 self.waiting_for_next = True
                 self.frame.next_button.setEnabled(True)
-            elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
-                # For olfactory only, probably need to wait for smell
-                pass
+            #elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
+            #    # For olfactory only, probably need to wait for smell
+            #    pass
             else:
                 QTimer.singleShot(1000, self._advance_image)
         else:
@@ -1222,5 +1224,5 @@ class DisplayWindow(QMainWindow):
         if self.olfactory_connected and scent_number:
             # Send scent command to olfactory controller
             self.olfactory_controller.trigger_scent(scent_number)
-            QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent())  # Stop scent after 3 seconds
+            QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent(scent_number))  # Stop scent after 3 seconds
 
