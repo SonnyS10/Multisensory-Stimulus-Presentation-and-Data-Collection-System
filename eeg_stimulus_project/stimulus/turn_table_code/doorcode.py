@@ -27,7 +27,7 @@ class DoorController:
         self.ticcmd('--current', '1920')
         self.ticcmd('--step-mode', '8')
         self.ticcmd('--max-speed', '500000000')
-        self.ticcmd('--max-accel', '100000') # Max of 100000, DON'T GO HIGHER THAN THIS
+        self.ticcmd('--max-accel', '80000') # Max of 100000, DON'T GO HIGHER THAN THIS
 
     def home(self):
         print("Homing to position 0...")
