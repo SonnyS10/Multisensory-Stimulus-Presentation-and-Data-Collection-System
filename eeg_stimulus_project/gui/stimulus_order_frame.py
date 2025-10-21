@@ -33,6 +33,7 @@ class StimulusOrderFrame(QWidget):
         self.custom_orders = {}  # Store applied custom orders for each test (what's actually used for tests)
         self.working_orders = {}  # Store working orders for each test (what user is currently editing)
         self.original_assets = {}  # Store original asset order
+        self.scent_numbers = {}  # {asset: scent_number}
         
         # Add randomization and repetitions settings
         self.randomize_cues = False
@@ -235,6 +236,24 @@ class StimulusOrderFrame(QWidget):
         """)
         import_button.clicked.connect(self.import_order_from_csv)
         button_layout.insertWidget(button_layout.count() // 2, import_button)
+        
+        # --- Add Assign Scent Numbers Button ---
+        self.assign_scent_btn = QPushButton("Assign Scent Numbers")
+        self.assign_scent_btn.setFont(QFont("Segoe UI", 11))
+        self.assign_scent_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #8e24aa;
+                color: white;
+                border-radius: 6px;
+                padding: 10px 20px;
+                min-width: 160px;
+            }
+            QPushButton:hover {
+                background-color: #6d1b7b;
+            }
+        """)
+        self.assign_scent_btn.clicked.connect(self.open_scent_assignment_dialog)
+        button_layout.addWidget(self.assign_scent_btn)
         
         layout.addLayout(button_layout)
 
@@ -484,6 +503,11 @@ class StimulusOrderFrame(QWidget):
     def on_test_selected(self):
         """Handle test selection change."""
         self.current_test_name = self.test_selector.currentText()
+        # Show/hide the assign scent button based on test type
+        if "olfactory" in self.current_test_name.lower():
+            self.assign_scent_btn.show()
+        else:
+            self.assign_scent_btn.hide()
         self.update_image_list()
         self.update_available_assets_list()
 
@@ -513,8 +537,13 @@ class StimulusOrderFrame(QWidget):
                 images.append(orig_craving)
                 self.working_orders[self.current_test_name] = images
 
+        # Determine if scent information should be shown
+        show_scent = "olfactory" in self.current_test_name.lower()
         for i, image in enumerate(images):
             item = QListWidgetItem()
+            key = getattr(image, "filename", None)
+            scent = self.scent_numbers.get(key, None)
+            scent_str = f" [Scent: {scent}]" if (show_scent and scent) else ""
             # Check if the image is a CravingRatingAsset
             if isinstance(image, CravingRatingAsset):
                 item.setText(f"{i+1}. craving_rating")
@@ -535,9 +564,9 @@ class StimulusOrderFrame(QWidget):
                 except Exception as e:
                     print(f"Error creating thumbnail for {filename}: {e}")
                 
-                item.setText(f"{i+1}. {display_name}")
+                item.setText(f"{i+1}. {display_name}{scent_str}")
             else:
-                item.setText(f"{i+1}. Image {i+1}")
+                item.setText(f"{i+1}. Image {i+1}{scent_str}")
             
             # Store the original image object in the item data
             item.setData(Qt.UserRole, image)
@@ -1027,6 +1056,39 @@ class StimulusOrderFrame(QWidget):
                     f"Would go to test: {self.current_test_name}\n(Implement show_test_frame in parent to enable navigation.)",
                     QMessageBox.Ok
                 )
+    def open_scent_assignment_dialog(self):
+        if not self.current_test_name:
+            return
+        images = self.working_orders.get(self.current_test_name, [])
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Assign Scent Numbers")
+        layout = QFormLayout(dialog)
+        scent_selectors = {}
+        for img in images:
+            # Only assign to images, not craving rating
+            if isinstance(img, CravingRatingAsset):
+                continue
+            display_name = getattr(img, "display_name", os.path.splitext(os.path.basename(getattr(img, "filename", "Image")))[0])
+            combo = QComboBox()
+            combo.addItem("None")
+            for i in range(1, 9):
+                combo.addItem(str(i))
+            # Set current value
+            key = getattr(img, "filename", None)
+            scent = self.scent_numbers.get(key, None)
+            if scent:
+                combo.setCurrentText(str(scent))
+            layout.addRow(display_name, combo)
+            scent_selectors[key] = combo
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        layout.addWidget(buttons)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        if dialog.exec_() == QDialog.Accepted:
+            for key, combo in scent_selectors.items():
+                val = combo.currentText()
+                self.scent_numbers[key] = int(val) if val.isdigit() else None
+            self.update_image_list()
 
 class CravingRatingAsset:
     def __init__(self):

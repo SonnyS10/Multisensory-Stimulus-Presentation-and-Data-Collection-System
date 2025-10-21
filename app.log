@@ -2373,6 +2373,7 @@
 2025-10-08 12:07:33,428 INFO Authentication (publickey) failed.
 2025-10-08 12:07:33,491 INFO Authentication (password) successful!
 2025-10-08 12:26:33,306 INFO Client disconnected.
+<<<<<<< HEAD
 2025-10-08 13:08:52,454 INFO Client: Connected to host.
 2025-10-08 13:24:53,005 INFO Client: Connected to host.
 2025-10-08 13:27:02,460 INFO Client: Connected to host.
@@ -2383,3 +2384,47 @@
 2025-10-17 11:39:57,554 INFO Client: Connected to host.
 2025-10-21 13:00:27,366 INFO Client: Connected to host.
 2025-10-21 13:02:40,236 INFO Client: Connected to host.
+=======
+2025-10-08 13:08:41,179 INFO Host: Waiting for client on port 9999...
+2025-10-08 13:08:52,383 INFO Host: Connected by ('169.254.185.196', 63400)
+2025-10-08 13:09:56,663 INFO Client disconnected.
+2025-10-08 13:24:37,266 INFO Host: Waiting for client on port 9999...
+2025-10-08 13:24:52,929 INFO Host: Connected by ('169.254.185.196', 65439)
+2025-10-08 13:25:33,569 INFO Client disconnected.
+2025-10-08 13:27:02,035 INFO Host: Waiting for client on port 9999...
+2025-10-08 13:27:02,383 INFO Host: Connected by ('169.254.185.196', 63489)
+2025-10-08 13:27:09,857 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-10-08 13:27:10,271 INFO Authentication (publickey) failed.
+2025-10-08 13:27:10,325 INFO Authentication (password) successful!
+2025-10-08 13:33:28,698 INFO Cannot close host while client is connected. Please close the client first.
+2025-10-08 13:37:25,229 INFO Client disconnected.
+2025-10-08 13:37:49,155 INFO Host: Waiting for client on port 9999...
+2025-10-08 13:38:04,149 INFO Host: Connected by ('169.254.185.196', 59736)
+2025-10-08 13:38:17,611 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-10-08 13:38:17,962 INFO Authentication (publickey) failed.
+2025-10-08 13:38:18,018 INFO Authentication (password) successful!
+2025-10-08 13:46:01,230 INFO Client disconnected.
+2025-10-16 10:06:17,312 INFO Host: Waiting for client on port 9999...
+2025-10-16 10:06:19,946 INFO Host: Connected by ('169.254.185.196', 59058)
+2025-10-16 10:06:31,246 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-10-16 10:06:31,434 INFO Authentication (publickey) failed.
+2025-10-16 10:06:31,497 INFO Authentication (password) successful!
+2025-10-16 10:11:05,677 INFO Cannot close host while client is connected. Please close the client first.
+2025-10-16 10:11:16,199 INFO Client disconnected.
+2025-10-16 10:11:36,647 INFO Host: Waiting for client on port 9999...
+2025-10-16 10:11:39,383 INFO Host: Connected by ('169.254.185.196', 51568)
+2025-10-16 10:11:46,095 INFO Connected (version 2.0, client OpenSSH_9.2p1)
+2025-10-16 10:11:46,227 INFO Authentication (publickey) failed.
+2025-10-16 10:11:46,283 INFO Authentication (password) successful!
+2025-10-16 10:24:33,618 INFO Cannot close host while client is connected. Please close the client first.
+2025-10-16 10:24:37,373 INFO Client disconnected.
+2025-10-17 11:05:20,888 INFO Host: Waiting for client on port 9999...
+2025-10-17 11:05:21,056 INFO Host: Connected by ('169.254.185.196', 54344)
+2025-10-17 11:38:09,752 INFO Client disconnected.
+2025-10-17 11:39:56,945 INFO Host: Waiting for client on port 9999...
+2025-10-17 11:39:57,472 INFO Host: Connected by ('169.254.185.196', 52744)
+2025-10-17 11:41:47,333 INFO Client disconnected.
+2025-10-21 13:00:25,149 INFO Host: Waiting for client on port 9999...
+2025-10-21 13:00:27,310 INFO Host: Connected by ('169.254.185.196', 57433)
+2025-10-21 13:00:34,142 INFO Client disconnected.
+>>>>>>> 82daa517d40e2e0ae8f2cdccb109c1eb20a85da7

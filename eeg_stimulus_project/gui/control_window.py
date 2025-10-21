@@ -572,8 +572,8 @@ class ControlWindow(QMainWindow):
                                 # Handle log messages from client
                                 log_message = message.get("message", "")
                                 logging.info(f"[CLIENT] {log_message}")
-                                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                                self.label_log.append((label, timestamp))
+                                #timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                #self.label_log.append((label, timestamp))
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
@@ -620,6 +620,10 @@ class ControlWindow(QMainWindow):
                     except Exception as e:
                         print(f"Error handling label message: {e}")
         threading.Thread(target=tactile_listener, daemon=True).start()
+
+    def send_olfactory_command(scent_number):
+        # Send scent_number to olfactory system (via socket, REST, etc.)
+        pass
 
     def start_test(self):
         if self.label_stream is None:
