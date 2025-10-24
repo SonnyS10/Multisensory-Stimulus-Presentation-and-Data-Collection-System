@@ -16,7 +16,7 @@ from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.pupil_labs import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
-from eeg_stimulus_project.stimulus.olfactory_controller import OlfactoryController
+from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
 import threading
 import json
 import time
