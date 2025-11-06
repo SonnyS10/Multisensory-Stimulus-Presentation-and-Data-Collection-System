@@ -871,7 +871,9 @@ class DisplayWindow(QMainWindow):
                 self.mirror_widget.deleteLater()
                 self.mirror_widget = None
             if self.eyetracker and self.eyetracker.device is not None:
-                self.eyetracker.stop_recording()          
+                self.eyetracker.stop_recording()
+            if hasattr(self, 'olfactory_controller') and self.olfactory_controller:
+                self.olfactory_controller.close()          
             super().closeEvent(event)
         else:
             # Prevent closing if stop wasn't pressed
