@@ -2442,3 +2442,7 @@
 2025-11-06 12:37:14,961 INFO Host: Connected by ('169.254.185.196', 53971)
 2025-11-06 12:39:48,731 INFO Client disconnected.
 2025-11-06 12:40:51,323 INFO Host: Waiting for client on port 9999...
+2025-11-06 12:48:53,555 INFO Host: Waiting for client on port 9999...
+2025-11-06 12:48:55,358 INFO Host: Connected by ('169.254.185.196', 63088)
+2025-11-06 12:55:02,759 INFO Cannot close host while client is connected. Please close the client first.
+2025-11-06 12:55:05,945 INFO Client disconnected.
