@@ -25,7 +25,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from eeg_stimulus_project.lsl.stream_manager import LSL
+from Old_Code.stream_manager import LSL
 
 
 class EEGStreamWindow(QMainWindow):

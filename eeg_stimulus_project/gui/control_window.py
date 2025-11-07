@@ -456,7 +456,7 @@ class ControlWindow(QMainWindow):
     def open_eeg_stream(self):
         """Open the EEG stream window in a separate process."""
         try:
-            from eeg_stimulus_project.gui.eeg_stream_window import run_eeg_stream_window
+            from Old_Code.eeg_stream_window import run_eeg_stream_window
             self.eeg_stream_process = Process(target=run_eeg_stream_window)
             self.eeg_stream_process.start()
             self.update_app_status_icon(self.eeg_stream_connected_icon, True)

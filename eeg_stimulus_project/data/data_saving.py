@@ -7,7 +7,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from eeg_stimulus_project.lsl.stream_manager import LSL
+from Old_Code.stream_manager import LSL
 #from eeg_stimulus_project.utils.labrecorder import LabRecorder
 #IN THE FUTURE, WE CAN JUST CREATE ALL OF THE TEST DIRECTORIES WEN WE CREATE A NEW PARTICIPANT AND THEN THIS FILE IS NOT NEEDED
 
