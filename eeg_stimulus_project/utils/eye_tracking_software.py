@@ -1,4 +1,3 @@
-from pupil_labs.realtime_api.simple import discover_one_device
 
 #print("Looking for the next best device...")
 #device = discover_one_device(max_search_duration_seconds=10)
@@ -6,7 +5,7 @@ from pupil_labs.realtime_api.simple import discover_one_device
 #    print("No device found.")
 #    raise SystemExit(-1)
 
-from pupil_labs.realtime_api.simple import Device
+from pupil_labs.realtime_api.simple import Device, discover_one_device
 import threading
 import logging
 
@@ -18,7 +17,7 @@ class PupilLabs():
 
         #ip = "172.20.10.2"
         #ip = "10.117.59.253"
-        ip = "10.117.17.21"
+        ip = "10.117.58.191"
         self.device = Device(address=ip, port="8080")
         
         print(f"Phone IP address: {self.device.phone_ip}")

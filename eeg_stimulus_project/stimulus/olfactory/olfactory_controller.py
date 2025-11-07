@@ -80,11 +80,20 @@ class OlfactoryController:
 
     def close(self):
         """Close both serial connections"""
-        if self.ser1:
-            self.ser1.write("q\n".encode())
-            _, response = self.safe_readline(self.ser1)
-            self.ser1.close()
-        if self.ser2:
-            self.ser2.write("q\n".encode())
-            _, response = self.safe_readline(self.ser2)
-            self.ser2.close()
+        if self.ser1 and self.ser1.is_open:
+            try:
+                self.ser1.write("q\n".encode())
+                _, response = self.safe_readline(self.ser1)
+            except Exception as e:
+                print(f"Error sending stop command to ser1: {e}")
+            finally:
+                self.ser1.close()
+        
+        if self.ser2 and self.ser2.is_open:
+            try:
+                self.ser2.write("q\n".encode())
+                _, response = self.safe_readline(self.ser2)
+            except Exception as e:
+                print(f"Error sending stop command to ser2: {e}")
+            finally:
+                self.ser2.close()

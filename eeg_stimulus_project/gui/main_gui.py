@@ -13,7 +13,7 @@ from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDispl
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.pupil_labs import PupilLabs
+from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.assets.asset_handler import Display
 import logging
