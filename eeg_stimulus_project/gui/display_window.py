@@ -1202,17 +1202,37 @@ class DisplayWindow(QMainWindow):
         try:
             if hasattr(key, 'char') and key.char is not None:
                 key_name = key.char.upper()
+                
+                # Handle Y/N for Stroop responses
                 if key_name in ['Y', 'N'] and getattr(self, 'waiting_for_stroop_response', False):
                     print(f"[DEBUG] Global key pressed: {key_name}")
                     # Only post event if window is not focused
                     if not self.isActiveWindow():
                         self.post_key_event(key_name)
+                
+                # Handle 1-7 for craving rating responses
+                elif key_name in ['1', '2', '3', '4', '5', '6', '7'] and hasattr(self, 'craving_response') and self.craving_response is None:
+                    print(f"[DEBUG] Global craving key pressed: {key_name}")
+                    # Only post event if window is not focused
+                    if not self.isActiveWindow():
+                        self.post_key_event(key_name)
+                        
         except Exception as e:
             print(f"Error in global key handler: {e}")
 
     def post_key_event(self, key_name):
         # Map key_name to Qt key
-        key_map = {'Y': Qt.Key_Y, 'N': Qt.Key_N}
+        key_map = {
+            'Y': Qt.Key_Y, 
+            'N': Qt.Key_N,
+            '1': Qt.Key_1,
+            '2': Qt.Key_2,
+            '3': Qt.Key_3,
+            '4': Qt.Key_4,
+            '5': Qt.Key_5,
+            '6': Qt.Key_6,
+            '7': Qt.Key_7
+        }
         qt_key = key_map.get(key_name)
         if qt_key is not None:
             event = QKeyEvent(QEvent.KeyPress, qt_key, Qt.NoModifier)
