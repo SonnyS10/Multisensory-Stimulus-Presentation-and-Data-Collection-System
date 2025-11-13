@@ -2451,3 +2451,6 @@
 2025-11-07 12:34:15,993 INFO Client: Connected to host.
 2025-11-07 12:54:16,374 INFO Client: Connected to host.
 2025-11-07 12:56:06,102 INFO Client: Connected to host.
+2025-11-13 10:50:14,927 INFO Host: Waiting for client on port 9999...
+2025-11-13 10:50:15,146 INFO Host: Connected by ('169.254.185.196', 57372)
+2025-11-13 11:02:35,895 INFO Client disconnected.

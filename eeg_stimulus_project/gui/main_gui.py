@@ -1,6 +1,6 @@
 import sys
 sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
@@ -441,7 +441,8 @@ class Frame(QFrame):
                 border-radius: 12px;
             }
         """)
-        top_frame.setMaximumHeight(150)
+        top_frame.setMaximumHeight(200)
+        top_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layout.addWidget(top_frame)
 
         top_layout = QVBoxLayout(top_frame)
@@ -487,12 +488,18 @@ class Frame(QFrame):
                 font-size: 15px;
                 padding: 2px 8px;
             }
+            QCheckBox::indicator {
+                width: 25px;
+                height: 25px;
+            }
         """
 
         #If the test is a stroop test, add these buttons and checkboxes
         if is_stroop_test:
             button_layout = QHBoxLayout()
             button_layout.setSpacing(14)
+            button_layout.setContentsMargins(0, 0, 0, 0)
+            button_layout.setAlignment(Qt.AlignVCenter)
             top_layout.addLayout(button_layout)
 
             self.start_button = QPushButton("Start", self)
@@ -500,10 +507,10 @@ class Frame(QFrame):
             self.start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(self.start_button)
 
-            stop_button = QPushButton("Stop", self)
-            stop_button.setStyleSheet(button_style)
-            stop_button.clicked.connect(self.stop_button_clicked_stroop)
-            button_layout.addWidget(stop_button)
+            self.stop_button = QPushButton("Stop", self)
+            self.stop_button.setStyleSheet(button_style)
+            self.stop_button.clicked.connect(self.stop_button_clicked_stroop)
+            button_layout.addWidget(self.stop_button)
 
             self.pause_button = QPushButton("Pause", self)
             self.pause_button.setStyleSheet(button_style)
@@ -536,6 +543,8 @@ class Frame(QFrame):
         if not is_stroop_test:
             button_layout = QHBoxLayout()
             button_layout.setSpacing(14)
+            button_layout.setContentsMargins(0, 0, 0, 0)
+            button_layout.setAlignment(Qt.AlignVCenter)
             top_layout.addLayout(button_layout)
 
             self.start_button = QPushButton("Start", self)
@@ -543,10 +552,10 @@ class Frame(QFrame):
             self.start_button.clicked.connect(self.start_button_clicked)
             button_layout.addWidget(self.start_button)
 
-            stop_button = QPushButton("Stop", self)
-            stop_button.setStyleSheet(button_style)
-            stop_button.clicked.connect(self.stop_button_clicked_passive)
-            button_layout.addWidget(stop_button)
+            self.stop_button = QPushButton("Stop", self)
+            self.stop_button.setStyleSheet(button_style)
+            self.stop_button.clicked.connect(self.stop_button_clicked_passive)
+            button_layout.addWidget(self.stop_button)
 
             self.pause_button = QPushButton("Pause", self)
             self.pause_button.setStyleSheet(button_style)
@@ -582,6 +591,70 @@ class Frame(QFrame):
             bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
             bottom_frame.setMaximumHeight(50)
             self.layout.addWidget(bottom_frame)
+
+        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'viewing_booth_button']:
+            btn = getattr(self, attr, None)
+            if btn is not None:
+                btn.setStyleSheet(button_style)
+                btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                btn.setMinimumHeight(48)
+
+        checkbox_attrs = ['display_button', 'vr_button', 'viewing_booth_button']
+        for attr in checkbox_attrs:
+            btn = getattr(self, attr, None)
+            if btn is not None:
+                btn.stateChanged.connect(lambda state, checked_attr=attr: self.handle_exclusive_checkbox(checked_attr, state))
+
+    def handle_exclusive_checkbox(self, checked_attr, state):
+        # Only act if a box was checked
+        if state == Qt.Checked:
+            for attr in ['display_button', 'vr_button', 'viewing_booth_button']:
+                if attr != checked_attr:
+                    btn = getattr(self, attr, None)
+                    if btn is not None:
+                        btn.blockSignals(True)
+                        btn.setChecked(False)
+                        btn.blockSignals(False)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        w = self.width()
+        h = self.height()
+        if w > 1200 or h > 800:
+            font_size = 24
+            padding = "18px 40px"
+        else:
+            font_size = 15
+            padding = "8px 22px"
+        button_style = f"""
+            QPushButton {{
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: {padding};
+                font-size: {font_size}px;
+            }}
+            QPushButton:disabled {{
+                background-color: #bdbdbd;
+                color: #eee;
+            }}
+            QPushButton:hover {{
+                background-color: #1976D2;
+            }}
+            QCheckBox {{
+                font-size: {font_size}px;
+                padding: 2px 8px;
+            }}
+            QCheckBox::indicator {{
+                width: {font_size + 10}px;
+                height: {font_size + 10}px;
+            }}
+        """
+        # Update styles for all relevant buttons and checkboxes
+        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'viewing_booth_button']:
+            btn = getattr(self, attr, None)
+            if btn is not None:
+                btn.setStyleSheet(button_style)
 
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
     #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
