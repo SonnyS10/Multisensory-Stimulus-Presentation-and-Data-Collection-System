@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel, QPushButton, QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 
@@ -66,18 +66,18 @@ class Sidebar(QFrame):
         self.add_submenu("Passive Viewing", [
             ("Unisensory Neutral Visual", parent.show_unisensory_neutral_visual),
             ("Unisensory Alcohol Visual", parent.show_unisensory_alcohol_visual),
-            ("Multisensory Neutral Visual & Olfactory", parent.show_multisensory_neutral_visual_olfactory),
-            ("Multisensory Alcohol Visual & Olfactory", parent.show_multisensory_alcohol_visual_olfactory),
-            ("Multisensory Neutral Visual, Tactile & Olfactory", parent.show_multisensory_neutral_visual_tactile_olfactory),
-            ("Multisensory Alcohol Visual, Tactile & Olfactory", parent.show_multisensory_alcohol_visual_tactile_olfactory)
+            ("Multisensory Neutral Visual && Olfactory", parent.show_multisensory_neutral_visual_olfactory),
+            ("Multisensory Alcohol Visual && Olfactory", parent.show_multisensory_alcohol_visual_olfactory),
+            ("Multisensory Neutral Visual, Tactile && Olfactory", parent.show_multisensory_neutral_visual_tactile_olfactory),
+            ("Multisensory Alcohol Visual, Tactile && Olfactory", parent.show_multisensory_alcohol_visual_tactile_olfactory)
         ])
 
         # Add the stroop tests to the sidebar
         self.add_submenu("Stroop Test", [
-            ("Multisensory Alcohol (Visual & Tactile)", parent.show_multisensory_alcohol_visual_tactile),
-            ("Multisensory Neutral (Visual & Tactile)", parent.show_multisensory_neutral_visual_tactile),
-            ("Multisensory Alcohol (Visual & Olfactory)", parent.show_multisensory_alcohol_visual_olfactory2),
-            ("Multisensory Neutral (Visual & Olfactory)", parent.show_multisensory_neutral_visual_olfactory2)
+            ("Multisensory Alcohol (Visual && Tactile)", parent.show_multisensory_alcohol_visual_tactile),
+            ("Multisensory Neutral (Visual && Tactile)", parent.show_multisensory_neutral_visual_tactile),
+            ("Multisensory Alcohol (Visual && Olfactory)", parent.show_multisensory_alcohol_visual_olfactory2),
+            ("Multisensory Neutral (Visual && Olfactory)", parent.show_multisensory_neutral_visual_olfactory2)
         ])
 
         # Instructions button
@@ -137,27 +137,34 @@ class Sidebar(QFrame):
     # Add a submenu with a heading and options  
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)
-        heading_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        heading_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         heading_label.setStyleSheet("color: #7E57C2; background: transparent; margin-bottom: 2px;")
         self.submenu_layout.addWidget(heading_label)
 
-        # Add buttons for each option in the submenu
         for option_text, option_func in options:
-            button = QPushButton(option_text, self)
-            button.setFont(QFont("Segoe UI", 10))
+            button = QPushButton(self)
+            button.setFont(QFont("Segoe UI", 16, QFont.Bold))
+            # Insert a line break after the 3rd word for long labels
+            words = option_text.split(' ')
+            if len(words) > 3:
+                text = ' '.join(words[:3]) + '\n' + ' '.join(words[3:])
+            else:
+                text = option_text
+            button.setText(text)
             button.setStyleSheet("""
                 QPushButton {
                     background-color: #ede7f6;
                     color: #53366b;
                     border-radius: 7px;
-                    padding: 7px 0px;
-                    text-align: left;
+                    padding: 14px 10px;
+                    text-align: center;
                 }
                 QPushButton:hover {
                     background-color: #d1b3ff;
                 }
             """)
             button.clicked.connect(option_func)
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             self.submenu_layout.addWidget(button)
 
     def highlight_tests(self, test_number):
@@ -177,7 +184,7 @@ class Sidebar(QFrame):
                 color: #53366b;
                 border-radius: 7px;
                 padding: 7px 0px;
-                text-align: left;
+                text-align: center;
             }
             QPushButton:hover {
                 background-color: #d1b3ff;
@@ -189,7 +196,7 @@ class Sidebar(QFrame):
                 color: #53366b;
                 border-radius: 7px;
                 padding: 7px 0px;
-                text-align: left;
+                text-align: center;
             }
             QPushButton:hover {
                 background-color: #ffd54f;
