@@ -453,6 +453,16 @@ class ControlWindow(QMainWindow):
         self.tactile_process = Process(target=tactile_setup.run_tactile_setup, args=(self.shared_status, self.connection))
         self.tactile_process.start()
 
+    def connect_olfactory(self):
+        if self.connection:
+            msg = {"action": "connect_olfactory"}
+            self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+
+    def connect_turntable(self):
+        if self.connection:
+            msg = {"action": "connect_turntable"}
+            self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+
     def open_eeg_stream(self):
         """Open the EEG stream window in a separate process."""
         try:
@@ -574,6 +584,10 @@ class ControlWindow(QMainWindow):
                                 logging.info(f"[CLIENT] {log_message}")
                                 #timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                                 #self.label_log.append((label, timestamp))
+                            elif action == "olfactory_connected":
+                                self.update_app_status_icon(self.olfactory_connected_icon, message.get("success", False))
+                            elif action == "turntable_connected":
+                                self.update_app_status_icon(self.turntable_connected_icon, message.get("success", False))
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
