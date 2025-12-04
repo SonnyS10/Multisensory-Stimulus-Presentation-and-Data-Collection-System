@@ -385,9 +385,9 @@ class DisplayWindow(QMainWindow):
             # Fallback: just move to default position and size
             self.move(100, 100)
             self.resize(700, 700)
-
-        self.olfactory_controller = OlfactoryController()
-        self.olfactory_connected = self.olfactory_controller.connect()
+        if "Olfactory" in self.current_test:
+            self.olfactory_controller = OlfactoryController()
+            self.olfactory_connected = self.olfactory_controller.connect()
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
@@ -460,6 +460,8 @@ class DisplayWindow(QMainWindow):
 
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
             if "Olfactory" in self.current_test:
@@ -498,6 +500,8 @@ class DisplayWindow(QMainWindow):
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         img = self.images[self.current_image_index]
         if "Olfactory" in self.current_test:
             self.scent_function()
@@ -523,6 +527,8 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         self.image_label.clear()
         self.set_instruction_text()
         self.wait_for_input()
@@ -540,6 +546,8 @@ class DisplayWindow(QMainWindow):
             print("Current image index is at the last image, waiting for next button is not applicable.")
 
     def show_crosshair_between_images(self, test_type):
+        if self.Paused:
+            return  # Do not proceed if paused
         # --- Clear craving rating widgets (everything after the first two persistent labels) ---
         self.clear_overlay()
 
@@ -639,6 +647,8 @@ class DisplayWindow(QMainWindow):
         self._advance_image()
 
     def _advance_image(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         self.current_image_index += 1
         if self.current_image_index < len(self.images):
             current_asset = self.images[self.current_image_index]
@@ -880,6 +890,8 @@ class DisplayWindow(QMainWindow):
             event.ignore()
 
     def end_screen(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         label = "End Screen Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
@@ -1110,6 +1122,8 @@ class DisplayWindow(QMainWindow):
         QTimer.singleShot(500, self.show_crosshair_after_craving)
 
     def show_crosshair_after_craving(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         # Show crosshair for a short period after craving rating
         self.clear_overlay()
         self.instructions_label.setText("+")
@@ -1137,6 +1151,8 @@ class DisplayWindow(QMainWindow):
             QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
         
     def show_crosshair_before_craving(self):
+        if self.Paused:
+            return  # Do not proceed if paused
         # Show crosshair for a short period before craving rating
         self.clear_overlay()
         self.instructions_label.setText("+")
