@@ -586,8 +586,10 @@ class ControlWindow(QMainWindow):
                                 #self.label_log.append((label, timestamp))
                             elif action == "olfactory_connected":
                                 self.update_app_status_icon(self.olfactory_connected_icon, message.get("success", False))
+                                self.shared_status['olfactory_connected'] = message.get("success", False)
                             elif action == "turntable_connected":
                                 self.update_app_status_icon(self.turntable_connected_icon, message.get("success", False))
+                                self.shared_status['turntable_connected'] = message.get("success", False)
                         except Exception as e:
                             logging.info(f"Host: Error processing command: {e}")
                             traceback.print_exc()
