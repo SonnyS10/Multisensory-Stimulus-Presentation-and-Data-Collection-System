@@ -74,6 +74,8 @@ def init_shared_resources():
     shared_status['eyetracker_connected'] = False
     shared_status['lsl_enabled'] = False
     shared_status['tactile_connected'] = False
+    shared_status['olfactory_connected'] = False
+    shared_status['turntable_connected'] = False
     log_queue = Queue()
     return manager, shared_status, log_queue
 

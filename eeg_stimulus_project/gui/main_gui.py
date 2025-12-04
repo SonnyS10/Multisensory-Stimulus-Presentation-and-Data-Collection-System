@@ -386,6 +386,7 @@ class GUI(QMainWindow):
                                 success = olf.connect()
                                 time.sleep(2)  # Give some time for the olfactory controller to initialize
                                 response = {"action": "olfactory_connected", "success": success}
+                                self.shared_status['olfactory_connected'] = success
                                 self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
                                 olf.close()
                             except Exception as e:
@@ -399,6 +400,7 @@ class GUI(QMainWindow):
                                 turntable_controller = TurntableController()
                                 time.sleep(2)  # Give some time for the turntable controller to initialize
                                 response = {"action": "turntable_connected", "success": True}
+                                self.shared_status['turntable_connected'] = True
                                 self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
                             except Exception as e:
                                 logging.info(f"Error connecting to turntable: {e}")
@@ -721,7 +723,34 @@ class Frame(QFrame):
             )
             if reply != QMessageBox.Yes:
                 return
+            
+        # --- Olfactory connection warning ---
+        is_olfactory = "Olfactory" in self.parent.get_current_test()
+        if is_olfactory and not self.shared_status.get('olfactory_connected', False):
+            reply = QMessageBox.question(
+                self,
+                "Olfactory Controller Not Connected",
+                "The olfactory controller is not connected, are you sure you want to proceed?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+            
+        # --- Turntable connection warning ---
+        is_turntable = self.viewing_booth_button.isChecked()
+        if is_turntable and not self.shared_status.get('turntable_connected', False):
+            reply = QMessageBox.question(
+                self,
+                "Turntable Not Connected",
+                "The turntable is not connected, are you sure you want to proceed?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
 
+        # --- Test already run warning ---
         current_test = self.parent.get_current_test()
         if current_test in self.tests_run:
             reply = QMessageBox.question(
