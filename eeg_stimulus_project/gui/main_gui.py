@@ -384,8 +384,10 @@ class GUI(QMainWindow):
                             try:
                                 olf = OlfactoryController()
                                 success = olf.connect()
+                                time.sleep(2)  # Give some time for the olfactory controller to initialize
                                 response = {"action": "olfactory_connected", "success": success}
                                 self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
+                                olf.close()
                             except Exception as e:
                                 logging.info(f"Error connecting to olfactory controller: {e}")
                         elif msg.get("action") == "connect_turntable":

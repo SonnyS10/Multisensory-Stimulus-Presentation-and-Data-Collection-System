@@ -215,7 +215,7 @@ class ControlWindow(QMainWindow):
         # --- Turntable Row ---
         turntable_row, self.turntable_connected_icon = device_row(
             "Turntable",
-            None,  # Add function if needed
+            self.connect_turntable,
             "Connection Status:",
             "turntable_connected_icon"
         )
@@ -224,7 +224,7 @@ class ControlWindow(QMainWindow):
         # --- Olfactory Row ---
         olfactory_row, self.olfactory_connected_icon = device_row(
             "Olfactory System",
-            None,  # Add function if needed
+            self.connect_olfactory,
             "Connection Status:",
             "olfactory_connected_icon"
         )
