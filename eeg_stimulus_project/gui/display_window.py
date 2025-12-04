@@ -203,11 +203,7 @@ class MirroredDisplayWindow(QWidget):
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
-        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.show_crosshair_period()
-        # After 2 Minutes, show the main instructions (not restart the experiment)
-        QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
-
+    
     def show_main_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
@@ -393,19 +389,6 @@ class DisplayWindow(QMainWindow):
         self.olfactory_controller = OlfactoryController()
         self.olfactory_connected = self.olfactory_controller.connect()
 
-    # helper that runs func after an initial delay, but if paused it defers execution until unpaused
-    def _call_when_unpaused(self, func, *args, delay_ms=0, retry_ms=100):
-        if delay_ms and delay_ms > 0:
-            QTimer.singleShot(delay_ms, lambda: self._call_when_unpaused(func, *args, delay_ms=0, retry_ms=retry_ms))
-            return
-        if not getattr(self, 'Paused', False):
-            try:
-                func(*args)
-            except TypeError:
-                func()
-        else:
-            QTimer.singleShot(retry_ms, lambda: self._call_when_unpaused(func, *args, delay_ms=0, retry_ms=retry_ms))
-
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -417,7 +400,7 @@ class DisplayWindow(QMainWindow):
                 if self.paused_time > 0:
                     self.elapsed_time = self.paused_time
                     self.current_image_index = self.paused_image_index - 1
-                    self.timer.start(1)  # Start the timer with 1 ms interval
+                    self.timer.start(1)  # Start the timer with 100 ms interval
                 else:
                     # When loading images for the current test:
                     from eeg_stimulus_project.assets.asset_handler import Display
@@ -430,7 +413,7 @@ class DisplayWindow(QMainWindow):
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
-                    self.timer.start(1)  # Start the timer with 1 ms interval
+                    self.timer.start(1)  # Start the timer with 100 ms interval
                 if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
                 else:
@@ -450,24 +433,17 @@ class DisplayWindow(QMainWindow):
     def pause_trial(self, event=None):
         label = "Paused Trial"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        # Stop primary timer
-        if hasattr(self, 'timer') and self.timer.isActive():
-            self.timer.stop()
-        # Stop Transition timers the object controls
-        if hasattr(self, 'image_transition_timer') and self.image_transition_timer.isActive():
-            self.image_transition_timer.stop()  # Stop the image transition timer
-        if hasattr(self, 'stroop_transition_timer') and self.stroop_transition_timer.isActive():
+        self.timer.stop()
+        self.image_transition_timer.stop()  # Stop the image transition timer
+        if hasattr(self, 'stroop_transition_timer'):
             self.stroop_transition_timer.stop()  # Stop the Stroop timer
         self.paused_time = self.elapsed_time
         logging.info(self.paused_time)
         self.send_message({"action": "client_log", "message": f"Paused time: {self.paused_time}"})
-        # Save current image index (store as last shown so resume logic can advance correctly)
-        try:
-            self.paused_image_index = self.current_image_index
-        except Exception:
-            self.paused_image_index = 0
+        self.paused_image_index = self.current_image_index 
         logging.info(self.paused_image_index)
         self.send_message({"action": "client_log", "message": f"Paused image index: {self.paused_image_index}"})
+         # Store the current image index
         self.Paused = True
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.pause_trial()
@@ -477,16 +453,10 @@ class DisplayWindow(QMainWindow):
     def resume_trial(self, event=None):
         label = "Resumed Trial"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        # Unset paused flag first so scheduled transitions can continue
         self.Paused = False
-        # Restart the main elapsed timer
-        if hasattr(self, 'timer') and not self.timer.isActive():
-            self.timer.start(1)
-        # Resume mirror
+        self.run_trial()  # Resume the trial
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.resume_trial()
-        # Resume trial logic by calling run_trial which will pick up the paused_time and paused_image_index
-        self.run_trial()
 
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
@@ -510,13 +480,13 @@ class DisplayWindow(QMainWindow):
                 self.current_label = label
             if "Tactile" in self.current_test:
                 # For tactile, show image for 2 seconds, then show crosshair and wait for touch
-                self._call_when_unpaused(lambda: self.show_crosshair_and_wait_tactile(), delay_ms=2000)
+                QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
             else:
-                # Only show crosshair if next asset is NOT a craving rating
+            # Only show crosshair if next asset is NOT a craving rating
                 if self.next_asset_is_craving():
-                    self._call_when_unpaused(lambda: self.show_crosshair_before_craving(), delay_ms=2000)
+                    QTimer.singleShot(2000, lambda: self.show_crosshair_before_craving())
                 else:
-                    self._call_when_unpaused(lambda: self.show_crosshair_between_images('passive'), delay_ms=2000)
+                    QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
         elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
             # Handle the craving rating asset (e.g., show a rating dialog or skip)
             # Example: show a custom widget or message
@@ -544,16 +514,12 @@ class DisplayWindow(QMainWindow):
             self.current_label = label
         if "Tactile" in self.current_test:
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
-            self._call_when_unpaused(self.hide_image, delay_ms=2000)
+            QTimer.singleShot(2000, self.hide_image)
         else:
             # Olfactory Stroop
-            try:
-                self.stroop_transition_timer.timeout.disconnect()
-            except Exception:
-                pass
+            self.stroop_transition_timer.timeout.disconnect()
             self.stroop_transition_timer.timeout.connect(self.hide_image)
-            # Use QTimer single shot via helper to honor pause state
-            self._call_when_unpaused(lambda: self.stroop_transition_timer.start(2000), delay_ms=0)
+            self.stroop_transition_timer.start(2000)
 
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
@@ -592,23 +558,24 @@ class DisplayWindow(QMainWindow):
         if test_type == 'passive':
             if "Tactile" in self.current_test and "Olfactory" in self.current_test:
                 if self.current_image_index == (len(self.images) - 1):
-                    self._call_when_unpaused(self._advance_image, delay_ms=duration_ms)
+                    QTimer.singleShot(duration_ms, self._advance_image)
                 else:
                     pass  # Wait for next button
             #elif "Olfactory" in self.current_test:
             #    # Probably same as tactile + olfactory
             #    pass  # Wait for smell
             else:
-                self._call_when_unpaused(self._advance_image, delay_ms=duration_ms)
+                QTimer.singleShot(duration_ms, self._advance_image)
         elif test_type == 'stroop':
             if "Tactile" in self.current_test:
                 if self.current_image_index == (len(self.images) - 1):
-                    self._call_when_unpaused(self._advance_image, delay_ms=duration_ms)
+                    QTimer.singleShot(duration_ms, self._advance_image)
                 else:
                     pass  # Wait for next button
             else:
                 # Olfactory Stroop
-                self._call_when_unpaused(self._advance_image, delay_ms=duration_ms)
+                print("Advancing image")
+                QTimer.singleShot(duration_ms, self._advance_image)
 
     @pyqtSlot()
     def proceed_from_next_button(self):
@@ -866,11 +833,14 @@ class DisplayWindow(QMainWindow):
             self.countdown_label.setText("Go!")
             label = "Countdown Finished, starting experiment"
             self.send_message({"action": "label", "label": label})  # Send label to the server
-            self._call_when_unpaused(self.after_countdown, delay_ms=1000)
+            QTimer.singleShot(1000, self.after_countdown)
 
     def after_countdown(self):
         if "Tactile" in self.current_test:
             self.show_touch_instruction(initial=True)
+        #elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
+        #    # For olfactory only, probably need to wait for smell
+        #    pass
         else:
             self.begin_experiment()
 
@@ -938,7 +908,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_instructions()
         # After a short delay (5 seconds), show the crosshair
-        self._call_when_unpaused(self.show_crosshair_period, delay_ms=5000)  # Show crosshair after 5 seconds (adjust as needed)
+        QTimer.singleShot(5000, self.show_crosshair_period)  # Show crosshair after 5 seconds (adjust as needed)
         
     def show_crosshair_period(self):
         # Show a crosshair for 2 minutes
@@ -954,7 +924,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 Minutes, show the main instructions (not restart the experiment)
-        self._call_when_unpaused(self.show_main_instructions, delay_ms=500)  # 2 minutes (120000)
+        QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
@@ -1072,6 +1042,11 @@ class DisplayWindow(QMainWindow):
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
 
+        #for i in range(7):
+        #    grid.setColumnStretch(i, 1)
+        #grid.setRowStretch(0, 1)
+        #grid.setRowStretch(1, 0)
+
         grid_widget = QWidget(self.overlay_widget)
         grid_widget.setLayout(grid)
         grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -1132,7 +1107,7 @@ class DisplayWindow(QMainWindow):
         self.send_message({"action": "crave", "crave": self.craving_response})  # Send label to the server
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
-        self._call_when_unpaused(self.show_crosshair_after_craving, delay_ms=500)
+        QTimer.singleShot(500, self.show_crosshair_after_craving)
 
     def show_crosshair_after_craving(self):
         # Show crosshair for a short period after craving rating
@@ -1153,10 +1128,13 @@ class DisplayWindow(QMainWindow):
                 # After craving rating, show crosshair and enable next button for tactile
                 self.waiting_for_next = True
                 self.frame.next_button.setEnabled(True)
+            #elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
+            #    # For olfactory only, probably need to wait for smell
+            #    pass
             else:
-                self._call_when_unpaused(self._advance_image, delay_ms=1000)
+                QTimer.singleShot(1000, self._advance_image)
         else:
-            self._call_when_unpaused(self.show_post_test_crosshair_instructions, delay_ms=1000)
+            QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
         
     def show_crosshair_before_craving(self):
         # Show crosshair for a short period before craving rating
@@ -1170,7 +1148,7 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
-        self._call_when_unpaused(self._advance_image, delay_ms=1000)  # 1 second crosshair before craving rating
+        QTimer.singleShot(1000, self._advance_image)  # 1 second crosshair before craving rating
 
     def next_asset_is_craving(self):
         next_idx = self.current_image_index + 1
@@ -1191,7 +1169,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_instructions()
         # After a short delay (5 seconds), show the crosshair
-        self._call_when_unpaused(self.show_post_test_crosshair_period, delay_ms=5000)  # Show crosshair after 5 seconds
+        QTimer.singleShot(5000, self.show_post_test_crosshair_period)  # Show crosshair after 5 seconds
 
     def show_post_test_crosshair_period(self):
         # Show a crosshair for 2 minutes after the test has ended
@@ -1207,7 +1185,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 minutes, show the end screen (not restart the experiment)
-        self._call_when_unpaused(self.end_screen, delay_ms=500)  # Show end screen after 2 minutes (120000)
+        QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
 
     def start_global_key_listener(self):
         # Start listening for global key presses
