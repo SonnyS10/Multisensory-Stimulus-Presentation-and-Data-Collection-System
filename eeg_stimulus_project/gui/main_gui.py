@@ -729,8 +729,8 @@ class Frame(QFrame):
         if is_olfactory and not self.shared_status.get('olfactory_connected', False):
             reply = QMessageBox.question(
                 self,
-                "Olfactory Controller Not Connected",
-                "The olfactory controller is not connected, are you sure you want to proceed?",
+                "Olfactory System Not Connected",
+                "The olfactory system is not connected, are you sure you want to proceed?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
