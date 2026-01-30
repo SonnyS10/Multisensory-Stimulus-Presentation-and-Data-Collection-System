@@ -113,7 +113,7 @@ if defined PYTHONW_PATH (
 )
 
 REM Method 3: Try common Anaconda locations
-echo [3/4] Checking common Anaconda locations...
+echo [3/6] Checking common Anaconda locations...
 if exist "%USERPROFILE%\anaconda3\python.exe" (
     set "PYTHON_EXE=%USERPROFILE%\anaconda3\python.exe"
     echo [OK] Found Python at: %USERPROFILE%\anaconda3\python.exe
@@ -132,8 +132,23 @@ if exist "C:\ProgramData\anaconda3\python.exe" (
     goto :found_python
 )
 
-REM Method 4: Try Windows Store Python
-echo [4/4] Checking Windows Store Python...
+REM Method 4: Try Program Files locations
+echo [4/6] Checking Program Files locations...
+for %%V in (314 313 312 311 310 39 38) do (
+    if exist "C:\Program Files\Python%%V\python.exe" (
+        set "PYTHON_EXE=C:\Program Files\Python%%V\python.exe"
+        echo [OK] Found Python at: C:\Program Files\Python%%V\python.exe
+        goto :found_python
+    )
+    if exist "C:\Program Files (x86)\Python%%V\python.exe" (
+        set "PYTHON_EXE=C:\Program Files (x86)\Python%%V\python.exe"
+        echo [OK] Found Python at: C:\Program Files (x86)\Python%%V\python.exe
+        goto :found_python
+    )
+)
+
+REM Method 5: Try Windows Store Python
+echo [5/6] Checking Windows Store Python...
 if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe" (
     set "PYTHON_EXE=%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe"
     echo [OK] Found Python at: %LOCALAPPDATA%\Microsoft\WindowsApps\python.exe
