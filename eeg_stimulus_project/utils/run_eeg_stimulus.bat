@@ -233,7 +233,7 @@ REM ==============================
 REM Check for all required packages
 REM ==============================
 
-set PACKAGES=PyQt5 pillow numpy matplotlib openpyxl pylsl pyyaml pandas pupil-labs-realtime-api pynput serial pywinauto
+set PACKAGES=PyQt5 pillow numpy matplotlib openpyxl pylsl pyyaml pandas pupil-labs-realtime-api pynput serial pywinauto paramiko
 
 echo Checking for required Python packages...
 for %%P in (%PACKAGES%) do (
