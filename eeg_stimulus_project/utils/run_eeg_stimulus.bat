@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM EEG Stimulus Project Launcher - Universal Version
 
 echo ========================================
@@ -94,13 +95,21 @@ if not errorlevel 1 (
     goto :found_python
 )
 
-REM Method 2: Try pythonw from PATH  
+REM Method 2: Try pythonw from PATH (but prefer python.exe)
 echo [2/4] Checking pythonw in PATH...
-pythonw --version >nul 2>&1
-if not errorlevel 1 (
-    set "PYTHON_EXE=pythonw"
-    echo [OK] Found Pythonw in PATH
-    goto :found_python
+for %%i in (pythonw.exe) do set "PYTHONW_PATH=%%~$PATH:i"
+if defined PYTHONW_PATH (
+    REM Get the directory containing pythonw and check for python.exe
+    for %%i in ("%PYTHONW_PATH%") do set "PYTHON_DIR=%%~dpi"
+    if exist "!PYTHON_DIR!python.exe" (
+        set "PYTHON_EXE=!PYTHON_DIR!python.exe"
+        echo [OK] Found Python in same directory as Pythonw
+        goto :found_python
+    ) else (
+        set "PYTHON_EXE=pythonw"
+        echo [OK] Found Pythonw in PATH
+        goto :found_python
+    )
 )
 
 REM Method 3: Try common Anaconda locations
