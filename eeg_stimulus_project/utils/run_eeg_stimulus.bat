@@ -34,91 +34,49 @@ REM Check if conda is available
 where conda >nul 2>&1
 if not errorlevel 1 (
     echo [OK] Found conda installation
-    
-    REM Get current environment name from conda info --envs
-    for /f "tokens=1,* delims= " %%i in ('conda info --envs 2^>nul ^| findstr /C:"*"') do (
-        set "CURRENT_ENV=%%i"
-    )
-    REM Now CURRENT_ENV is set
-
-    echo Current conda environment: %CURRENT_ENV%
     echo.
-    echo Available conda environments:
-    conda info --envs 2>nul
+    echo Automatically selecting best conda environment...
     echo.
     
-    REM Ask user which environment to use
-    echo Environment options:
-    echo 1. Use current environment (%CURRENT_ENV%)
-    echo 2. Use Research environment (if available)
-    echo 3. Use base environment
-    echo 4. Choose specific environment
-    echo 5. Use system Python (no conda)
-    echo.
-    set /p "ENV_CHOICE=Enter your choice (1-5): "
+    REM Try environments in order of preference
     
-    if "%ENV_CHOICE%"=="1" (
-        echo Using current environment: %CURRENT_ENV%
+    REM 1. Try Research environment first
+    echo [1/4] Checking for 'Research' conda environment...
+    call conda activate Research 2>nul
+    if not errorlevel 1 (
+        echo [OK] Activated Research environment
         set "PYTHON_EXE=python"
         goto :found_python
     )
+    echo [INFO] Research environment not available
     
-    if "%ENV_CHOICE%"=="2" (
-        echo Activating Research environment...
-        call conda activate Research 2>nul
-        if not errorlevel 1 (
-            echo [OK] Activated Research environment
-            set "PYTHON_EXE=python"
-            goto :found_python
-        ) else (
-            echo [WARNING] Failed to activate Research environment
-            echo Falling back to current environment
+    REM 2. Get and try current active environment (if not base)
+    echo [2/4] Checking current conda environment...
+    for /f "tokens=1,* delims= " %%i in ('conda info --envs 2^>nul ^| findstr /C:"*"') do (
+        set "CURRENT_ENV=%%i"
+    )
+    if defined CURRENT_ENV (
+        if /I not "%CURRENT_ENV%"=="base" (
+            echo [OK] Using current environment: %CURRENT_ENV%
             set "PYTHON_EXE=python"
             goto :found_python
         )
     )
+    echo [INFO] No suitable active environment
     
-    if "%ENV_CHOICE%"=="3" (
-        echo Activating base environment...
-        call conda activate base 2>nul
-        if not errorlevel 1 (
-            echo [OK] Activated base environment
-            set "PYTHON_EXE=python"
-            goto :found_python
-        ) else (
-            echo [WARNING] Failed to activate base environment
-            set "PYTHON_EXE=python"
-            goto :found_python
-        )
+    REM 3. Try base environment
+    echo [3/4] Checking for 'base' conda environment...
+    call conda activate base 2>nul
+    if not errorlevel 1 (
+        echo [OK] Activated base environment
+        set "PYTHON_EXE=python"
+        goto :found_python
     )
+    echo [INFO] Base environment not available
     
-    if "%ENV_CHOICE%"=="4" (
-        echo.
-        set /p "CUSTOM_ENV=Enter environment name: "
-        echo Activating %CUSTOM_ENV% environment...
-        call conda activate %CUSTOM_ENV% 2>nul
-        if not errorlevel 1 (
-            echo [OK] Activated %CUSTOM_ENV% environment
-            set "PYTHON_EXE=python"
-            goto :found_python
-        ) else (
-            echo [ERROR] Failed to activate %CUSTOM_ENV% environment
-            echo Available environments:
-            conda info --envs
-            pause
-            exit /b 1
-        )
-    )
-    
-    if "%ENV_CHOICE%"=="5" (
-        echo Using system Python...
-        goto :find_system_python
-    )
-    
-    REM Default to current environment if invalid choice
-    echo Invalid choice, using current environment: %CURRENT_ENV%
-    set "PYTHON_EXE=python"
-    goto :found_python
+    REM 4. If no conda environment worked, try system Python
+    echo [4/4] No conda environment available, trying system Python...
+    goto :find_system_python
 ) else (
     echo [INFO] Conda not found, searching for system Python...
     goto :find_system_python
