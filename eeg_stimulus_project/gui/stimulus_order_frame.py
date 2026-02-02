@@ -11,7 +11,7 @@ import time
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, 
     QListWidget, QListWidgetItem, QFrame, QMessageBox, QSizePolicy, QFileDialog,
-    QCheckBox, QLineEdit, QDialog, QFormLayout, QDialogButtonBox
+    QCheckBox, QLineEdit, QDialog, QFormLayout, QDialogButtonBox, QTreeWidget, QTreeWidgetItem
 )
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize
@@ -276,33 +276,44 @@ class StimulusOrderFrame(QWidget):
         assets_label.setAlignment(Qt.AlignLeft)
         assets_layout.addWidget(assets_label)
 
-        self.available_assets_list = QListWidget()
-        #print("available_assets_list created:", hasattr(self, "available_assets_list"))
-        self.available_assets_list.setSelectionMode(QListWidget.SingleSelection)
-        self.available_assets_list.setMinimumHeight(120)
-        self.available_assets_list.setStyleSheet("""
-            QListWidget {
+        self.available_assets_tree = QTreeWidget()
+        self.available_assets_tree.setHeaderHidden(True)
+        self.available_assets_tree.setSelectionMode(QTreeWidget.SingleSelection)
+        self.available_assets_tree.setMinimumHeight(120)
+        self.available_assets_tree.setStyleSheet("""
+            QTreeWidget {
                 background-color: white;
                 border: 1px solid #bbb;
                 border-radius: 4px;
                 padding: 5px;
             }
-            QListWidget::item {
-                padding: 8px;
-                margin: 2px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                background-color: #f9f9f9;
+            QTreeWidget::item {
+                padding: 6px;
+                border-radius: 3px;
             }
-            QListWidget::item:selected {
+            QTreeWidget::item:selected {
                 background-color: #007bff;
                 color: white;
             }
-            QListWidget::item:hover {
+            QTreeWidget::item:hover {
                 background-color: #e9ecef;
             }
+            QTreeWidget::branch {
+                background-color: white;
+            }
+            QTreeWidget::branch:has-children:!has-siblings:closed,
+            QTreeWidget::branch:closed:has-children:has-siblings {
+                border-image: none;
+                image: url(none);
+            }
+            QTreeWidget::branch:open:has-children:!has-siblings,
+            QTreeWidget::branch:open:has-children:has-siblings {
+                border-image: none;
+                image: url(none);
+            }
         """)
-        assets_layout.addWidget(self.available_assets_list)
+        self.available_assets_tree.setIndentation(20)
+        assets_layout.addWidget(self.available_assets_tree)
 
         asset_btn_layout = QHBoxLayout()
         self.add_asset_btn = QPushButton("Add Selected Asset")
@@ -437,21 +448,78 @@ class StimulusOrderFrame(QWidget):
 
             # Gather all unique assets for the available assets list, tagging by origin
             asset_dict = {}
-            alcohol_folder = os.path.abspath(self.alcohol_folder) if self.alcohol_folder else None
-            non_alcohol_folder = os.path.abspath(self.non_alcohol_folder) if self.non_alcohol_folder else None
+            
+            # Get custom folder paths if provided and validate they're not just the project root
+            gui_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(gui_dir)  # eeg_stimulus_project
+            project_root = os.path.normpath(os.path.abspath(project_root))
+            
+            # Only use custom folders if they're actually set and not the project root
+            alcohol_folder = None
+            if self.alcohol_folder and os.path.abspath(self.alcohol_folder) != project_root:
+                alcohol_folder = os.path.normpath(os.path.abspath(self.alcohol_folder))
+            
+            non_alcohol_folder = None
+            if self.non_alcohol_folder and os.path.abspath(self.non_alcohol_folder) != project_root:
+                non_alcohol_folder = os.path.normpath(os.path.abspath(self.non_alcohol_folder))
+            
+            # Get default folder paths
+            default_alcohol_folder = os.path.join(project_root, 'assets', 'Images', 'Default', 'Alcohol')
+            default_neutral_folder = os.path.join(project_root, 'assets', 'Images', 'Default', 'Neutral')
+            
+            # Normalize paths for comparison
+            default_alcohol_folder = os.path.normpath(os.path.abspath(default_alcohol_folder))
+            default_neutral_folder = os.path.normpath(os.path.abspath(default_neutral_folder))
+            
+            print(f"=== Asset Origin Detection ===")
+            print(f"Project Root: {project_root}")
+            print(f"Default Alcohol Folder: {default_alcohol_folder}")
+            print(f"Default Neutral Folder: {default_neutral_folder}")
+            print(f"Custom Alcohol Folder: {alcohol_folder}")
+            print(f"Custom Neutral Folder: {non_alcohol_folder}")
+            print(f"=============================")
+            
             for images in self.original_assets.values():
                 for img in images:
                     fname = getattr(img, 'filename', None)
                     if fname:
-                        fname_abs = os.path.abspath(fname)
+                        fname_abs = os.path.normpath(os.path.abspath(fname))
+                        fname_dir = os.path.dirname(fname_abs)
 
-                        if alcohol_folder and fname_abs.startswith(alcohol_folder):
+                        # Check paths - be very specific with matching
+                        # Check if in alcohol folders (default or custom)
+                        is_alcohol = False
+                        is_neutral = False
+                        
+                        # Check default folders (exact match)
+                        if fname_dir == default_alcohol_folder:
+                            is_alcohol = True
+                        elif fname_dir == default_neutral_folder:
+                            is_neutral = True
+                        # Check custom folders (exact match or subdirectory)
+                        elif alcohol_folder and (fname_dir == alcohol_folder or fname_dir.startswith(alcohol_folder + os.sep)):
+                            is_alcohol = True
+                        elif non_alcohol_folder and (fname_dir == non_alcohol_folder or fname_dir.startswith(non_alcohol_folder + os.sep)):
+                            is_neutral = True
+                        
+                        # Assign origin based on checks
+                        if is_alcohol:
                             img.asset_origin = "alcohol"
-                        elif non_alcohol_folder and fname_abs.startswith(non_alcohol_folder):
+                        elif is_neutral:
                             img.asset_origin = "neutral"
                         else:
-                            img.asset_origin = "unknown"
-                        norm = self.normalize_name(os.path.basename(fname))
+                            # Fallback: check if filename contains alcohol-related keywords
+                            fname_lower = fname.lower()
+                            if any(keyword in fname_lower for keyword in ['beer', 'stella', 'wine', 'whiskey', 'vodka', 'alcohol', 'liquor']):
+                                img.asset_origin = "alcohol"
+                            else:
+                                img.asset_origin = "unknown"
+                        
+                        # Debug output
+                        print(f"  {os.path.basename(fname)} | Dir: {fname_dir} | Origin: {img.asset_origin}")
+                        
+                        # Use full normalized path as key to avoid overwriting assets with same filename
+                        norm = self.normalize_name(fname_abs)
                         asset_dict[norm] = img
             self.all_asset_objs = list(asset_dict.values())
             self.update_available_assets_list()
@@ -462,9 +530,8 @@ class StimulusOrderFrame(QWidget):
             self.update_available_assets_list()
 
     def update_available_assets_list(self):
-        """Update the available assets list widget, filtering by test type."""
-        #print("update_available_assets_list called, has available_assets_list:", hasattr(self, "available_assets_list"))
-        self.available_assets_list.clear()
+        """Update the available assets tree widget with folder structure, filtering by test type."""
+        self.available_assets_tree.clear()
         if not self.current_test_name:
             return
 
@@ -476,29 +543,93 @@ class StimulusOrderFrame(QWidget):
         else:
             cue_type = None  # Show all if not specified
 
+        # Organize assets by source
+        default_assets = []
+        custom_assets = []
+        
+        # Get paths for comparison
+        gui_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(gui_dir)
+        default_folder = os.path.normpath(os.path.join(project_root, 'assets', 'Images', 'Default'))
+        
+        print(f"\n=== Tree Display Debug ===")
+        print(f"Default folder path: {default_folder}")
+        print(f"Filter type: {cue_type}")
+        
         for img in self.all_asset_objs:
-            # Only show assets from the correct folder
-            if cue_type and getattr(img, "asset_origin", None) != cue_type:
+            origin = getattr(img, "asset_origin", "not_set")
+            # Only show assets from the correct type
+            if cue_type and origin != cue_type:
                 continue
-            item = QListWidgetItem()
+            
             fname = getattr(img, 'filename', None)
-            display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
-            item.setText(display_name)
             if fname:
-                try:
-                    pixmap = QPixmap(fname)
-                    if not pixmap.isNull():
-                        thumbnail = pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                        item.setIcon(QIcon(thumbnail))
-                except Exception as e:
-                    print(f"Error creating thumbnail for {fname}: {e}")
-            item.setData(Qt.UserRole, img)
-            self.available_assets_list.addItem(item)
-
-        # Add the craving rating asset to the available assets list
-        craving_item = QListWidgetItem("craving_rating")
-        craving_item.setData(Qt.UserRole, CravingRatingAsset())
-        self.available_assets_list.addItem(craving_item)
+                fname_abs = os.path.normpath(os.path.abspath(fname))
+                fname_dir = os.path.dirname(fname_abs)
+                # Check if it's from default folder or custom
+                # Must check if the file path contains the default folder path
+                is_default = fname_abs.startswith(default_folder + os.sep) or fname_dir == default_folder
+                print(f"  File: {os.path.basename(fname)} | Path: {fname_abs[:80]}... | Is Default: {is_default}")
+                
+                if is_default:
+                    default_assets.append(img)
+                else:
+                    custom_assets.append(img)
+        
+        # Create folder structure
+        if default_assets:
+            default_folder_item = QTreeWidgetItem(self.available_assets_tree)
+            default_folder_item.setText(0, f"📁 Default {cue_type.capitalize() if cue_type else ''} Assets ({len(default_assets)})")
+            default_folder_item.setFont(0, QFont("Segoe UI", 11, QFont.Bold))
+            default_folder_item.setExpanded(True)
+            
+            for img in default_assets:
+                fname = getattr(img, 'filename', None)
+                display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
+                item = QTreeWidgetItem(default_folder_item)
+                item.setText(0, display_name)
+                item.setData(0, Qt.UserRole, img)
+                
+                if fname:
+                    try:
+                        pixmap = QPixmap(fname)
+                        if not pixmap.isNull():
+                            thumbnail = pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                            item.setIcon(0, QIcon(thumbnail))
+                    except Exception as e:
+                        print(f"Error creating thumbnail for {fname}: {e}")
+        
+        if custom_assets:
+            custom_folder_item = QTreeWidgetItem(self.available_assets_tree)
+            custom_folder_item.setText(0, f"📁 Custom {cue_type.capitalize() if cue_type else ''} Assets ({len(custom_assets)})")
+            custom_folder_item.setFont(0, QFont("Segoe UI", 11, QFont.Bold))
+            custom_folder_item.setExpanded(True)
+            
+            for img in custom_assets:
+                fname = getattr(img, 'filename', None)
+                display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
+                item = QTreeWidgetItem(custom_folder_item)
+                item.setText(0, display_name)
+                item.setData(0, Qt.UserRole, img)
+                
+                if fname:
+                    try:
+                        pixmap = QPixmap(fname)
+                        if not pixmap.isNull():
+                            thumbnail = pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                            item.setIcon(0, QIcon(thumbnail))
+                    except Exception as e:
+                        print(f"Error creating thumbnail for {fname}: {e}")
+        
+        # Add craving rating asset
+        craving_item = QTreeWidgetItem(self.available_assets_tree)
+        craving_item.setText(0, "📊 craving_rating")
+        craving_item.setFont(0, QFont("Segoe UI", 10, QFont.Bold))
+        craving_item.setData(0, Qt.UserRole, CravingRatingAsset())
+        
+        # Debug output
+        total_assets = len(default_assets) + len(custom_assets)
+        print(f"Test: {self.current_test_name}, Type filter: {cue_type}, Assets shown: {total_assets}/{len(self.all_asset_objs)} (Default: {len(default_assets)}, Custom: {len(custom_assets)})")
 
     def on_test_selected(self):
         """Handle test selection change."""
@@ -648,13 +779,21 @@ class StimulusOrderFrame(QWidget):
         self.update_image_list()
     
     def add_selected_asset_to_test(self):
-        """Add the selected asset from the available list to the current test's working order."""
+        """Add the selected asset from the available tree to the current test's working order."""
         if not self.current_test_name:
             return
-        selected_items = self.available_assets_list.selectedItems()
+        selected_items = self.available_assets_tree.selectedItems()
         if not selected_items:
             return
-        img = selected_items[0].data(Qt.UserRole)
+        
+        # Get the selected item - could be a folder or an asset
+        selected_item = selected_items[0]
+        img = selected_item.data(0, Qt.UserRole)
+        
+        # If it's a folder (no data), don't add
+        if img is None:
+            QMessageBox.information(self, "Select Asset", "Please select an asset, not a folder.")
+            return
         
         # Ensure working order exists
         if self.current_test_name not in self.working_orders:

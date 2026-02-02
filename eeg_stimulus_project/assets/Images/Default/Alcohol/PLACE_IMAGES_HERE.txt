@@ -1,0 +1,18 @@
+# Place Your Alcohol Stimulus Images Here
+
+Add alcohol-related images to this folder:
+- Beer bottles, cans, or glasses
+- Wine bottles or glasses  
+- Liquor bottles
+- Cocktails
+- Mixed drinks
+
+**Supported formats:** .jpg, .jpeg, .png, .bmp, .gif, .tiff, .webp
+
+Example filenames:
+- beer_bottle_1.jpg
+- wine_glass_red.jpg
+- whiskey_bottle.jpg
+- cocktail_martini.jpg
+
+The images will automatically be loaded when you run the experiment.

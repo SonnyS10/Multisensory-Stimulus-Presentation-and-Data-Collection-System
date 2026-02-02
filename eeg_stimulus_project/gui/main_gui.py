@@ -711,9 +711,23 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
 
-        # --- Tactile connection warning ---
-        is_tactile = "Tactile" in self.parent.get_current_test()
-        if is_tactile and not self.shared_status.get('tactile_connected', False):
+        # --- Tactile connection check (mandatory for Stroop tactile tests) ---
+        current_test = self.parent.get_current_test()
+        is_stroop_tactile = current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 
+                                               'Stroop Multisensory Neutral (Visual & Tactile)']
+        is_tactile = "Tactile" in current_test
+        
+        if is_stroop_tactile and not self.shared_status.get('tactile_connected', False):
+            # For Stroop tactile tests, tactile connection is MANDATORY
+            QMessageBox.critical(
+                self,
+                "Tactile Box Required",
+                "The tactile box must be connected to run this Stroop test. Please connect the tactile system in the Control Window before starting.",
+                QMessageBox.Ok
+            )
+            return
+        elif is_tactile and not self.shared_status.get('tactile_connected', False):
+            # For non-Stroop tactile tests, show warning
             reply = QMessageBox.question(
                 self,
                 "Tactile Box Not Connected",
@@ -724,9 +738,22 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
             
-        # --- Olfactory connection warning ---
-        is_olfactory = "Olfactory" in self.parent.get_current_test()
-        if is_olfactory and not self.shared_status.get('olfactory_connected', False):
+        # --- Olfactory connection check (mandatory for Stroop olfactory tests) ---
+        is_stroop_olfactory = current_test in ['Stroop Multisensory Alcohol (Visual & Olfactory)', 
+                                                 'Stroop Multisensory Neutral (Visual & Olfactory)']
+        is_olfactory = "Olfactory" in current_test
+        
+        if is_stroop_olfactory and not self.shared_status.get('olfactory_connected', False):
+            # For Stroop olfactory tests, olfactory connection is MANDATORY
+            QMessageBox.critical(
+                self,
+                "Olfactory System Required",
+                "The olfactory system must be connected to run this Stroop test. Please connect the olfactory system in the Control Window before starting.",
+                QMessageBox.Ok
+            )
+            return
+        elif is_olfactory and not self.shared_status.get('olfactory_connected', False):
+            # For non-Stroop olfactory tests, show warning
             reply = QMessageBox.question(
                 self,
                 "Olfactory System Not Connected",

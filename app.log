@@ -2510,6 +2510,7 @@
 2026-01-23 13:35:15,149 INFO Cannot close host while client is connected. Please close the client first.
 2026-01-23 13:35:17,341 INFO Client disconnected.
 2026-01-30 16:33:20,145 INFO Client: Connected to host.
+<<<<<<< HEAD
 2026-02-02 15:40:59,105 INFO Host: Waiting for client on port 9999...
 2026-02-02 15:41:00,110 INFO Host: Connected by ('169.254.185.196', 55193)
 2026-02-02 15:41:06,677 INFO Cannot close host while client is connected. Please close the client first.
@@ -2524,3 +2525,10 @@
 2026-02-02 15:42:56,171 INFO Host: Waiting for client on port 9999...
 2026-02-02 15:43:05,719 INFO Host: Connected by ('169.254.185.196', 63008)
 2026-02-02 15:44:45,426 INFO Client disconnected.
+=======
+2026-01-30 16:44:19,800 INFO Client: Connected to host.
+2026-01-30 16:55:41,165 INFO Client: Connected to host.
+2026-01-30 17:06:53,925 INFO Client: Connected to host.
+2026-02-02 15:41:00,221 INFO Client: Connected to host.
+2026-02-02 15:43:05,828 INFO Client: Connected to host.
+>>>>>>> b7da760d102d3caa5f28b5e19089bc6f8c9e85d6
