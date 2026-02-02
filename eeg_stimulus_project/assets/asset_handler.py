@@ -110,41 +110,39 @@ class Display():
         # Get fallback images
         fallback_images = load_fallback_images()
         
-        # Load alcohol images
-        if alcohol_folder and os.path.isdir(alcohol_folder):
-            alcohol_images = load_images_from_folder(alcohol_folder)
-            if not alcohol_images:
-                # Fallback to default alcohol folder
-                if os.path.isdir(default_alcohol_folder):
-                    alcohol_images = load_images_from_folder(default_alcohol_folder)
-                if not alcohol_images:
-                    # Final fallback to hardcoded defaults if available
-                    alcohol_images = fallback_images if fallback_images else []
-        else:
-            # Use default alcohol folder if it exists
-            if os.path.isdir(default_alcohol_folder):
-                alcohol_images = load_images_from_folder(default_alcohol_folder)
-            if not alcohol_images:
-                # Final fallback to hardcoded defaults if available
-                alcohol_images = fallback_images if fallback_images else []
+        # Load alcohol images - ALWAYS include default, then add custom
+        alcohol_images = []
         
-        # Load non-alcohol (neutral) images
+        # First, load from default folder if it exists
+        if os.path.isdir(default_alcohol_folder):
+            default_alcohol = load_images_from_folder(default_alcohol_folder)
+            alcohol_images.extend(default_alcohol)
+        
+        # Then, add from custom folder if provided
+        if alcohol_folder and os.path.isdir(alcohol_folder):
+            custom_alcohol = load_images_from_folder(alcohol_folder)
+            alcohol_images.extend(custom_alcohol)
+        
+        # If still no images, use fallback
+        if not alcohol_images:
+            alcohol_images = fallback_images if fallback_images else []
+        
+        # Load non-alcohol (neutral) images - ALWAYS include default, then add custom
+        non_alcohol_images = []
+        
+        # First, load from default folder if it exists
+        if os.path.isdir(default_neutral_folder):
+            default_neutral = load_images_from_folder(default_neutral_folder)
+            non_alcohol_images.extend(default_neutral)
+        
+        # Then, add from custom folder if provided
         if non_alcohol_folder and os.path.isdir(non_alcohol_folder):
-            non_alcohol_images = load_images_from_folder(non_alcohol_folder)
-            if not non_alcohol_images:
-                # Fallback to default neutral folder
-                if os.path.isdir(default_neutral_folder):
-                    non_alcohol_images = load_images_from_folder(default_neutral_folder)
-                if not non_alcohol_images:
-                    # Final fallback to personalized images
-                    non_alcohol_images = personalized_images
-        else:
-            # Use default neutral folder if it exists
-            if os.path.isdir(default_neutral_folder):
-                non_alcohol_images = load_images_from_folder(default_neutral_folder)
-            if not non_alcohol_images:
-                # Final fallback to personalized images
-                non_alcohol_images = personalized_images
+            custom_neutral = load_images_from_folder(non_alcohol_folder)
+            non_alcohol_images.extend(custom_neutral)
+        
+        # If still no images, use fallback
+        if not non_alcohol_images:
+            non_alcohol_images = personalized_images if personalized_images else []
 
         # Warning if no images found
         if not alcohol_images:
