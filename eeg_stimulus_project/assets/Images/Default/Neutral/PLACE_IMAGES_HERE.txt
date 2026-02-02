@@ -1,0 +1,18 @@
+# Place Your Neutral Stimulus Images Here
+
+Add neutral (non-alcoholic) images to this folder:
+- Water bottles or glasses
+- Juice bottles or cartons
+- Soft drink cans or bottles
+- Coffee or tea cups
+- Other beverage containers
+
+**Supported formats:** .jpg, .jpeg, .png, .bmp, .gif, .tiff, .webp
+
+Example filenames:
+- water_bottle_1.jpg
+- orange_juice_glass.jpg
+- soda_can_1.jpg
+- coffee_cup.jpg
+
+The images will automatically be loaded when you run the experiment.

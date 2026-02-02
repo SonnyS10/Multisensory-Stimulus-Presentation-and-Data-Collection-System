@@ -2,9 +2,30 @@ from PIL import Image
 import os
 import random
 
-# Global Variables
-Beer = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Beer.jpg'))
-Stella = Image.open(os.path.join(os.path.dirname(__file__), 'Images', 'Stella.jpg'))
+# Global Variables - Load fallback images only if they exist
+def load_fallback_images():
+    """Load hardcoded fallback images if they exist."""
+    fallback_images = []
+    beer_path = os.path.join(os.path.dirname(__file__), 'Images', 'Beer.jpg')
+    stella_path = os.path.join(os.path.dirname(__file__), 'Images', 'Stella.jpg')
+    
+    if os.path.exists(beer_path):
+        try:
+            beer = Image.open(beer_path)
+            beer.filename = beer_path
+            fallback_images.append(beer)
+        except Exception as e:
+            print(f"Warning: Could not load Beer.jpg: {e}")
+    
+    if os.path.exists(stella_path):
+        try:
+            stella = Image.open(stella_path)
+            stella.filename = stella_path
+            fallback_images.append(stella)
+        except Exception as e:
+            print(f"Warning: Could not load Stella.jpg: {e}")
+    
+    return fallback_images
 
 # Function to load images from a folder
 def load_images_from_folder(folder):
@@ -82,26 +103,59 @@ class Display():
         #    f"  seed={seed}\n"
         #    f"  repetitions={repetitions}\n"
         #)
-        # Use user folders if provided, else use defaults
-        def_images_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default')
-        # Load backup default images
-        backup_default_images = []
-        if os.path.isdir(def_images_folder):
-            backup_default_images = load_images_from_folder(def_images_folder)
+        # Define default folders with separate alcohol and neutral directories
+        default_alcohol_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default', 'Alcohol')
+        default_neutral_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Default', 'Neutral')
+        
+        # Get fallback images
+        fallback_images = load_fallback_images()
+        
         # Load alcohol images
         if alcohol_folder and os.path.isdir(alcohol_folder):
             alcohol_images = load_images_from_folder(alcohol_folder)
             if not alcohol_images:
-                alcohol_images = backup_default_images if backup_default_images else [Beer, Stella]
+                # Fallback to default alcohol folder
+                if os.path.isdir(default_alcohol_folder):
+                    alcohol_images = load_images_from_folder(default_alcohol_folder)
+                if not alcohol_images:
+                    # Final fallback to hardcoded defaults if available
+                    alcohol_images = fallback_images if fallback_images else []
         else:
-            alcohol_images = backup_default_images if backup_default_images else [Beer, Stella]
-        # Load non-alcohol images
+            # Use default alcohol folder if it exists
+            if os.path.isdir(default_alcohol_folder):
+                alcohol_images = load_images_from_folder(default_alcohol_folder)
+            if not alcohol_images:
+                # Final fallback to hardcoded defaults if available
+                alcohol_images = fallback_images if fallback_images else []
+        
+        # Load non-alcohol (neutral) images
         if non_alcohol_folder and os.path.isdir(non_alcohol_folder):
             non_alcohol_images = load_images_from_folder(non_alcohol_folder)
             if not non_alcohol_images:
-                non_alcohol_images = backup_default_images if backup_default_images else personalized_images
+                # Fallback to default neutral folder
+                if os.path.isdir(default_neutral_folder):
+                    non_alcohol_images = load_images_from_folder(default_neutral_folder)
+                if not non_alcohol_images:
+                    # Final fallback to personalized images
+                    non_alcohol_images = personalized_images
         else:
-            non_alcohol_images = backup_default_images if backup_default_images else personalized_images
+            # Use default neutral folder if it exists
+            if os.path.isdir(default_neutral_folder):
+                non_alcohol_images = load_images_from_folder(default_neutral_folder)
+            if not non_alcohol_images:
+                # Final fallback to personalized images
+                non_alcohol_images = personalized_images
+
+        # Warning if no images found
+        if not alcohol_images:
+            print("WARNING: No alcohol stimulus images found! Please add images to:")
+            print(f"  - {default_alcohol_folder}")
+            print("  - Or specify a custom folder in the main GUI")
+        
+        if not non_alcohol_images:
+            print("WARNING: No neutral stimulus images found! Please add images to:")
+            print(f"  - {default_neutral_folder}")
+            print("  - Or specify a custom folder in the main GUI")
 
         # Build test_assets dict as before, but randomize if needed
         test_assets = {}

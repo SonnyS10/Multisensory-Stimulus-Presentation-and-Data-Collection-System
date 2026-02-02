@@ -437,20 +437,61 @@ class StimulusOrderFrame(QWidget):
 
             # Gather all unique assets for the available assets list, tagging by origin
             asset_dict = {}
-            alcohol_folder = os.path.abspath(self.alcohol_folder) if self.alcohol_folder else None
-            non_alcohol_folder = os.path.abspath(self.non_alcohol_folder) if self.non_alcohol_folder else None
+            
+            # Get custom folder paths if provided and validate they're not just the project root
+            gui_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(gui_dir)  # eeg_stimulus_project
+            project_root = os.path.normpath(os.path.abspath(project_root))
+            
+            # Only use custom folders if they're actually set and not the project root
+            alcohol_folder = None
+            if self.alcohol_folder and os.path.abspath(self.alcohol_folder) != project_root:
+                alcohol_folder = os.path.normpath(os.path.abspath(self.alcohol_folder))
+            
+            non_alcohol_folder = None
+            if self.non_alcohol_folder and os.path.abspath(self.non_alcohol_folder) != project_root:
+                non_alcohol_folder = os.path.normpath(os.path.abspath(self.non_alcohol_folder))
+            
+            # Get default folder paths
+            default_alcohol_folder = os.path.join(project_root, 'assets', 'Images', 'Default', 'Alcohol')
+            default_neutral_folder = os.path.join(project_root, 'assets', 'Images', 'Default', 'Neutral')
+            
+            # Normalize paths for comparison
+            default_alcohol_folder = os.path.normpath(os.path.abspath(default_alcohol_folder))
+            default_neutral_folder = os.path.normpath(os.path.abspath(default_neutral_folder))
+            
+            print(f"=== Asset Origin Detection ===")
+            print(f"Project Root: {project_root}")
+            print(f"Default Alcohol Folder: {default_alcohol_folder}")
+            print(f"Default Neutral Folder: {default_neutral_folder}")
+            print(f"Custom Alcohol Folder: {alcohol_folder}")
+            print(f"Custom Neutral Folder: {non_alcohol_folder}")
+            print(f"=============================")
+            
             for images in self.original_assets.values():
                 for img in images:
                     fname = getattr(img, 'filename', None)
                     if fname:
-                        fname_abs = os.path.abspath(fname)
+                        fname_abs = os.path.normpath(os.path.abspath(fname))
+                        fname_dir = os.path.dirname(fname_abs)
 
-                        if alcohol_folder and fname_abs.startswith(alcohol_folder):
+                        # Check paths - be very specific with matching
+                        # Check default folders first (most specific), then custom folders
+                        if fname_dir == default_alcohol_folder or (alcohol_folder and fname_dir.startswith(alcohol_folder + os.sep)):
                             img.asset_origin = "alcohol"
-                        elif non_alcohol_folder and fname_abs.startswith(non_alcohol_folder):
+                        elif fname_dir == default_neutral_folder or (non_alcohol_folder and fname_dir.startswith(non_alcohol_folder + os.sep)):
                             img.asset_origin = "neutral"
                         else:
-                            img.asset_origin = "unknown"
+                            # Fallback: check if filename contains alcohol-related keywords
+                            fname_lower = fname.lower()
+                            if any(keyword in fname_lower for keyword in ['beer', 'stella', 'wine', 'whiskey', 'vodka', 'alcohol', 'liquor']):
+                                img.asset_origin = "alcohol"
+                            else:
+                                img.asset_origin = "unknown"
+                        
+                        # Debug output
+                        print(f"  {os.path.basename(fname)} | Dir: {fname_dir} | Origin: {img.asset_origin}")
+                        
                         norm = self.normalize_name(os.path.basename(fname))
                         asset_dict[norm] = img
             self.all_asset_objs = list(asset_dict.values())
@@ -476,10 +517,15 @@ class StimulusOrderFrame(QWidget):
         else:
             cue_type = None  # Show all if not specified
 
+        # Debug: Count assets by origin
+        assets_shown = 0
         for img in self.all_asset_objs:
+            origin = getattr(img, "asset_origin", "not_set")
             # Only show assets from the correct folder
-            if cue_type and getattr(img, "asset_origin", None) != cue_type:
+            if cue_type and origin != cue_type:
                 continue
+            
+            assets_shown += 1
             item = QListWidgetItem()
             fname = getattr(img, 'filename', None)
             display_name = os.path.splitext(os.path.basename(fname))[0] if fname else "Image"
@@ -494,6 +540,9 @@ class StimulusOrderFrame(QWidget):
                     print(f"Error creating thumbnail for {fname}: {e}")
             item.setData(Qt.UserRole, img)
             self.available_assets_list.addItem(item)
+        
+        # Debug output
+        print(f"Test: {self.current_test_name}, Type filter: {cue_type}, Assets shown: {assets_shown}/{len(self.all_asset_objs)}")
 
         # Add the craving rating asset to the available assets list
         craving_item = QListWidgetItem("craving_rating")
