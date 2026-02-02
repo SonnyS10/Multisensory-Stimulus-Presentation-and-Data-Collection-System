@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget, QDialog, QLineEdit
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
@@ -433,19 +433,23 @@ class ControlWindow(QMainWindow):
 
     #Connect to the Pupil Labs Eye Tracker.
     def connect_eyetracker(self):
-        try:
-            self.eyetracker = PupilLabs()
-            time.sleep(2)  # Wait for the Pupil Labs device to initialize
-            if self.eyetracker.device is not None:
-                self.shared_status['eyetracker_connected'] = True
-                self.connection.sendall((json.dumps({"action": "eyetracker_connected"}) + "\n").encode('utf-8'))
-                logging.info("Connected to Eye Tracker.")
-                self.eyetracker.estimate_time_offset()  # Estimate time offset
-            else:
-                raise Exception()
-        except Exception:
-            logging.info(f"Failed to connect to Eye Tracker")
-            self.shared_status['eyetracker_connected'] = False
+        default_ip = "10.117.15.169"
+        dialog = EyeTrackerIPDialog(default_ip, self)
+        if dialog.exec_() == QDialog.Accepted:
+            ip = dialog.get_ip()
+            try:
+                self.eyetracker = PupilLabs(ip_address=ip)
+                time.sleep(2)  # Wait for the Pupil Labs device to initialize
+                if self.eyetracker.device is not None:
+                    self.shared_status['eyetracker_connected'] = True
+                    self.connection.sendall((json.dumps({"action": "eyetracker_connected"}) + "\n").encode('utf-8'))
+                    logging.info("Connected to Eye Tracker.")
+                    self.eyetracker.estimate_time_offset()  # Estimate time offset
+                else:
+                    raise Exception()
+            except Exception:
+                logging.info(f"Failed to connect to Eye Tracker")
+                self.shared_status['eyetracker_connected'] = False
         self.update_app_status_icon(self.eyetracker_connected_icon, self.shared_status['eyetracker_connected'])
         
     def open_tactile_box(self):
@@ -830,6 +834,27 @@ class ControlInstructionsFrame(QWidget):
 
     def hide_instructions(self):
         self.setVisible(False)
+
+class EyeTrackerIPDialog(QDialog):
+    def __init__(self, current_ip, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Confirm Eye Tracker IP Address")
+        self.setModal(True)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("Please confirm the Eye Tracker IP address:"))
+        self.ip_edit = QLineEdit(current_ip)
+        layout.addWidget(self.ip_edit)
+        btn_layout = QHBoxLayout()
+        self.confirm_btn = QPushButton("Confirm")
+        self.cancel_btn = QPushButton("Cancel")
+        btn_layout.addWidget(self.confirm_btn)
+        btn_layout.addWidget(self.cancel_btn)
+        layout.addLayout(btn_layout)
+        self.confirm_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.reject)
+
+    def get_ip(self):
+        return self.ip_edit.text()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

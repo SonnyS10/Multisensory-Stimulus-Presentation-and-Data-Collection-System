@@ -1,25 +1,18 @@
-
-#print("Looking for the next best device...")
-#device = discover_one_device(max_search_duration_seconds=10)
-#if device is None:
-#    print("No device found.")
-#    raise SystemExit(-1)
-
 from pupil_labs.realtime_api.simple import Device, discover_one_device
 import threading
 import logging
 
+# Uncomment the following lines to test connection independently
+
+#ip = "10.117.15.169"
+#device = Device(address=ip, port="8080")
+#print(f"Phone IP address: {device.phone_ip}")
+
 class PupilLabs():
-    def __init__(self):
+    def __init__(self, ip_address="10.117.15.169"):
         super().__init__()
         logging.info("Attempting to connect to Pupil Labs device...")
-        #self.device = discover_one_device(max_search_duration_seconds=5)
-
-        #ip = "172.20.10.2"
-        #ip = "10.117.59.253"
-        ip = "10.117.58.191"
-        self.device = Device(address=ip, port="8080")
-        
+        self.device = Device(address=ip_address, port="8080")
         print(f"Phone IP address: {self.device.phone_ip}")
         #print(f"Phone name: {self.device.phone_name}")
         #print(f"Phone unique ID: {self.device.phone_id}")
