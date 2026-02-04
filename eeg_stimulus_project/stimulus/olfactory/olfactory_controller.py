@@ -4,8 +4,8 @@ import time
 class OlfactoryController:
     def __init__(self):
         # Arduino settings
-        self.arduino1_port = 'COM8'  # Scents 1-4
-        self.arduino2_port = 'COM9'  # Scents 5-8
+        self.arduino1_port = 'COM9'  # Scents 1-4
+        self.arduino2_port = 'COM8'  # Scents 5-8
         self.baud_rate = 115200
         self.ser1 = None
         self.ser2 = None

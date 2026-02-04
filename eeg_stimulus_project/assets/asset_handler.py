@@ -43,7 +43,11 @@ def load_images_from_folder(folder):
     return images
 
 # Load personalized images
-personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Personalized')
+try:
+    personalized_folder = os.path.join(os.path.dirname(__file__), 'Images', 'Personalized')
+except Exception as e:
+    print(f"Error determining personalized images folder: {e}")
+    personalized_folder = None
 personalized_images = load_images_from_folder(personalized_folder)
 
 def get_mixed_images(general_images, personalized_images):
