@@ -553,7 +553,7 @@ class DisplayWindow(QMainWindow):
 
         label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        duration_ms = random.randint(800, 1200)
+        duration_ms = random.randint(2000, 6000)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -936,7 +936,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
         # After 2 Minutes, show the main instructions (not restart the experiment)
-        QTimer.singleShot(500, self.show_main_instructions)  # 2 minutes (120000)
+        QTimer.singleShot(240000, self.show_main_instructions)  # 4 minutes (240000)
 
     def show_main_instructions(self):
         # Restore your original instructions and allow the experiment to proceed
