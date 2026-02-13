@@ -28,7 +28,7 @@ from logging.handlers import QueueHandler
 #It contains the same layout and functionality as the main display window, but it is not interactive
 #It is used to show the experimenter what the subject is seeing
 class MirroredDisplayWindow(QWidget):
-    def __init__(self, parent=None, current_test=None):
+    def __init__(self, parent=None, current_test=None, baseline_mode=False):
         super().__init__(parent)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  
@@ -81,7 +81,10 @@ class MirroredDisplayWindow(QWidget):
 
         self.stacked_layout.setCurrentIndex(0)
 
-        self.show_crosshair_instructions()
+        if baseline_mode:
+            self.show_crosshair_instructions()
+        else:
+            self.show_main_instructions()
 
         self.paused = False
 
@@ -220,7 +223,7 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None): 
+                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None, baseline_mode=False): 
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -235,6 +238,7 @@ class DisplayWindow(QMainWindow):
         self.repetitions = repetitions
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
+        self.baseline_mode = baseline_mode
 
         if self.local_mode:
             if self.shared_status.get('eyetracker_connected', False):
@@ -313,8 +317,6 @@ class DisplayWindow(QMainWindow):
         # Show overlay first
         self.stacked_layout.setCurrentIndex(0)
 
-        self.show_crosshair_instructions()
-
         # Timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
@@ -389,6 +391,12 @@ class DisplayWindow(QMainWindow):
             self.olfactory_controller = OlfactoryController()
             self.olfactory_connected = self.olfactory_controller.connect()
 
+        # Show initial screen - baseline shows crosshair, normal tests show main instructions
+        if self.baseline_mode:
+            self.show_crosshair_instructions()
+        else:
+            self.show_main_instructions()
+
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
         current_test = self.current_test
@@ -460,8 +468,8 @@ class DisplayWindow(QMainWindow):
 
     #This is the main logic for displaying the images in the passive test, it handles the image transition and the timer for the images         
     def display_images_passive(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
             if "Olfactory" in self.current_test:
@@ -500,8 +508,8 @@ class DisplayWindow(QMainWindow):
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
     def display_images_stroop(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if "Olfactory" in self.current_test:
             self.scent_function()
@@ -527,8 +535,8 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to hide the image and show the instruction text, it clears the image label and sets the instruction text
     def hide_image(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         self.image_label.clear()
         self.set_instruction_text()
         self.wait_for_input()
@@ -546,8 +554,8 @@ class DisplayWindow(QMainWindow):
             print("Current image index is at the last image, waiting for next button is not applicable.")
 
     def show_crosshair_between_images(self, test_type):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         # --- Clear craving rating widgets (everything after the first two persistent labels) ---
         self.clear_overlay()
 
@@ -647,8 +655,8 @@ class DisplayWindow(QMainWindow):
         self._advance_image()
 
     def _advance_image(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         self.current_image_index += 1
         if self.current_image_index < len(self.images):
             current_asset = self.images[self.current_image_index]
@@ -688,7 +696,7 @@ class DisplayWindow(QMainWindow):
     #This method is needed to make the image transition timer work, it is called when the image transition timer times out. It is the main way the pause and resume functionality works
     #It is called from the image_transition_timer
     def _on_image_transition(self):
-        if not self.Paused:
+        if not self.Paused and not self.stopped:
             self.display_images_passive()
 
     #This method is called to update the image label with the current image, it scales the image to fit the label and also updates the mirror widget if it exists
@@ -871,8 +879,21 @@ class DisplayWindow(QMainWindow):
     def closeEvent(self, event):
         if getattr(self, 'stopped', False):
             logging.info("Closing DisplayWindow...")
-            self.send_message({"action": "client_log", "message": "Closing DisplayWindow..."})
             self.stop_global_key_listener()
+            # Cancel ALL pending timers to prevent callbacks after close
+            timer_attrs = (
+                '_crosshair_instruction_timer', '_crosshair_period_timer',
+                'image_transition_timer', 'stroop_transition_timer',
+            )
+            for attr in timer_attrs:
+                t = getattr(self, attr, None)
+                if t is not None and t.isActive():
+                    t.stop()
+            # Stop countdown timer if active
+            if hasattr(self, 'countdown_timer'):
+                ct = getattr(self, 'countdown_timer', None)
+                if ct is not None and ct.isActive():
+                    ct.stop()
             # Allow closing and do cleanup
             if hasattr(self, 'timer') and self.timer.isActive():
                 self.timer.stop()
@@ -890,8 +911,8 @@ class DisplayWindow(QMainWindow):
             event.ignore()
 
     def end_screen(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         label = "End Screen Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
@@ -909,6 +930,8 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.end_screen()
 
     def show_crosshair_instructions(self):
+        if self.stopped:
+            return
         # Show your pre-instructions
         label = "Crosshair Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
@@ -920,9 +943,14 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_instructions()
         # After a short delay (5 seconds), show the crosshair
-        QTimer.singleShot(5000, self.show_crosshair_period)  # Show crosshair after 5 seconds (adjust as needed)
+        self._crosshair_instruction_timer = QTimer(self)
+        self._crosshair_instruction_timer.setSingleShot(True)
+        self._crosshair_instruction_timer.timeout.connect(self.show_crosshair_period)
+        self._crosshair_instruction_timer.start(5000)
         
     def show_crosshair_period(self):
+        if self.stopped:
+            return
         # Show a crosshair for 2 minutes
         label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
@@ -935,10 +963,18 @@ class DisplayWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.show_crosshair_period()
-        # After 2 Minutes, show the main instructions (not restart the experiment)
-        QTimer.singleShot(240000, self.show_main_instructions)  # 4 minutes (240000)
+        # After 4 minutes, end the baseline or show main instructions for the test
+        self._crosshair_period_timer = QTimer(self)
+        self._crosshair_period_timer.setSingleShot(True)
+        if self.baseline_mode:
+            self._crosshair_period_timer.timeout.connect(self.end_screen)
+        else:
+            self._crosshair_period_timer.timeout.connect(self.show_main_instructions)
+        self._crosshair_period_timer.start(240000)
 
     def show_main_instructions(self):
+        if self.stopped:
+            return
         # Restore your original instructions and allow the experiment to proceed
         label = "Main Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
@@ -953,6 +989,8 @@ class DisplayWindow(QMainWindow):
         self.ready_for_space = True
 
     def send_message(self, message_dict):
+        if getattr(self, 'stopped', False):
+            return  # Don't send messages after the test has been stopped
         if self.client:
             try:
                 self.connection.sendall((json.dumps(message_dict) + "\n").encode('utf-8'))
@@ -1122,8 +1160,8 @@ class DisplayWindow(QMainWindow):
         QTimer.singleShot(500, self.show_crosshair_after_craving)
 
     def show_crosshair_after_craving(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         # Show crosshair for a short period after craving rating
         self.clear_overlay()
         self.instructions_label.setText("+")
@@ -1151,8 +1189,8 @@ class DisplayWindow(QMainWindow):
             QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
         
     def show_crosshair_before_craving(self):
-        if self.Paused:
-            return  # Do not proceed if paused
+        if self.stopped or self.Paused:
+            return  # Do not proceed if stopped or paused
         # Show crosshair for a short period before craving rating
         self.clear_overlay()
         self.instructions_label.setText("+")
@@ -1171,6 +1209,8 @@ class DisplayWindow(QMainWindow):
         return next_idx < len(self.images) and isinstance(self.images[next_idx], CravingRatingAsset)
 
     def show_post_test_crosshair_instructions(self):
+        if self.stopped:
+            return
         # Remove all widgets and layouts after the persistent instruction and countdown labels
         self.clear_overlay()
 
@@ -1188,6 +1228,8 @@ class DisplayWindow(QMainWindow):
         QTimer.singleShot(5000, self.show_post_test_crosshair_period)  # Show crosshair after 5 seconds
 
     def show_post_test_crosshair_period(self):
+        if self.stopped:
+            return
         # Show a crosshair for 2 minutes after the test has ended
         label = "Post-Test Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server

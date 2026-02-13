@@ -82,6 +82,7 @@ class GUI(QMainWindow):
         # Instructions and Latency Checker Frame
         self.instruction_frame = InstructionFrame(self)
         self.latency_checker = LatencyChecker(self)
+        self.baseline_frame = BaselineFrame(self)
         self.stimulus_order_frame = StimulusOrderFrame(
             parent=self,
             alcohol_folder=self.alcohol_folder,
@@ -104,6 +105,7 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.instruction_frame)
         self.stacked_widget.addWidget(self.latency_checker)
         self.stacked_widget.addWidget(self.stimulus_order_frame)
+        self.stacked_widget.addWidget(self.baseline_frame)
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
         self.last_test_frame = self.unisensory_neutral_visual  # Default to first test
@@ -203,6 +205,14 @@ class GUI(QMainWindow):
             self.stacked_widget.setCurrentWidget(self.stimulus_order_frame)
             self.sidebar.instructions_button.setText("Show Instructions")
 
+    def start_baseline(self):
+        """Toggle to the baseline recording frame."""
+        if self.stacked_widget.currentWidget() == self.baseline_frame:
+            self.stacked_widget.setCurrentWidget(self.last_test_frame)
+        else:
+            self.stacked_widget.setCurrentWidget(self.baseline_frame)
+            self.sidebar.instructions_button.setText("Show Instructions")
+
     def update_custom_orders(self, custom_orders):
         """Update the custom orders in the Display class."""
         Display.set_custom_orders(custom_orders)
@@ -210,9 +220,9 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None):
+    def open_secondary_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None, baseline_mode=False):
         def any_display_widget_open():
-            # Check all frames for an open display_widget
+            # Check all frames (including baseline) for an open display_widget
             frames = [
                 self.unisensory_neutral_visual,
                 self.unisensory_alcohol_visual,
@@ -224,6 +234,7 @@ class GUI(QMainWindow):
                 self.multisensory_neutral_visual_tactile,
                 self.multisensory_alcohol_visual_olfactory2,
                 self.multisensory_neutral_visual_olfactory2,
+                self.baseline_frame,
             ]
             return any(getattr(f, 'display_widget', None) is not None for f in frames)
 
@@ -234,7 +245,10 @@ class GUI(QMainWindow):
                 self.send_message({"action": "client_log", "message": "A display widget is already open in another frame. Not creating a new one."})
                 return
             if not hasattr(current_frame, 'display_widget') or current_frame.display_widget is None:
-                current_test = self.get_current_test()
+                if baseline_mode:
+                    current_test = "Baseline"
+                else:
+                    current_test = self.get_current_test()
                 # Get randomization and repetitions settings from stimulus_order_frame
                 randomize_cues, seed = self.stimulus_order_frame.get_randomization_settings()
                 repetitions = self.stimulus_order_frame.get_repetitions_settings()
@@ -249,10 +263,11 @@ class GUI(QMainWindow):
                     non_alcohol_folder=self.non_alcohol_folder,
                     randomize_cues=randomize_cues,
                     seed=seed,
-                    repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers
+                    repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers,
+                    baseline_mode=baseline_mode
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
-                current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test)
+                current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test, baseline_mode=baseline_mode)
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
                 # Add both to the middle_frame layout
                 middle_layout = current_frame.middle_frame.layout()  # Or however you access the layout
@@ -1181,6 +1196,201 @@ class InstructionFrame(QWidget):
             self.prev_button.setVisible(True)
             self.continue_button.setVisible(False)
         self.page_label.setText(f"Page {idx + 1} of {total}")
+
+class BaselineFrame(QFrame):
+    """Dedicated frame for recording baseline (crosshair for 4 minutes)."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.display_widget = None
+        self.mirror_display_widget = None
+        self.label_stream = None
+        self.labrecorder = None
+        self.eyetracker = None
+
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #999999;
+                border-radius: 16px;
+                border: 1.5px solid #43A047;
+            }
+        """)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.setSpacing(18)
+
+        # Top frame/header
+        top_frame = QFrame(self)
+        top_frame.setStyleSheet("""
+            QFrame {
+                background-color: #43A047;
+                border-radius: 12px;
+            }
+        """)
+        top_frame.setMaximumHeight(200)
+        top_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.layout.addWidget(top_frame)
+
+        top_layout = QVBoxLayout(top_frame)
+        top_layout.setContentsMargins(15, 15, 15, 15)
+        top_layout.setSpacing(8)
+
+        header = QLabel("Baseline Recording", self)
+        header.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        header.setAlignment(Qt.AlignCenter)
+        header.setStyleSheet("color: white;")
+        top_layout.addWidget(header)
+
+        description = QLabel("Record a 4-minute baseline EEG with crosshair fixation.", self)
+        description.setFont(QFont("Segoe UI", 12))
+        description.setAlignment(Qt.AlignCenter)
+        description.setStyleSheet("color: #e8f5e9;")
+        description.setWordWrap(True)
+        top_layout.addWidget(description)
+
+        button_style = """
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+                font-size: 15px;
+            }
+            QPushButton:disabled {
+                background-color: #bdbdbd;
+                color: #eee;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """
+
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(14)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setAlignment(Qt.AlignVCenter)
+        top_layout.addLayout(button_layout)
+
+        self.start_button = QPushButton("Start Baseline", self)
+        self.start_button.setStyleSheet(button_style)
+        self.start_button.clicked.connect(self.start_baseline)
+        button_layout.addWidget(self.start_button)
+
+        self.stop_button = QPushButton("Stop Baseline", self)
+        self.stop_button.setStyleSheet(button_style)
+        self.stop_button.clicked.connect(self.stop_baseline)
+        button_layout.addWidget(self.stop_button)
+
+        for btn in [self.start_button, self.stop_button]:
+            btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            btn.setMinimumHeight(48)
+
+        # Middle frame for mirror display
+        self.middle_frame = QFrame(self)
+        self.middle_frame.setStyleSheet("""
+            QFrame {
+                background-color: #ede7f6;
+                border-radius: 10px;
+            }
+        """)
+        self.middle_frame.setMinimumHeight(420)
+        self.middle_frame.setLayout(QHBoxLayout())
+        self.layout.addWidget(self.middle_frame)
+
+        bottom_frame = QFrame(self)
+        bottom_frame.setStyleSheet("background-color: #43A047; border-radius: 8px;")
+        bottom_frame.setMaximumHeight(50)
+        self.layout.addWidget(bottom_frame)
+
+    def start_baseline(self):
+        """Launch the baseline display window."""
+        if self.display_widget is not None:
+            QMessageBox.warning(self, "Already Running", "Baseline is already running. Stop it first.")
+            return
+
+        # Check if any other frame has a display widget open
+        all_frames = [
+            self.parent.unisensory_neutral_visual,
+            self.parent.unisensory_alcohol_visual,
+            self.parent.multisensory_neutral_visual_olfactory,
+            self.parent.multisensory_alcohol_visual_olfactory,
+            self.parent.multisensory_neutral_visual_tactile_olfactory,
+            self.parent.multisensory_alcohol_visual_tactile_olfactory,
+            self.parent.multisensory_alcohol_visual_tactile,
+            self.parent.multisensory_neutral_visual_tactile,
+            self.parent.multisensory_alcohol_visual_olfactory2,
+            self.parent.multisensory_neutral_visual_olfactory2,
+        ]
+        if any(getattr(f, 'display_widget', None) is not None for f in all_frames):
+            QMessageBox.warning(self, "Already Running", "A display window is already open. Please stop it first.")
+            return
+
+        # Create label stream
+        if self.label_stream is None:
+            self.label_stream = LSLLabelStream()
+
+        self.parent.send_message({"action": "start_button", "test": "Baseline"})
+
+        # Create display and mirror widgets
+        self.display_widget = DisplayWindow(
+            self.parent.connection, self.parent.log_queue, self.label_stream, self, "Baseline",
+            self.parent.base_dir, self.parent.test_number,
+            eyetracker=self.eyetracker,
+            shared_status=self.parent.shared_status,
+            client=self.parent.client,
+            alcohol_folder=self.parent.alcohol_folder,
+            non_alcohol_folder=self.parent.non_alcohol_folder,
+            local_mode=self.parent.local_mode,
+            baseline_mode=True
+        )
+        self.mirror_display_widget = MirroredDisplayWindow(self, current_test="Baseline", baseline_mode=True)
+        self.display_widget.set_mirror(self.mirror_display_widget)
+
+        # Add mirror to middle frame
+        middle_layout = self.middle_frame.layout()
+        middle_layout.addWidget(self.mirror_display_widget)
+        middle_layout.setStretchFactor(self.mirror_display_widget, 1)
+
+        # Show the main display window
+        self.display_widget.show()
+
+        # Start LabRecorder if connected
+        if self.parent.local_mode and self.parent.shared_status.get('lab_recorder_connected', False):
+            if self.labrecorder is None or getattr(self.labrecorder, 's', None) is None:
+                self.labrecorder = LabRecorder(self.parent.base_dir)
+            if self.labrecorder and self.labrecorder.s is not None:
+                self.labrecorder.Start_Recorder("Baseline")
+
+        self.start_button.setEnabled(False)
+
+    def stop_baseline(self):
+        """Stop the baseline recording and clean up."""
+        self.parent.send_message({"action": "stop_button", "test": "Baseline"})
+
+        # Stop LabRecorder
+        if self.labrecorder and getattr(self.labrecorder, 's', None) is not None:
+            self.labrecorder.Stop_Recorder()
+
+        # Close display widget
+        if self.display_widget is not None:
+            self.display_widget.stopped = True
+            self.display_widget.close()
+            self.display_widget.setParent(None)
+            self.display_widget = None
+
+        # Close mirror widget
+        if self.mirror_display_widget is not None:
+            self.mirror_display_widget.close()
+            self.mirror_display_widget.setParent(None)
+            self.mirror_display_widget = None
+
+        self.start_button.setEnabled(True)
+        self.label_stream = None
+
+    def send_message(self, message_dict):
+        self.parent.send_message(message_dict)
+
 
 class LatencyChecker(QWidget):
     def __init__(self, parent=None):

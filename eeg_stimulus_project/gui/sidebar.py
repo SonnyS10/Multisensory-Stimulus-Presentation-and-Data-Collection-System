@@ -134,6 +134,24 @@ class Sidebar(QFrame):
         stimulus_order_button.clicked.connect(parent.toggle_stimulus_order)
         self.layout.addWidget(stimulus_order_button)
 
+        # Record Baseline button
+        baseline_button = QPushButton("Record Baseline", self)
+        baseline_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        baseline_button.setStyleSheet("""
+            QPushButton {
+                background-color: #43A047;
+                color: white;
+                border-radius: 8px;
+                padding: 10px 0px;
+                margin-top: 18px;
+            }
+            QPushButton:hover {
+                background-color: #2E7D32;
+            }
+        """)
+        baseline_button.clicked.connect(parent.start_baseline)
+        self.layout.addWidget(baseline_button)
+
     # Add a submenu with a heading and options  
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)
