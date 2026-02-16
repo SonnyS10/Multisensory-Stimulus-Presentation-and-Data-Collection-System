@@ -857,6 +857,18 @@ class Frame(QFrame):
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
     def stop_button_clicked_stroop(self):
+        # Ask for confirmation before stopping
+        reply = QMessageBox.question(
+            self,
+            "Confirm Stop",
+            "Are you sure you want to stop the test? This will save all data from connected devices and end the experiment.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No  # Default to No
+        )
+        
+        if reply == QMessageBox.No:
+            return  # Cancel the stop operation
+        
         self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
 
         save_data = Save_Data(self.base_dir, self.test_number)
@@ -889,6 +901,18 @@ class Frame(QFrame):
 
     #Function to handle what happens when the stop button is clicked for passive tests(calls the data_saving file)
     def stop_button_clicked_passive(self):
+        # Ask for confirmation before stopping
+        reply = QMessageBox.question(
+            self,
+            "Confirm Stop",
+            "Are you sure you want to stop the test? This will save all data from connected devices and end the experiment.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No  # Default to No
+        )
+        
+        if reply == QMessageBox.No:
+            return  # Cancel the stop operation
+        
         self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
 
         save_data = Save_Data(self.base_dir, self.test_number)
