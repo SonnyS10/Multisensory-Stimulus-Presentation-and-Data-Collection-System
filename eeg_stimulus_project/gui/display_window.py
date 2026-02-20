@@ -686,7 +686,7 @@ class DisplayWindow(QMainWindow):
             #if self.eyetracker and self.eyetracker.device is not None:
             #    self.eyetracker.stop_recording()
             #self.show_craving_rating_screen()
-            self.show_post_test_crosshair_instructions()
+            self.end_screen()
 
     def poll_label(self):
         # This will print the current label and the current time in ms
@@ -1186,8 +1186,8 @@ class DisplayWindow(QMainWindow):
             else:
                 QTimer.singleShot(1000, self._advance_image)
         else:
-            QTimer.singleShot(1000, self.show_post_test_crosshair_instructions)
-        
+            QTimer.singleShot(1000, self.end_screen)
+
     def show_crosshair_before_craving(self):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
@@ -1207,43 +1207,6 @@ class DisplayWindow(QMainWindow):
     def next_asset_is_craving(self):
         next_idx = self.current_image_index + 1
         return next_idx < len(self.images) and isinstance(self.images[next_idx], CravingRatingAsset)
-
-    def show_post_test_crosshair_instructions(self):
-        if self.stopped:
-            return
-        # Remove all widgets and layouts after the persistent instruction and countdown labels
-        self.clear_overlay()
-
-        # Now update the instructions as usual
-        label = "Post-Test Crosshair Instructions Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
-        self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
-        self.instructions_label.setVisible(True)
-        self.countdown_label.setVisible(False)
-        self.overlay_widget.setVisible(True)
-        self.stacked_layout.setCurrentWidget(self.overlay_widget)
-        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.show_crosshair_instructions()
-        # After a short delay (5 seconds), show the crosshair
-        QTimer.singleShot(5000, self.show_post_test_crosshair_period)  # Show crosshair after 5 seconds
-
-    def show_post_test_crosshair_period(self):
-        if self.stopped:
-            return
-        # Show a crosshair for 2 minutes after the test has ended
-        label = "Post-Test Crosshair Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
-        self.instructions_label.setText("+")
-        self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
-        self.instructions_label.setAlignment(Qt.AlignCenter)
-        self.instructions_label.setVisible(True)
-        self.countdown_label.setVisible(False)
-        self.overlay_widget.setVisible(True)
-        self.stacked_layout.setCurrentWidget(self.overlay_widget)
-        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
-            self.mirror_widget.show_crosshair_period()
-        # After 2 minutes, show the end screen (not restart the experiment)
-        QTimer.singleShot(500, self.end_screen)  # Show end screen after 2 minutes (120000)
 
     def start_global_key_listener(self):
         # Start listening for global key presses

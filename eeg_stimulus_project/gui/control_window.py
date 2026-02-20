@@ -569,6 +569,7 @@ class ControlWindow(QMainWindow):
                             elif action == "label":
                                 label = message.get("label", None)
                                 self.label_push(label)
+                                self.eyetracker.send_marker(label)
                                 #logging.info(f"Host: Pushing label: {label}")
                                 pass
                             elif action == "latency_ping":
