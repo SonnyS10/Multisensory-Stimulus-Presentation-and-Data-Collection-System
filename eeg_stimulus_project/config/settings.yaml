@@ -32,13 +32,13 @@ network:
   # Tactile system configuration
   tactile_system:
     # Tactile control computer IP
-    host: "10.115.12.225"
+    host: "10.115.9.73"
     # SSH username
     username: "benja"
     # SSH password (can use environment variable: ${TACTILE_PASSWORD:neuro})
     password: "neuro"
     # Data streaming port
-    data_port: 5006
+    data_port: 5007
     # Remote Python virtual environment activation command
     venv_activate: "source ~/Desktop/bin/activate"
     # Remote script path

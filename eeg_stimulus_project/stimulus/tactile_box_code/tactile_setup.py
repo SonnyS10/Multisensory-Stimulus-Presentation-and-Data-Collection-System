@@ -23,10 +23,10 @@ from eeg_stimulus_project.config import config
 def get_ssh_config():
     """Get SSH configuration from settings."""
     return {
-        'host': config.get('network.tactile_system.host', '10.115.12.225'),
+        'host': config.get('network.tactile_system.host', '10.115.9.73'),
         'username': config.get('network.tactile_system.username', 'benja'),
         'password': config.get('network.tactile_system.password', 'neuro'),
-        'data_port': config.get('network.tactile_system.data_port', 5006),
+        'data_port': config.get('network.tactile_system.data_port', 5007),
         'venv_activate': config.get('network.tactile_system.venv_activate', 'source ~/Desktop/bin/activate'),
         'script_path': config.get('network.tactile_system.script_path', 'python ~/forcereadwithzero.py')
     }
@@ -192,7 +192,9 @@ class RemoteScriptGUI(QMainWindow):
         # Get configuration values
         ssh_config = get_ssh_config()
         PI_IP = ssh_config['host']
+        print(PI_IP)
         PORT = ssh_config['data_port']
+        print(PORT)
         
         # Get output filename from configuration
         output_file = config.get_absolute_path('paths.tactile_data_file')
