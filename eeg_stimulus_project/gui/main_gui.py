@@ -33,7 +33,8 @@ class GUI(QMainWindow):
         self.eyetracker_connected = False
         self.labrecorder_connected = False
         self.local_mode = local_mode
-        
+        self.olfactory_controller = None
+
         if connection is not None:
             self.start_listener()
 
@@ -363,7 +364,6 @@ class GUI(QMainWindow):
     def start_listener(self):
         def listen():
             buffer = ""
-            olf = None  # Initialize olfactory controller variable
             while True:
                 try:
                     data = self.connection.recv(4096).decode('utf-8')
@@ -398,31 +398,32 @@ class GUI(QMainWindow):
                         elif msg.get("action") == "connect_olfactory":
                             from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
                             try:
-                                olf = OlfactoryController()
-                                success = olf.connect()
-                                time.sleep(2)  # Give some time for the olfactory controller to initialize
-                                response = {"action": "olfactory_connected", "success": success}
-                                self.shared_status['olfactory_connected'] = success
-                                self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
-                                olf.close()
+                                self.olfactory_controller = OlfactoryController()
+                                if self.olfactory_controller.connect():
+                                    logging.info("Olfactory controller connected")
+                                    self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": True}) + "\n").encode('utf-8'))
+                                else:
+                                    logging.error("Failed to connect olfactory controller")
+                                    self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": False}) + "\n").encode('utf-8'))
                             except Exception as e:
-                                logging.info(f"Error connecting to olfactory controller: {e}")
+                                logging.error(f"Error connecting olfactory: {e}")
+                                self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": False}) + "\n").encode('utf-8'))
+                            
                         elif msg.get("action") == "trigger_scent":
-                            scent_number = msg.get("scent_number")
-                            olf = OlfactoryController()
-                            success = olf.connect()
-                            time.sleep(2)  # Give some time for the olfactory controller to initialize
-                            if olf:
-                                olf.trigger_scent(scent_number)
+                            if self.olfactory_controller:
+                                scent_number = msg.get("scent_number")
+                                self.olfactory_controller.trigger_scent(scent_number)
+                        
                         elif msg.get("action") == "stop_scent":
-                            scent_number = msg.get("scent_number")
-                            if olf:
-                                olf.stop_scent(scent_number)
-                                olf.close()
+                            if self.olfactory_controller:
+                                scent_number = msg.get("scent_number")
+                                self.olfactory_controller.stop_scent(scent_number)
+                        
                         elif msg.get("action") == "swap_olfactory_ports":
                             if self.olfactory_controller:
                                 self.olfactory_controller.swap_ports()
                                 logging.info("Olfactory ports swapped")
+                        
                         elif msg.get("action") == "connect_turntable":
                             from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
                             from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
