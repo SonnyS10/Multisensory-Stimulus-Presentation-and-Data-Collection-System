@@ -20,6 +20,11 @@ class OlfactoryController:
         except Exception as e:
             print(f"Error connecting to Arduinos: {e}")
             return False
+    def swap_ports(self):
+        """Swap the Arduino port assignments."""
+        self.arduino1_port, self.arduino2_port = self.arduino2_port, self.arduino1_port
+        print(f"Ports swapped. Arduino1 (scents 1-4) now at: {self.arduino1_port}")
+        print(f"Ports swapped. Arduino2 (scents 5-8) now at: {self.arduino2_port}")
 
     def safe_readline(self, ser, encoding='utf-8'):
         """Safely read a line from serial port"""

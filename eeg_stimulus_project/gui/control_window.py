@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget, QDialog, QLineEdit
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QApplication, QMainWindow, QWidget, QLabel, QPushButton, QHBoxLayout, QTextEdit, QStackedWidget, QDialog, QLineEdit, QMessageBox
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QMetaObject, pyqtSignal, QObject
 import sys
@@ -229,6 +229,26 @@ class ControlWindow(QMainWindow):
             "olfactory_connected_icon"
         )
         self.device_frame_layout.addLayout(olfactory_row)
+
+        # --- Olfactory Validation Button ---
+        validate_olfactory_btn = QPushButton("Validate Ports", self)
+        validate_olfactory_btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        validate_olfactory_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 22px;
+            }
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+        """)
+        validate_olfactory_btn.clicked.connect(self.validate_olfactory_ports)
+        olfactory_validation_row = QHBoxLayout()
+        olfactory_validation_row.addWidget(validate_olfactory_btn)
+        olfactory_validation_row.addStretch()
+        self.device_frame_layout.addLayout(olfactory_validation_row)
 
         # --- EEG Stream Row ---
         eeg_stream_row, self.eeg_stream_connected_icon = device_row(
@@ -461,6 +481,121 @@ class ControlWindow(QMainWindow):
         if self.connection:
             msg = {"action": "connect_olfactory"}
             self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+
+    def validate_olfactory_ports(self):
+        """Validate and test olfactory ports to ensure correct assignment."""
+        # Initial confirmation dialog
+        reply = QMessageBox.question(
+            self,
+            "Olfactory Port Validation",
+            "Ready to test run the olfactory system to make sure that the scents are correctly assigned?\n\n"
+            "This will dispense scents and ask you to confirm they are correct.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.No:
+            return
+        
+        # Start validation process
+        self.validation_state = {
+            'testing_scent': 1,
+            'ports_swapped': False,
+            'step': 'dispense'  # State: 'dispense', 'await_response', 'swap_test'
+        }
+        
+        self._run_validation_step()
+    
+    def _run_validation_step(self):
+        """Execute the current validation step."""
+        state = self.validation_state
+        scent_num = state['testing_scent']
+        
+        if state['step'] == 'dispense':
+            # Trigger the scent
+            logging.info(f"Dispensing scent {scent_num} for 2 seconds...")
+            msg = {"action": "trigger_scent", "scent_number": scent_num}
+            try:
+                self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+            except Exception as e:
+                logging.error(f"Failed to send scent trigger: {e}")
+                return
+            
+            # Schedule stop after 2 seconds
+            QTimer.singleShot(2000, self._stop_scent_and_ask)
+        
+        elif state['step'] == 'await_response':
+            # Ask user if scent was correct
+            swapped_text = " (after swapping ports)" if state['ports_swapped'] else ""
+            reply = QMessageBox.question(
+                self,
+                f"Scent {scent_num} Test",
+                f"Was scent {scent_num} correctly dispensed{swapped_text}?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Success! Check if we're done
+                if scent_num == 1 and not state['ports_swapped']:
+                    # Test scent 5 next
+                    state['testing_scent'] = 5
+                    state['step'] = 'dispense'
+                    QTimer.singleShot(500, self._run_validation_step)
+                else:
+                    # All tests passed
+                    QMessageBox.information(
+                        self,
+                        "Validation Complete",
+                        "Olfactory port validation successful!\n\n"
+                        f"Ports are correctly assigned. {'(Ports were swapped)' if state['ports_swapped'] else ''}"
+                    )
+                    logging.info(f"Olfactory validation complete. Ports swapped: {state['ports_swapped']}")
+            else:
+                # User says it was wrong
+                if not state['ports_swapped']:
+                    # Swap ports and retry same scent
+                    state['ports_swapped'] = True
+                    logging.info(f"Swapping ports and retrying scent {scent_num}...")
+                    msg = {"action": "swap_olfactory_ports"}
+                    try:
+                        self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+                    except Exception as e:
+                        logging.error(f"Failed to send port swap command: {e}")
+                        return
+                    
+                    # Wait a moment then retry
+                    state['step'] = 'dispense'
+                    QTimer.singleShot(500, self._run_validation_step)
+                else:
+                    # Already swapped once, still wrong - user needs to check hardware
+                    QMessageBox.critical(
+                        self,
+                        "Validation Failed",
+                        "Scent dispensing is not working correctly even after swapping ports.\n\n"
+                        "Please check:\n"
+                        "1. Arduino connections\n"
+                        "2. Scent cartridge placement\n"
+                        "3. Serial port configuration\n\n"
+                        "Contact technical support if the problem persists."
+                    )
+                    logging.error("Olfactory validation failed - hardware issue suspected")
+    
+    def _stop_scent_and_ask(self):
+        """Stop the currently dispensing scent and ask user for feedback."""
+        scent_num = self.validation_state['testing_scent']
+        
+        # Stop the scent
+        msg = {"action": "stop_scent", "scent_number": scent_num}
+        try:
+            self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+        except Exception as e:
+            logging.error(f"Failed to send scent stop command: {e}")
+        
+        logging.info(f"Scent {scent_num} dispensing stopped.")
+        
+        # Move to response step
+        self.validation_state['step'] = 'await_response'
+        self._run_validation_step()
 
     def connect_turntable(self):
         if self.connection:

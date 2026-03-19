@@ -363,6 +363,7 @@ class GUI(QMainWindow):
     def start_listener(self):
         def listen():
             buffer = ""
+            olf = None  # Initialize olfactory controller variable
             while True:
                 try:
                     data = self.connection.recv(4096).decode('utf-8')
@@ -406,6 +407,22 @@ class GUI(QMainWindow):
                                 olf.close()
                             except Exception as e:
                                 logging.info(f"Error connecting to olfactory controller: {e}")
+                        elif msg.get("action") == "trigger_scent":
+                            scent_number = msg.get("scent_number")
+                            olf = OlfactoryController()
+                            success = olf.connect()
+                            time.sleep(2)  # Give some time for the olfactory controller to initialize
+                            if olf:
+                                olf.trigger_scent(scent_number)
+                        elif msg.get("action") == "stop_scent":
+                            scent_number = msg.get("scent_number")
+                            if olf:
+                                olf.stop_scent(scent_number)
+                                olf.close()
+                        elif msg.get("action") == "swap_olfactory_ports":
+                            if self.olfactory_controller:
+                                self.olfactory_controller.swap_ports()
+                                logging.info("Olfactory ports swapped")
                         elif msg.get("action") == "connect_turntable":
                             from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
                             from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
