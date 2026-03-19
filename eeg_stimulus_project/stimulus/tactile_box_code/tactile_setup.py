@@ -201,6 +201,7 @@ class RemoteScriptGUI(QMainWindow):
         
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', PORT))  # Listen on all interfaces
                 s.connect((PI_IP, PORT))
                 with open(output_file, "wb") as f:
                     print(f"Connected to {PI_IP}:{PORT}. Receiving data...")
