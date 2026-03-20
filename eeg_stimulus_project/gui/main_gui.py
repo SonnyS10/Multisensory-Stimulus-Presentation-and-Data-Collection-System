@@ -402,6 +402,7 @@ class GUI(QMainWindow):
                                 if self.olfactory_controller.connect():
                                     logging.info("Olfactory controller connected")
                                     self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": True}) + "\n").encode('utf-8'))
+                                    self.olfactory_controller.close()  # Close immediately after testing connection, will reconnect when needed for stimulus presentation
                                 else:
                                     logging.error("Failed to connect olfactory controller")
                                     self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": False}) + "\n").encode('utf-8'))
@@ -410,7 +411,8 @@ class GUI(QMainWindow):
                                 self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": False}) + "\n").encode('utf-8'))
                             
                         elif msg.get("action") == "trigger_scent":
-                            if self.olfactory_controller:
+                            if self.olfactory_controller.connect():
+                                time.sleep(2)  # Give some time for the connection to establish
                                 scent_number = msg.get("scent_number")
                                 self.olfactory_controller.trigger_scent(scent_number)
                         
@@ -418,6 +420,7 @@ class GUI(QMainWindow):
                             if self.olfactory_controller:
                                 scent_number = msg.get("scent_number")
                                 self.olfactory_controller.stop_scent(scent_number)
+                                self.olfactory_controller.close()  # Close after stopping scent, will reconnect when needed for next stimulus presentation
                         
                         elif msg.get("action") == "swap_olfactory_ports":
                             if self.olfactory_controller:

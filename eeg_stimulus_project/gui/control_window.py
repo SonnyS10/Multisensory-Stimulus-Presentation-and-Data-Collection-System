@@ -513,7 +513,7 @@ class ControlWindow(QMainWindow):
         
         if state['step'] == 'dispense':
             # Trigger the scent
-            logging.info(f"Dispensing scent {scent_num} for 2 seconds...")
+            logging.info(f"Dispensing scent {scent_num}...")
             msg = {"action": "trigger_scent", "scent_number": scent_num}
             try:
                 self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
@@ -521,8 +521,8 @@ class ControlWindow(QMainWindow):
                 logging.error(f"Failed to send scent trigger: {e}")
                 return
             
-            # Schedule stop after 2 seconds
-            QTimer.singleShot(2000, self._stop_scent_and_ask)
+            # Schedule stop
+            QTimer.singleShot(6000, self._stop_scent_and_ask)
         
         elif state['step'] == 'await_response':
             # Ask user if scent was correct
