@@ -401,6 +401,7 @@ class GUI(QMainWindow):
                                 self.olfactory_controller = OlfactoryController()
                                 if self.olfactory_controller.connect():
                                     logging.info("Olfactory controller connected")
+                                    self.shared_status['olfactory_connected'] = True
                                     self.connection.sendall((json.dumps({"action": "olfactory_connected", "success": True}) + "\n").encode('utf-8'))
                                     self.olfactory_controller.close()  # Close immediately after testing connection, will reconnect when needed for stimulus presentation
                                 else:

@@ -453,7 +453,7 @@ class ControlWindow(QMainWindow):
 
     #Connect to the Pupil Labs Eye Tracker.
     def connect_eyetracker(self):
-        default_ip = "10.117.15.169"
+        default_ip = "10.117.25.116"
         dialog = EyeTrackerIPDialog(default_ip, self)
         if dialog.exec_() == QDialog.Accepted:
             ip = dialog.get_ip()
@@ -704,7 +704,8 @@ class ControlWindow(QMainWindow):
                             elif action == "label":
                                 label = message.get("label", None)
                                 self.label_push(label)
-                                self.eyetracker.send_marker(label)
+                                if self.eyetracker and self.eyetracker.device is not None:
+                                    self.eyetracker.send_marker(label)
                                 #logging.info(f"Host: Pushing label: {label}")
                                 pass
                             elif action == "latency_ping":
