@@ -24,10 +24,10 @@ class DoorController:
     #DO NOT MODIFY THESE PARAMETERS WITHOUT DEEP UNDERSTANING OF THE MOTOR AND CONTROLLER
     def set_motor_parameters(self):
         print("Setting motor parameters...")
-        self.ticcmd('--current', '1920')
-        self.ticcmd('--step-mode', '8')
-        self.ticcmd('--max-speed', '500000000')
-        self.ticcmd('--max-accel', '80000') # Max of 100000, DON'T GO HIGHER THAN THIS
+        self.ticcmd('--current', '2880')
+        self.ticcmd('--step-mode', '32')
+        self.ticcmd('--max-speed', '80000000')
+        self.ticcmd('--max-accel', '8000000') # Max of 100000, DON'T GO HIGHER THAN THIS
 
     def home(self):
         print("Homing to position 0...")
