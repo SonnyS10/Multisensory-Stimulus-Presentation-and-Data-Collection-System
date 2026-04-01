@@ -8,7 +8,7 @@ import yaml
 import time
 
 class DoorController:
-    def __init__(self, device_id='00475502', move_steps=-400):
+    def __init__(self, device_id='00475502', move_steps=1800):
         self.device_id = device_id
         self.move_steps = move_steps
         self.set_motor_parameters()
@@ -26,8 +26,8 @@ class DoorController:
         print("Setting motor parameters...")
         self.ticcmd('--current', '2880')
         self.ticcmd('--step-mode', '32')
-        self.ticcmd('--max-speed', '80000000')
-        self.ticcmd('--max-accel', '8000000') # Max of 100000, DON'T GO HIGHER THAN THIS
+        self.ticcmd('--max-speed', '40000000')
+        self.ticcmd('--max-accel', '6000000') # Max of 100000, DON'T GO HIGHER THAN THIS
 
     def home(self):
         print("Homing to position 0...")
@@ -46,7 +46,7 @@ class DoorController:
     def close(self):
         self.ticcmd('--energize')
         print("Closing (moving to 0)...")
-        self.ticcmd('--exit-safe-start', '--position', '0')
+        self.ticcmd('--exit-safe-start', '--position', '-100')
         time.sleep(2)
         self.ticcmd('--deenergize')
         print("Motor de-energized.")
