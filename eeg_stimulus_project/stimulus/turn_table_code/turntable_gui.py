@@ -10,6 +10,24 @@ from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSlot
 from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
 
+
+def bay_label_to_index(bay_label):
+    """Map displayed bay labels to physical 0-based positions around the 16-step ring."""
+    if 1 <= bay_label <= 8:
+        # Inner ring labels occupy odd physical indices: 1, 3, 5, ... 15
+        return 2 * bay_label - 1
+    if 9 <= bay_label <= 16:
+        # Outer ring labels occupy even physical indices: 0, 2, 4, ... 14
+        return 2 * (bay_label - 9)
+    raise ValueError(f"Bay label out of range: {bay_label}")
+
+
+def paired_empty_bay_slot(bay_label):
+    """Return the paired half-bay slot that should remain empty."""
+    if 1 <= bay_label < 8:
+        return bay_label + 1
+    return None
+
 class TurntableWidget(QWidget):
     def __init__(self, parent=None, controller=None):
         super().__init__(parent)
@@ -29,14 +47,15 @@ class TurntableWidget(QWidget):
         r_inner = min(cx, cy) * 0.55
         r_outer = min(cx, cy) * 0.80
 
-        # Inner buttons: odd numbers 1-15
+        # Inner buttons: 1-8
         for i in range(8):
-            odd_num = 2 * i + 1  # 1, 3, 5, ..., 15
+            inner_num = i + 1
+            physical_index = bay_label_to_index(inner_num)
             angle = -90 + (i + 0.5) * (360 / 8)  # Centered between dividers
             rad = math.radians(angle)
             x = cx + r_inner * math.cos(rad)
             y = cy + r_inner * math.sin(rad)
-            btn = QPushButton(str(odd_num), self)
+            btn = QPushButton(str(inner_num), self)
             btn.setFixedSize(36, 36)
             btn.move(int(x - 18), int(y - 18))
             btn.setStyleSheet("""
@@ -52,20 +71,18 @@ class TurntableWidget(QWidget):
                     border: 2px inset #888888;
                 }
             """)
-            btn.clicked.connect(lambda checked, bay=odd_num-1: self.controller.move_to_bay(bay))
+            btn.clicked.connect(lambda checked, bay=physical_index: self.controller.move_to_bay(bay))
             self.inner_buttons.append(btn)
 
-        # Outer buttons: 16 at top, then 2, 4, ..., 14 clockwise
+        # Outer buttons: 9-16
         for i in range(8):
-            if i == 0:
-                even_num = 16
-            else:
-                even_num = (2 * i)
+            outer_num = i + 9
+            physical_index = bay_label_to_index(outer_num)
             angle_outer = -90 + i * (360 / 8)
             rad_outer = math.radians(angle_outer)
             x2 = cx + r_outer * math.cos(rad_outer)
             y2 = cy + r_outer * math.sin(rad_outer)
-            btn2 = QPushButton(str(even_num), self)
+            btn2 = QPushButton(str(outer_num), self)
             btn2.setFixedSize(36, 36)
             btn2.move(int(x2 - 18), int(y2 - 18))
             btn2.setStyleSheet("""
@@ -81,7 +98,7 @@ class TurntableWidget(QWidget):
                     border: 2px inset #555555;
                 }
             """)
-            btn2.clicked.connect(lambda checked, bay=even_num-1: self.controller.move_to_bay(bay))
+            btn2.clicked.connect(lambda checked, bay=physical_index: self.controller.move_to_bay(bay))
             self.outer_buttons.append(btn2)
 
     def resizeEvent(self, event):
@@ -170,8 +187,8 @@ class TurntableWindow(QWidget):
 
         # Assignment list widget (editable bay column)
         self.assignment_list = AssignmentTableWidget(self)
-        self.assignment_list.setColumnCount(2)
-        self.assignment_list.setHorizontalHeaderLabels(["Object", "Bay"])
+        self.assignment_list.setColumnCount(3)
+        self.assignment_list.setHorizontalHeaderLabels(["Object", "Bay", "Empty Slot Bay"])
         self.assignment_list.horizontalHeader().setStretchLastSection(True)
         self.assignment_list.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.SelectedClicked)
         self.assignment_list.setMinimumWidth(240)
@@ -204,10 +221,20 @@ class TurntableWindow(QWidget):
         self.assignment_list.horizontalHeader().setHighlightSections(False)
         self.assignment_list.setShowGrid(False)
 
+        self.auto_bay_btn = QPushButton("Auto-Bay 1-8")
+        self.auto_bay_gap_btn = QPushButton("Auto-Bay 1-8 (Half-Bays Empty)")
+        self.auto_bay_btn.clicked.connect(self.auto_bay_sequential)
+        self.auto_bay_gap_btn.clicked.connect(self.auto_bay_with_gaps)
+
+        assignment_panel = QVBoxLayout()
+        assignment_panel.addWidget(self.auto_bay_btn)
+        assignment_panel.addWidget(self.auto_bay_gap_btn)
+        assignment_panel.addWidget(self.assignment_list)
+
         # Main layout: turntable left, assignments right
         center_layout = QHBoxLayout()
         center_layout.addWidget(self.turntable, alignment=Qt.AlignCenter)
-        center_layout.addWidget(self.assignment_list)
+        center_layout.addLayout(assignment_panel)
 
         main_layout = QVBoxLayout(self)
         main_layout.addLayout(top_bar)
@@ -229,12 +256,70 @@ class TurntableWindow(QWidget):
 
         self.assignment_list.cellChanged.connect(self.handle_bay_edit)
         self._updating_table = False  # Prevent recursion
+        self._gap_replacement_objects = set()
+        self._show_empty_slot_bays = False
+
+        if not self.object_to_bay and self.test_order:
+            self.auto_assign_bays(list(range(1, 9)), "1-8", show_message=False)
 
         self.update_assignment_list()
+
+    def auto_assign_bays(self, bay_sequence, mode_name, show_message=True):
+        self._gap_replacement_objects.clear()
+        self._show_empty_slot_bays = False
+        self.object_to_bay = {}
+        for i, obj in enumerate(self.test_order):
+            if i < len(bay_sequence):
+                self.object_to_bay[obj] = bay_sequence[i]
+            else:
+                self.object_to_bay[obj] = None
+
+        self.update_assignment_list()
+
+        if show_message and len(self.test_order) > len(bay_sequence):
+            QMessageBox.information(
+                self,
+                "Auto-Bay Complete",
+                f"Assigned first {len(bay_sequence)} items using pattern {mode_name}. Remaining items were left empty.",
+            )
+
+    def auto_bay_sequential(self):
+        self.auto_assign_bays(list(range(1, 9)), "1-8")
+
+    def auto_bay_with_gaps(self):
+        self._gap_replacement_objects.clear()
+        self._show_empty_slot_bays = True
+
+        # Keep every second bay empty by using only 1, 3, 5, 7 and wrapping with duplicates.
+        self.object_to_bay = {}
+        gap_bays = [1, 3, 5, 7]
+
+        for i, obj in enumerate(self.test_order):
+            bay = gap_bays[i % len(gap_bays)]
+            self.object_to_bay[obj] = bay
+            if i >= len(gap_bays):
+                self._gap_replacement_objects.add(obj)
+
+        self.update_assignment_list()
+
+        if len(self.test_order) > 8:
+            QMessageBox.information(
+                self,
+                "Auto-Bay Complete",
+                "Assigned with empty gap bays using 1, 3, 5, 7. Items beyond 4 wrapped and duplicate earlier bay assignments.",
+            )
 
     def update_assignment_list(self):
         self._updating_table = True
         self.assignment_list.setRowCount(len(self.test_order))
+
+        bay_counts = {}
+        for obj in self.test_order:
+            bay = self.object_to_bay.get(obj)
+            if isinstance(bay, int) and 1 <= bay <= 16:
+                bay_counts[bay] = bay_counts.get(bay, 0) + 1
+        duplicate_bays = {bay for bay, count in bay_counts.items() if count > 1}
+
         for i, obj in enumerate(self.test_order):
             obj_item = QTableWidgetItem(str(obj))
             obj_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Not editable
@@ -249,6 +334,11 @@ class TurntableWindow(QWidget):
                 # Set placeholder text visually
                 bay_item.setData(Qt.DisplayRole, "")
                 bay_item.setData(Qt.UserRole, "Input Bay Number Here")
+                bay_item.setToolTip("")
+                empty_slot_item = QTableWidgetItem("")
+                empty_slot_item.setTextAlignment(Qt.AlignCenter)
+                empty_slot_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                empty_slot_item.setForeground(QColor("#888"))
             else:
                 bay_item = QTableWidgetItem(str(bay))
                 bay_item.setTextAlignment(Qt.AlignCenter)
@@ -257,9 +347,31 @@ class TurntableWindow(QWidget):
                 font.setItalic(False)
                 bay_item.setFont(font)
                 bay_item.setData(Qt.UserRole, "")
+                paired_slot = paired_empty_bay_slot(bay) if self._show_empty_slot_bays else None
+                empty_slot_item = QTableWidgetItem(str(paired_slot) if paired_slot is not None else "")
+                empty_slot_item.setTextAlignment(Qt.AlignCenter)
+                empty_slot_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                if bay in duplicate_bays:
+                    bay_item.setBackground(QColor("#ffe7ad"))
+                    bay_item.setToolTip("Duplicate bay assignment: multiple stimuli share this bay.")
+                    if self._show_empty_slot_bays:
+                        empty_slot_item.setBackground(QColor("#fff4d1"))
+                        empty_slot_item.setToolTip("Paired empty slot for this duplicated bay.")
+                    else:
+                        empty_slot_item.setBackground(QColor("#ffffff"))
+                        empty_slot_item.setToolTip("")
+                elif obj in self._gap_replacement_objects:
+                    bay_item.setBackground(QColor("#e6f0ff"))
+                    bay_item.setToolTip("Wrapped assignment after bay 8 (shares bay number by design).")
+                    empty_slot_item.setToolTip("Paired empty slot.")
+                else:
+                    bay_item.setBackground(QColor("#ffffff"))
+                    bay_item.setToolTip("")
+                    empty_slot_item.setToolTip("Paired empty slot." if self._show_empty_slot_bays else "")
             obj_item.setTextAlignment(Qt.AlignCenter)
             self.assignment_list.setItem(i, 0, obj_item)
             self.assignment_list.setItem(i, 1, bay_item)
+            self.assignment_list.setItem(i, 2, empty_slot_item)
             self.assignment_list.setRowHeight(i, 34)
         self._updating_table = False
 
@@ -267,6 +379,8 @@ class TurntableWindow(QWidget):
         if self._updating_table or column != 1:
             return
         obj = self.test_order[row]
+        self._gap_replacement_objects.discard(obj)
+        self._show_empty_slot_bays = False
         text = self.assignment_list.item(row, 1).text().strip()
         if text == "":
             self.object_to_bay[obj] = None
@@ -318,7 +432,7 @@ class TurntableWindow(QWidget):
             self._start_timer(1000, self.run_test_sequence)
             return
         print(f"Moving to bay {bay} for object {object_name}")
-        self.controller.move_to_bay(bay - 1, wait=True)
+        self.controller.move_to_bay(bay_label_to_index(bay), wait=True)
         if self.tactile_mode:
             print("Waiting for touch signal from tactile box...")
             self.waiting_for_touch = True
