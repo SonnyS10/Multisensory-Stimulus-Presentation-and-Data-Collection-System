@@ -140,6 +140,7 @@ cython_debug/
 
 # Application-specific files
 *.log
+app.log
 saved_data/
 eeg_stimulus_project/saved_data/
 eeg_stimulus_project/stimulus/tactile_box_code/received_data.txt
