@@ -651,23 +651,23 @@ class Frame(QFrame):
             self.display_button.setStyleSheet(button_style)
             button_layout.addWidget(self.display_button)
 
-            self.viewing_booth_button = QCheckBox("Viewing Booth", self)
-            self.viewing_booth_button.setStyleSheet(button_style)
-            button_layout.addWidget(self.viewing_booth_button)
+            self.turntable_button = QCheckBox("Turntable", self)
+            self.turntable_button.setStyleSheet(button_style)
+            button_layout.addWidget(self.turntable_button)
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
             bottom_frame.setMaximumHeight(50)
             self.layout.addWidget(bottom_frame)
 
-        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'viewing_booth_button']:
+        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'turntable_button']:
             btn = getattr(self, attr, None)
             if btn is not None:
                 btn.setStyleSheet(button_style)
                 btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
                 btn.setMinimumHeight(48)
 
-        checkbox_attrs = ['display_button', 'vr_button', 'viewing_booth_button']
+        checkbox_attrs = ['display_button', 'vr_button', 'turntable_button']
         for attr in checkbox_attrs:
             btn = getattr(self, attr, None)
             if btn is not None:
@@ -676,7 +676,7 @@ class Frame(QFrame):
     def handle_exclusive_checkbox(self, checked_attr, state):
         # Only act if a box was checked
         if state == Qt.Checked:
-            for attr in ['display_button', 'vr_button', 'viewing_booth_button']:
+            for attr in ['display_button', 'vr_button', 'turntable_button']:
                 if attr != checked_attr:
                     btn = getattr(self, attr, None)
                     if btn is not None:
@@ -719,27 +719,27 @@ class Frame(QFrame):
             }}
         """
         # Update styles for all relevant buttons and checkboxes
-        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'viewing_booth_button']:
+        for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'turntable_button']:
             btn = getattr(self, attr, None)
             if btn is not None:
                 btn.setStyleSheet(button_style)
 
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
-    #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Viewing Booth)
+    #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Turntable)
     def start_button_clicked(self):
         #print(self.shared_status['lab_recorder_connected'])
         #print(self.shared_status['eyetracker_connected'])
         # Check if at least one of the checkboxes is checked
         checked = False
         # Defensive: check if the attributes exist (they may not in all test types)
-        for attr in ['display_button', 'vr_button', 'viewing_booth_button']:
+        for attr in ['display_button', 'vr_button', 'turntable_button']:
             btn = getattr(self, attr, None)
             if btn is not None and btn.isChecked():
                 checked = True
                 break
 
         if not checked:
-            QMessageBox.critical(self, "Error", "Please select at least one display mode (VR, Display, or Viewing Booth) before starting.")
+            QMessageBox.critical(self, "Error", "Please select at least one display mode (VR, Display, or Turntable) before starting.")
             return
 
         # --- Labrecroder/Eyetracker connection warning ---
@@ -808,7 +808,7 @@ class Frame(QFrame):
                 return
             
         # --- Turntable connection warning ---
-        is_turntable = self.viewing_booth_button.isChecked()
+        is_turntable = self.turntable_button.isChecked()
         if is_turntable and not self.shared_status.get('turntable_connected', False):
             reply = QMessageBox.question(
                 self,
@@ -859,7 +859,7 @@ class Frame(QFrame):
         # After successfully starting the test, add it to the set
         self.tests_run.add(current_test)
 
-        if hasattr(self, 'viewing_booth_button') and self.viewing_booth_button.isChecked():
+        if hasattr(self, 'turntable_button') and self.turntable_button.isChecked():
             test_name = self.parent.get_current_test()
             test_order = self.parent.stimulus_order_frame.working_orders.get(test_name, [])
             test_order_names = [os.path.splitext(os.path.basename(img.filename))[0] for img in test_order if hasattr(img, 'filename')]
@@ -1053,11 +1053,11 @@ class InstructionFrame(QWidget):
             "<li><b>Resume:</b> Continues a paused test.</li>"
             "<li><b>Next:</b> Displays instructions for the participant to interact with the tactile box (only for tactile tests).</li>"
             "</ul>"
-            "<p><b>Display/VR/Viewing Booth:</b> Select the output mode for the experiment. Only one may be selected at a time:</p>"
+            "<p><b>Display/VR/Turntable:</b> Select the output mode for the experiment. Only one may be selected at a time:</p>"
             "<ul>"
             "<li>🖥️ <b>Display:</b> Shows the 2D experiment on the main screen.</li>"
             "<li>🕶️ <b>VR:</b> Activates the VR headset for a 3D experience.</li>"
-            "<li>🔬 <b>Viewing Booth:</b> Uses the viewing booth for the experiment.</li>"
+            "<li>🔬 <b>Turntable:</b> Uses the Turntable for the experiment.</li>"
             "</ul>"
         )
         self.add_instruction_page(
@@ -1105,7 +1105,7 @@ class InstructionFrame(QWidget):
             "<ol>"
             "<li>Select the desired test from the sidebar.</li>"
             "<li>Ensure all required external devices are connected in the Control Window.</li>"
-            "<li>Choose the display mode (<b>Display</b>, <b>VR</b>, or <b>Viewing Booth</b>).</li>"
+            "<li>Choose the display mode (<b>Display</b>, <b>VR</b>, or <b>Turntable</b>).</li>"
             "<li>Click <b>Start</b> to begin.</li>"
             "<li>Follow on-screen prompts and monitor the status indicators.</li>"
             "<li>Click <b>Stop</b> to end and save the test.</li>"
