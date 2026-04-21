@@ -16,6 +16,7 @@ from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.assets.asset_handler import Display
+from eeg_stimulus_project.gui.craving_dialog import CravingRatingDialog
 import logging
 from logging.handlers import QueueHandler
 
@@ -462,6 +463,11 @@ class GUI(QMainWindow):
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
                 # Don't call send_message here to avoid infinite recursion
+    
+    def show_craving_rating_dialog(self):
+        """Show a manual craving rating dialog."""
+        dialog = CravingRatingDialog(self, self.base_dir, self.test_number)
+        dialog.exec_()
 
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):

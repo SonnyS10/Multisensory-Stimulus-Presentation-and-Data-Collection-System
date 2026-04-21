@@ -152,6 +152,24 @@ class Sidebar(QFrame):
         baseline_button.clicked.connect(parent.start_baseline)
         self.layout.addWidget(baseline_button)
 
+        # Manual Craving Rating Button
+        craving_button = QPushButton("Manual Craving Rating", self)
+        craving_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        craving_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF6F00;
+                color: white;
+                border-radius: 8px;
+                padding: 10px 0px;
+                margin-top: 18px;
+            }
+            QPushButton:hover {
+                background-color: #E65100;
+            }
+        """)
+        craving_button.clicked.connect(parent.show_craving_rating_dialog)
+        self.layout.addWidget(craving_button)
+
     # Add a submenu with a heading and options  
     def add_submenu(self, heading, options):
         heading_label = QLabel(heading, self)
