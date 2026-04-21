@@ -8,6 +8,7 @@ import json
 import sys
 import datetime
 import os
+import shlex
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QTextEdit, QLabel, QSpinBox, QDesktopWidget
 from PyQt5.QtCore import QTimer
@@ -43,45 +44,155 @@ ssh_client = None
 remote_channel = None
 output_queue = queue.Queue()
 
+
+def get_remote_script_pattern(script_command):
+    """Extract the remote script filename so we can safely stop stale instances."""
+    try:
+        parts = shlex.split(script_command)
+        if not parts:
+            return "forcereadwithzero.py"
+        last_token = parts[-1]
+        script_name = os.path.basename(last_token)
+        return script_name or "forcereadwithzero.py"
+    except Exception:
+        return "forcereadwithzero.py"
+
 def start_remote_script(local_script_callback): 
+    startup_event = threading.Event()
+    startup_state = {"ok": False, "error": "Timed out while starting remote script."}
+
     def task():
         global ssh_client, remote_channel
         try:
+            ssh_config = get_ssh_config()
+            ssh_host = ssh_config['host']
+            ssh_user = ssh_config['username']
+            ssh_password = ssh_config['password']
+            data_port = ssh_config['data_port']
+            remote_venv_activate = ssh_config['venv_activate']
+            remote_script = ssh_config['script_path']
+
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_client.connect(ssh_host, username=ssh_user, password=ssh_password)
 
-            remote_command = f"{remote_venv_activate} && {remote_script}"
+            script_pattern = get_remote_script_pattern(remote_script)
+            quoted_pattern = shlex.quote(script_pattern)
+            quoted_password = shlex.quote(ssh_password)
+            cleanup_by_port_command = (
+                f"if command -v lsof >/dev/null 2>&1; then "
+                f"for pid in $(lsof -t -iTCP:{data_port} -sTCP:LISTEN 2>/dev/null); do "
+                f"kill \"$pid\" >/dev/null 2>&1 || true; "
+                f"done; "
+                f"elif command -v fuser >/dev/null 2>&1; then "
+                f"fuser -k {data_port}/tcp >/dev/null 2>&1 || true; "
+                f"fi"
+            )
+            cleanup_by_port_sudo_command = (
+                f"if command -v sudo >/dev/null 2>&1 && command -v fuser >/dev/null 2>&1; then "
+                f"echo {quoted_password} | sudo -S -p '' fuser -k {data_port}/tcp >/dev/null 2>&1 || true; "
+                f"fi"
+            )
+            cleanup_by_name_command = (
+                f"for pid in $(pgrep -f {quoted_pattern} 2>/dev/null); do "
+                f"[ \"$pid\" != \"$$\" ] && kill \"$pid\" >/dev/null 2>&1 || true; "
+                f"done"
+            )
+            launch_command = (
+                f"{cleanup_by_port_command}; "
+                f"{cleanup_by_name_command}; "
+                f"{cleanup_by_port_sudo_command}; "
+                f"sleep 0.5; "
+                f"{remote_venv_activate} && {remote_script}"
+            )
+            remote_command = f"bash -lc {shlex.quote(launch_command)}"
             remote_channel = ssh_client.get_transport().open_session()
             remote_channel.get_pty()
             remote_channel.exec_command(remote_command)
+
+            # If the channel exits immediately, startup failed and local socket should not start.
+            time.sleep(1.0)
+            if remote_channel.exit_status_ready():
+                exit_status = remote_channel.recv_exit_status()
+                early_output = ""
+                if remote_channel.recv_ready():
+                    early_output += remote_channel.recv(4096).decode(errors="replace")
+                if remote_channel.recv_stderr_ready():
+                    early_output += remote_channel.recv_stderr(4096).decode(errors="replace")
+                startup_state["ok"] = False
+                if early_output.strip():
+                    startup_state["error"] = f"Remote script exited immediately with status {exit_status}. Output: {early_output.strip()}"
+                else:
+                    startup_state["error"] = f"Remote script exited immediately with status {exit_status}."
+                startup_event.set()
+            else:
+                startup_state["ok"] = True
+                startup_event.set()
 
 
             while True:
                 if remote_channel.recv_ready():
                     data = remote_channel.recv(1024).decode()
                     output_queue.put(data)
+                if remote_channel.recv_stderr_ready():
+                    err_data = remote_channel.recv_stderr(1024).decode()
+                    output_queue.put(err_data)
                 if remote_channel.exit_status_ready():
+                    exit_status = remote_channel.recv_exit_status()
+                    if exit_status != 0:
+                        output_queue.put(f"[ERROR] Remote script exited with status {exit_status}. If you see 'Address already in use', wait 5-10 seconds and start again.\n")
                     break
 
             ssh_client.close()
             output_queue.put("[INFO] Remote script ended.\n")
         except Exception as e:
+            startup_state["ok"] = False
+            startup_state["error"] = f"Failed to start remote script on host {ssh_host}: {e}"
+            startup_event.set()
             output_queue.put(f"[ERROR] Failed to start remote script: {e}\n")
 
     threading.Thread(target=task, daemon=True).start()
     print("Attempting to remote in to the Raspberry Pi...")
-    time.sleep(5)  # Allow time for the thread to start
-    local_script_callback()
+    startup_event.wait(timeout=15)
+    if startup_state["ok"]:
+        output_queue.put("[INFO] Remote script startup confirmed. Starting local data client...\n")
+        local_script_callback()
+    else:
+        output_queue.put(f"[ERROR] {startup_state['error']}\n")
 
 def stop_remote_script():
-    global remote_channel
+    global remote_channel, ssh_client
     if remote_channel is not None:
         try:
             remote_channel.close()
         except Exception:
             pass  # Ignore errors if already closed
-        output_queue.put("[INFO] Remote script manually stopped.\n")
+
+    # Best-effort remote cleanup in case the script remains running after channel close.
+    try:
+        if ssh_client is not None and ssh_client.get_transport() and ssh_client.get_transport().is_active():
+            ssh_config = get_ssh_config()
+            script_pattern = get_remote_script_pattern(ssh_config['script_path'])
+            data_port = ssh_config['data_port']
+            quoted_password = shlex.quote(ssh_config['password'])
+            cleanup_cmd = (
+                f"pkill -f {shlex.quote(script_pattern)} >/dev/null 2>&1 || true; "
+                f"if command -v lsof >/dev/null 2>&1; then "
+                f"for pid in $(lsof -t -iTCP:{data_port} -sTCP:LISTEN 2>/dev/null); do "
+                f"kill \"$pid\" >/dev/null 2>&1 || true; "
+                f"done; "
+                f"elif command -v fuser >/dev/null 2>&1; then "
+                f"fuser -k {data_port}/tcp >/dev/null 2>&1 || true; "
+                f"fi; "
+                f"if command -v sudo >/dev/null 2>&1 && command -v fuser >/dev/null 2>&1; then "
+                f"echo {quoted_password} | sudo -S -p '' fuser -k {data_port}/tcp >/dev/null 2>&1 || true; "
+                f"fi"
+            )
+            ssh_client.exec_command(f"bash -lc {shlex.quote(cleanup_cmd)}")
+    except Exception:
+        pass
+
+    output_queue.put("[INFO] Remote script manually stopped.\n")
 
 class RemoteScriptGUI(QMainWindow):
     def __init__(self, shared_status, connection=None):
@@ -191,8 +302,8 @@ class RemoteScriptGUI(QMainWindow):
     def start_local_script(self):
         # Get configuration values
         ssh_config = get_ssh_config()
-        PI_IP = ssh_config['host']
-        print(PI_IP)
+        remote_host = ssh_config['host']
+        print(remote_host)
         PORT = ssh_config['data_port']
         print(PORT)
         
@@ -200,11 +311,22 @@ class RemoteScriptGUI(QMainWindow):
         output_file = config.get_absolute_path('paths.tactile_data_file')
         
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', PORT))  # Listen on all interfaces
-                s.connect((PI_IP, PORT))
+            sock = None
+            last_error = None
+            for _ in range(20):
+                try:
+                    sock = socket.create_connection((remote_host, PORT), timeout=2)
+                    break
+                except OSError as e:
+                    last_error = e
+                    time.sleep(0.5)
+
+            if sock is None:
+                raise ConnectionError(f"Could not connect to tactile data socket {remote_host}:{PORT}. Last error: {last_error}")
+
+            with sock as s:
                 with open(output_file, "wb") as f:
-                    print(f"Connected to {PI_IP}:{PORT}. Receiving data...")
+                    print(f"Connected to {remote_host}:{PORT}. Receiving data...")
                     self.send_label_to_control("tactile_connected")
                     while True:
                         data = s.recv(1024)
@@ -214,6 +336,8 @@ class RemoteScriptGUI(QMainWindow):
             print(f"All data saved to {output_file}")
         except KeyboardInterrupt:
             print("Connection terminated by user.")  
+        except Exception as e:
+            output_queue.put(f"[ERROR] Local tactile data connection failed: {e}\n")
 
     def stop_script(self):
         self.status_label.setText("Status: Stopping remote script...")
