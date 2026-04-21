@@ -231,7 +231,7 @@ class ControlWindow(QMainWindow):
         self.device_frame_layout.addLayout(olfactory_row)
 
         # --- Olfactory Validation Button ---
-        validate_olfactory_btn = QPushButton("Validate Ports", self)
+        validate_olfactory_btn = QPushButton("Validate Olfactory Ports", self)
         validate_olfactory_btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
         validate_olfactory_btn.setStyleSheet("""
             QPushButton {
@@ -249,16 +249,6 @@ class ControlWindow(QMainWindow):
         olfactory_validation_row.addWidget(validate_olfactory_btn)
         olfactory_validation_row.addStretch()
         self.device_frame_layout.addLayout(olfactory_validation_row)
-
-        # --- EEG Stream Row ---
-        eeg_stream_row, self.eeg_stream_connected_icon = device_row(
-            "EEG Stream",
-            self.open_eeg_stream,
-            "Stream Status:",
-            "eeg_stream_connected_icon"
-        )
-        self.device_frame_layout.addLayout(eeg_stream_row)
-
 
         # --- Add Device Frame to Main Layout ---
         self.control_layout.addWidget(self.device_frame)
@@ -302,7 +292,6 @@ class ControlWindow(QMainWindow):
         self.vr_process = None
         self.turntable_process = None
         self.olfactory_process = None
-        self.eeg_stream_process = None
 
         if self.host:
             # If this is the host, start listening for commands from the client
@@ -601,18 +590,6 @@ class ControlWindow(QMainWindow):
         if self.connection:
             msg = {"action": "connect_turntable"}
             self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
-
-    def open_eeg_stream(self):
-        """Open the EEG stream window in a separate process."""
-        try:
-            from Old_Code.eeg_stream_window import run_eeg_stream_window
-            self.eeg_stream_process = Process(target=run_eeg_stream_window)
-            self.eeg_stream_process.start()
-            self.update_app_status_icon(self.eeg_stream_connected_icon, True)
-            logging.info("EEG Stream window opened")
-        except Exception as e:
-            logging.error(f"Failed to open EEG Stream window: {e}")
-            self.update_app_status_icon(self.eeg_stream_connected_icon, False)
 
     #Update the application connection/linkage status icon to show a red or green light.
     def update_app_status_icon(self, bar_widget, is_green):
