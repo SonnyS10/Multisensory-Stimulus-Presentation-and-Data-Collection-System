@@ -2602,6 +2602,7 @@
 2026-04-21 13:31:22,946 INFO Authentication (password) successful!
 2026-04-21 13:31:37,059 INFO Connected (version 2.0, client OpenSSH_9.2p1)
 2026-04-21 13:31:37,265 INFO Authentication (password) successful!
+<<<<<<< HEAD
 2026-04-21 13:35:40,893 INFO Host: Waiting for client on port 9999...
 2026-04-21 13:35:41,905 INFO Host: Connected by ('169.254.185.196', 56437)
 2026-04-21 13:35:51,647 INFO Connected (version 2.0, client OpenSSH_9.2p1)
@@ -2625,3 +2626,9 @@
 2026-04-21 14:23:47,011 INFO Host: Connected by ('169.254.185.196', 50485)
 2026-04-21 14:24:04,480 INFO Client disconnected.
 2026-04-21 14:24:20,882 INFO Host: Waiting for client on port 9999...
+=======
+2026-04-21 13:35:41,964 INFO Client: Connected to host.
+2026-04-21 13:43:32,810 INFO Client: Connected to host.
+2026-04-21 14:17:54,741 INFO Client: Connected to host.
+2026-04-21 14:23:47,078 INFO Client: Connected to host.
+>>>>>>> c8d86c3cfa6a25373a8fbbe27c6565fbb94cc8c4

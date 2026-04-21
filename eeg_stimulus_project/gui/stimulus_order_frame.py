@@ -426,6 +426,7 @@ class StimulusOrderFrame(QWidget):
         """Load current assets from the asset handler."""
         #print("Loading current assets...")
         try:
+            passive_default_limit = 8
             randomize_cues, seed = self.get_randomization_settings()
             repetitions = self.get_repetitions_settings()
             
@@ -439,8 +440,9 @@ class StimulusOrderFrame(QWidget):
             # --- Ensure CravingRatingAsset is last in all passive tests ---
             for test_name, asset_list in self.original_assets.items():
                 if test_name and not test_name.lower().startswith("stroop"):
-                    # Remove any existing craving rating asset
                     asset_list = [a for a in asset_list if not isinstance(a, CravingRatingAsset)]
+                    asset_list = asset_list[:passive_default_limit]
+                    # Remove any existing craving rating asset
                     original_craving = CravingRatingAsset()
                     original_craving.is_original = True
                     asset_list.append(original_craving)
@@ -732,6 +734,9 @@ class StimulusOrderFrame(QWidget):
         
         # Ensure working order exists and is current with UI
         self.sync_working_order_with_ui()
+
+        if not self.validate_passive_unique_stimulus_limit():
+            return
         
         # Copy working order to applied custom order
         self.custom_orders[self.current_test_name] = self.working_orders[self.current_test_name].copy()
@@ -806,6 +811,14 @@ class StimulusOrderFrame(QWidget):
                 working.insert(craving_idx, img)
             else:
                 working.append(img)
+
+            if not self.validate_passive_unique_stimulus_limit():
+                # Revert this add if it violates passive unique-stimulus constraints.
+                if img in working:
+                    working.remove(img)
+                self.update_image_list()
+                self.update_apply_button_state()
+                return
         else:
             self.working_orders[self.current_test_name].append(img)
         self.update_image_list()
@@ -936,6 +949,10 @@ class StimulusOrderFrame(QWidget):
                 imported_order.append(original_craving)
             # Update the working order for the current test
             self.working_orders[self.current_test_name] = imported_order
+
+            if not self.validate_passive_unique_stimulus_limit():
+                return
+
             self.update_image_list()
             self.update_apply_button_state()  # Update button state to show changes can be applied
 
@@ -1152,6 +1169,9 @@ class StimulusOrderFrame(QWidget):
         # Update working order with randomized images
         self.working_orders[self.current_test_name] = repeated_images
 
+        if not self.validate_passive_unique_stimulus_limit():
+            return
+
         # Update the UI
         self.update_image_list()
         self.update_apply_button_state()
@@ -1165,6 +1185,42 @@ class StimulusOrderFrame(QWidget):
     def is_passive_test(self):
         return self.current_test_name and not self.current_test_name.lower().startswith("stroop")
 
+    def validate_passive_unique_stimulus_limit(self):
+        """Enforce passive viewing limit of max 8 unique non-craving stimuli."""
+        if not self.is_passive_test() or not self.current_test_name:
+            return True
+
+        if self.current_test_name in self.working_orders:
+            images = self.working_orders[self.current_test_name]
+        elif self.current_test_name in self.custom_orders:
+            images = self.custom_orders[self.current_test_name]
+        else:
+            images = self.original_assets.get(self.current_test_name, [])
+
+        unique_names = set()
+        for img in images:
+            if isinstance(img, CravingRatingAsset):
+                continue
+            if hasattr(img, 'filename') and img.filename:
+                base_name = os.path.splitext(os.path.basename(img.filename))[0]
+                unique_names.add(self.normalize_name(base_name))
+            elif hasattr(img, 'display_name') and img.display_name:
+                unique_names.add(self.normalize_name(str(img.display_name)))
+            else:
+                unique_names.add(self.normalize_name(str(img)))
+
+        if len(unique_names) > 8:
+            QMessageBox.critical(
+                self,
+                "Too Many Unique Stimuli",
+                f"Passive viewing tests support at most 8 unique stimuli. "
+                f"Current order has {len(unique_names)} unique stimuli.\n\n"
+                "Remove or merge stimuli until there are 8 or fewer unique entries.",
+                QMessageBox.Ok
+            )
+            return False
+        return True
+
     def goto_selected_test(self):
         """Ask for confirmation, then go to the selected test if confirmed."""
         if not self.current_test_name:
@@ -1175,6 +1231,10 @@ class StimulusOrderFrame(QWidget):
                 QMessageBox.Ok
             )
             return
+
+            self.sync_working_order_with_ui()
+            if not self.validate_passive_unique_stimulus_limit():
+                return
 
         reply = QMessageBox.question(
             self,
