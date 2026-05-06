@@ -9,7 +9,7 @@ import logging
 #print(f"Phone IP address: {device.phone_ip}")
 
 class PupilLabs():
-    def __init__(self, ip_address="10.117.15.169"):
+    def __init__(self, ip_address="10.117.36.226"):
         super().__init__()
         logging.info("Attempting to connect to Pupil Labs device...")
         self.device = Device(address=ip_address, port="8080")
