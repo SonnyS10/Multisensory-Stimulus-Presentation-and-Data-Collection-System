@@ -609,9 +609,9 @@ class DisplayWindow(QMainWindow):
         if "Olfactory" in self.current_test:
             # Can be touched upon later
             if initial:
-                instruction_text = "Please touch the object to begin. Once you touch the object, a brief scent will dispensed."
+                instruction_text = "Please touch the object to begin. Once you touch the object, a brief scent will be dispensed."
             else:
-                instruction_text = "You may now touch the object. Once you touch the object, a brief scent will dispensed."
+                instruction_text = "You may now touch the object. Once you touch the object, a brief scent will be dispensed."
         else:
             instruction_text = "Please touch the object to begin." if initial else "You may now touch the object."
         font = QFont("Arial", 32, QFont.Bold)
@@ -935,7 +935,7 @@ class DisplayWindow(QMainWindow):
         # Show your pre-instructions
         label = "Crosshair Instructions Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
-        self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 2 minutes.")
+        self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 4 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
@@ -951,7 +951,7 @@ class DisplayWindow(QMainWindow):
     def show_crosshair_period(self):
         if self.stopped:
             return
-        # Show a crosshair for 2 minutes
+        # Show a crosshair for 4 minutes
         label = "Crosshair Shown"
         self.send_message({"action": "label", "label": label})  # Send label to the server
         self.instructions_label.setText("+")

@@ -487,6 +487,7 @@ class Frame(QFrame):
         self.eyetracker_connected = eyetracker_connected
         self.labrecorder_connected = labrecorder_connected
         self.local_mode = local_mode
+        self.is_stroop_test = is_stroop_test
 
         # --- Aesthetic Styles ---
         self.setStyleSheet("""
@@ -808,17 +809,18 @@ class Frame(QFrame):
                 return
             
         # --- Turntable connection warning ---
-        is_turntable = self.turntable_button.isChecked()
-        if is_turntable and not self.shared_status.get('turntable_connected', False):
-            reply = QMessageBox.question(
-                self,
-                "Turntable Not Connected",
-                "The turntable is not connected, are you sure you want to proceed?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            if reply != QMessageBox.Yes:
-                return
+        if not self.is_stroop_test:
+            is_turntable = self.turntable_button.isChecked()
+            if is_turntable and not self.shared_status.get('turntable_connected', False):
+                reply = QMessageBox.question(
+                    self,
+                    "Turntable Not Connected",
+                    "The turntable is not connected, are you sure you want to proceed?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply != QMessageBox.Yes:
+                    return
 
         # --- Test already run warning ---
         current_test = self.parent.get_current_test()
