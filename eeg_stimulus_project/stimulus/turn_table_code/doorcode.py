@@ -46,7 +46,7 @@ class DoorController:
     def close(self):
         self.ticcmd('--energize')
         print("Closing (moving to 0)...")
-        self.ticcmd('--exit-safe-start', '--position', '-100')
+        self.ticcmd('--exit-safe-start', '--position', '-150')
         time.sleep(2)
         self.ticcmd('--deenergize')
         print("Motor de-energized.")
