@@ -1,341 +1,249 @@
 # Getting Started Guide
-## Multisensory Stimulus Presentation and Data Collection System
 
-This guide will walk you through setting up and running your first experiment with the Multisensory Stimulus Presentation and Data Collection System, starting from just a GitHub repository link.
+This guide covers the current first-run workflow for the active application in `eeg_stimulus_project/`.
 
-## Table of Contents
-1. [System Requirements](#system-requirements)
-2. [Installation](#installation)
-3. [First-Time Setup](#first-time-setup)
-4. [Running Your First Test](#running-your-first-test)
-5. [Basic Operation](#basic-operation)
-6. [Troubleshooting](#troubleshooting)
-7. [Next Steps](#next-steps)
+## Before You Start
 
----
+### Minimum Software Requirements
 
-## System Requirements
+- Python 3.8+
+- A working virtual environment or Python installation with `pip`
+- The packages in `requirements.txt`
 
-### Minimum Requirements
-- **Operating System**: Windows 10/11, macOS 10.15+, or Linux (Ubuntu 18.04+)
-- **Python**: Version 3.8 or higher
-- **RAM**: 4GB minimum, 8GB recommended
-- **Storage**: 2GB free space for software and initial data
-- **Network**: Internet connection for initial setup
+### Recommended For First Test Runs
 
-### Recommended Hardware (Optional)
-- **EEG System**: EMOTIV EPOC Flex (32-channel)
-- **Eye Tracker**: Eyelink 1000 Plus or Pupil Labs
-- **VR Headset**: HTC VIVE Pro Eye
-- **Custom Hardware**: Tactile stimulation system, olfactory delivery system
-
-### Software Dependencies
-The following will be installed automatically:
-- PyQt5 (GUI framework)
-- NumPy, Pandas (data handling)
-- Matplotlib (visualization)
-- PyLSL (Lab Streaming Layer)
-- Paramiko (SSH connectivity)
-- Additional dependencies (see requirements.txt)
-
----
+- Start with `Developer Mode`
+- Use `Test Number` `1` for a passive viewing test
+- Use the `Display` output mode for the first run
 
 ## Installation
 
-### Step 1: Install Python
-If you don't have Python installed:
-
-**Windows:**
-1. Download Python from [python.org](https://www.python.org/downloads/)
-2. **Important**: Check "Add Python to PATH" during installation
-3. Verify installation by opening Command Prompt and typing: `python --version`
-
-**macOS:**
 ```bash
-# Using Homebrew (recommended)
-brew install python
-
-# Or download from python.org
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install python3 python3-pip python3-venv
-```
-
-### Step 2: Clone the Repository
-Open a terminal/command prompt and run:
-
-```bash
-# Clone the repository
 git clone https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System.git
-
-# Navigate to the project directory
 cd Multisensory-Stimulus-Presentation-and-Data-Collection-System
-```
 
-### Step 3: Create a Virtual Environment (Recommended)
-```bash
-# Create virtual environment
 python -m venv venv
 
-# Activate virtual environment
-# Windows:
+# Windows
 venv\Scripts\activate
-# macOS/Linux:
+
+# macOS/Linux
 source venv/bin/activate
-```
 
-### Step 4: Install Dependencies
-```bash
-# Install all required packages
 pip install -r requirements.txt
 ```
 
-### Step 5: Verify Installation
+Verify the package imports:
+
 ```bash
-# Test that the main module can be imported
-python -c "import eeg_stimulus_project; print('Installation successful!')"
+python -c "import eeg_stimulus_project; print('Installation successful')"
 ```
 
----
+## First-Time Configuration Review
 
-## First-Time Setup
+Before the first run on a new machine, review:
 
-### 1. Configuration
-The system uses a configuration file for settings. The default configuration should work for basic testing:
+- `eeg_stimulus_project/config/settings.yaml`
+- host/client port settings
+- tactile system IP and credentials
+- platform-specific executable paths for LabRecorder and Actichamp
+
+Important: this project still includes lab-specific defaults. Do not assume the shipped IP addresses and paths are correct for your environment.
+
+## Launch Options
+
+You can start the application in any of these ways:
+
+### Terminal
 
 ```bash
-# View the configuration file
-cat eeg_stimulus_project/config/settings.yaml
-```
-
-For now, the default settings are sufficient. Advanced configuration is covered in the [Data Collection Host Guide](DATA_COLLECTION_HOST_GUIDE.md).
-
-### 2. Test Data Directory
-The system will automatically create data directories when you run experiments. Default location:
-- **Windows**: `eeg_stimulus_project/saved_data/`
-- **macOS/Linux**: `eeg_stimulus_project/saved_data/`
-
-### 3. Default Assets
-The system includes default images for testing. Custom assets can be imported later through the GUI.
-
----
-
-## Running Your First Test
-
-### Quick Start (Developer Mode)
-The easiest way to test the system is using Developer Mode, which runs everything on one computer:
-
-#### 1. **Launch the Application**
-
-There are three main ways to launch the application:
-
-**a. Using the Terminal/Command Prompt**
-1. Open your terminal or command prompt
-2. Navigate to the project directory:
-   ```bash
-   cd Multisensory-Stimulus-Presentation-and-Data-Collection-System
-   ```
-3. Activate your virtual environment (if using one):
-   ```bash
-   # Windows:
-   venv\Scripts\activate
-   # macOS/Linux:
-   source venv/bin/activate
-   ```
-4. Run the application:
-   ```bash
-   python -m eeg_stimulus_project.main.main
-   ```
-
-**b. Using the .bat File (Windows Only)**
-1. Navigate to the project directory in File Explorer
-2. Go to the `eeg_stimulus_project/utils/` folder
-3. Double-click on `run_eeg_stimulus.bat`
-4. The batch file will:
-   - Automatically detect your Python installation (system or conda)
-   - Install any missing dependencies
-   - Launch the application
-5. Follow the on-screen prompts to select your Python environment if multiple are available
-
-**c. Creating a Desktop Shortcut with Custom Brain Icon**
-1. **Create the shortcut**:
-   - Right-click on your desktop and select "New" → "Shortcut"
-   - Browse to your project directory and select `eeg_stimulus_project/utils/run_eeg_stimulus.bat`
-   - Click "Next" and give it a name like "EEG Stimulus Application"
-   - Click "Finish"
-
-2. **Set the custom brain icon**:
-   - Right-click on the newly created shortcut and select "Properties"
-   - Click on the "Change Icon..." button
-   - Click "Browse..." and navigate to `eeg_stimulus_project/utils/Brain_icon.ico`
-   - Select the brain icon and click "OK"
-   - Click "OK" again to apply the changes
-
-3. **Launch the application**:
-   - Double-click the desktop shortcut to start the application
-   - The custom brain icon will be visible both on the desktop and in the taskbar
-
-#### 2. **Fill in Subject Information**:
-   - Subject ID: Enter a test ID (e.g., "test001")
-   - Test Number: Enter "1" for passive viewing test
-
-#### 3. **Start Developer Mode**:
-   - Click the green "Developer Mode" button
-   - Two windows will open:
-     - **Control Window**: For managing the experiment
-     - **Experiment Window**: For running the actual experiment
-
-#### 4. **Navigate to a Test**:
-   - In the Experiment Window, use the sidebar to select a test
-   - Try "Unisensory Neutral Visual" first
-
-#### 5. **Run a Simple Test**:
-   - Check the "Start Display" checkbox in the test frame
-   - A stimulus presentation window will open
-   - Click through the experiment to see how it works
-
-### Understanding the Interface
-
-**Main Launcher Window:**
-- **Subject Information**: Required for data organization
-- **Experiment Mode**: Choose how to run the system
-- **Custom Assets**: Optional image folders for personalized experiments
-
-**Control Window (Host):**
-- Monitor experiment status
-- Connect to hardware systems
-- View system logs
-- Control recording systems
-
-**Experiment Window:**
-- Navigate between different test conditions
-- Control stimulus presentation
-- Monitor experiment progress
-- Access instructions and utilities
-
----
-
-## Basic Operation
-
-### Experiment Types
-The system supports two main experiment types:
-
-**Test 1 - Passive Viewing Experiments:**
-- Unisensory Neutral Visual
-- Unisensory Alcohol Visual
-- Multisensory Neutral Visual & Olfactory
-- Multisensory Alcohol Visual & Olfactory
-- Multisensory Neutral Visual, Tactile & Olfactory
-- Multisensory Alcohol Visual, Tactile & Olfactory
-
-**Test 2 - Stroop Task Experiments:**
-- Stroop Multisensory Alcohol (Visual & Tactile)
-- Stroop Multisensory Neutral (Visual & Tactile)
-- Stroop Multisensory Alcohol (Visual & Olfactory)
-- Stroop Multisensory Neutral (Visual & Olfactory)
-
-### Navigation
-- **Sidebar**: Click test names to switch between conditions
-- **Instructions**: Toggle experiment instructions on/off
-- **Stimulus Order**: Configure stimulus presentation sequences
-- **Latency Checker**: Test system responsiveness (for distributed setups)
-
-### Data Collection
-- Data is automatically saved in organized directories
-- Each subject gets a unique folder
-- Each test type gets its own subdirectory
-- Behavioral data is saved as CSV files
-- EEG and other physiological data is coordinated via LSL
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "Module not found" errors:**
-```bash
-# Make sure you're in the right directory
-pwd  # Should show the project root
-
-# Reinstall dependencies
-pip install -r requirements.txt
-```
-
-**2. "Permission denied" errors:**
-```bash
-# On macOS/Linux, you might need:
-chmod +x eeg_stimulus_project/utils/run_eeg_stimulus.sh
-```
-
-**3. PyQt5 display issues:**
-```bash
-# On Linux, you might need:
-sudo apt install python3-pyqt5
-```
-
-**4. LSL library not found:**
-```bash
-# This is normal if you don't have LSL hardware
-# The software will still run for basic testing
-```
-
-### Getting Help
-1. Check the console output for error messages
-2. Look at the log files in the application directory
-3. Refer to the [Troubleshooting section](TROUBLESHOOTING.md) for specific hardware issues
-4. Check the GitHub issues for known problems
-
----
-
-## Next Steps
-
-### For Researchers
-- Read the [Experimenter Client Guide](EXPERIMENTER_CLIENT_GUIDE.md)
-- Learn about [Data Collection Host Setup](DATA_COLLECTION_HOST_GUIDE.md)
-- Explore [Hardware Integration](HARDWARE_SETUP.md)
-
-### For Developers
-- Review the [Developer Documentation](DEVELOPER_DOCUMENTATION.md)
-- Understand the [System Architecture](DEVELOPER_DOCUMENTATION.md#system-architecture)
-- Learn about [Adding New Features](DEVELOPER_DOCUMENTATION.md#adding-new-features)
-
-### For System Administrators
-- Set up [Network Configuration](DATA_COLLECTION_HOST_GUIDE.md#network-setup)
-- Configure [Hardware Systems](HARDWARE_SETUP.md)
-- Plan [Data Storage and Backup](DATA_COLLECTION_HOST_GUIDE.md#data-management)
-
----
-
-## Quick Reference
-
-### Essential Commands
-```bash
-# Start the application
 python -m eeg_stimulus_project.main.main
-
-# Check installation
-python -c "import eeg_stimulus_project; print('OK')"
-
-# View logs (if issues occur)
-tail -f app.log
 ```
 
-### Important Files
-- `eeg_stimulus_project/config/settings.yaml` - Configuration
-- `eeg_stimulus_project/saved_data/` - Experiment data
-- `requirements.txt` - Python dependencies
-- `app.log` - Application logs
+### Windows Batch Launcher
 
-### Default Network Settings
-- **Host Port**: 9999
-- **Default Host IP**: 169.254.37.25 (update as needed)
+Double-click:
 
----
+```text
+eeg_stimulus_project/utils/run_eeg_stimulus.bat
+```
 
-**Congratulations!** You've successfully set up the Multisensory Stimulus Presentation and Data Collection System. You're now ready to run experiments and collect data.
+### Desktop Shortcut On Windows
 
-For questions or issues, please refer to the specific guides for your use case or check the project's GitHub repository for support.
+If you want a shortcut, point it to:
+
+```text
+eeg_stimulus_project/utils/run_eeg_stimulus.bat
+```
+
+An icon file is available at:
+
+```text
+eeg_stimulus_project/utils/Brain_icon.ico
+```
+
+## Your First Local Test Run
+
+### Step 1: Open The Launcher
+
+Start the application and use the launcher window.
+
+Fill in:
+
+- `Subject ID`, such as `test001`
+- `Test Number`, either `1` or `2`
+
+For a first run, use:
+
+- `Subject ID`: any test identifier
+- `Test Number`: `1`
+
+### Step 2: Start Developer Mode
+
+Click `Developer Mode`.
+
+This launches:
+
+- the control window
+- the experiment window
+
+On local runs, the data directory tree is created immediately.
+
+### Step 3: Understand The Two Windows
+
+#### Control Window
+
+The current control window includes rows for:
+
+- `Actichamp`
+- `LabRecorder`
+- `Eye Tracker`
+- `Tactile Box`
+- `Virtual Reality`
+- `Turntable`
+- `Olfactory System`
+
+It also includes:
+
+- a log output panel
+- status indicators for each device
+- `Validate Olfactory Ports`
+
+#### Experiment Window
+
+The experiment window includes:
+
+- passive and Stroop test pages
+- `Start`, `Stop`, `Pause`, `Resume`, and `Next`
+- output-mode checkboxes such as `Display`, `VR`, and `Turntable`
+- `Instructions`
+- `Stimulus Order`
+- `Latency Checker`
+- `Record Baseline`
+
+### Step 4: Run A Simple Passive Test
+
+1. In the experiment window, select `Unisensory Neutral Visual`.
+2. Check `Display` as the output mode.
+3. Click `Start`.
+4. A display window opens and a mirrored view appears in the experiment page.
+5. When you are finished, click `Stop`.
+
+If you do not select an output mode, the application blocks startup and prompts you to choose `Display`, `VR`, or `Turntable`.
+
+### Step 5: Review Saved Output
+
+Local runs save under:
+
+```text
+eeg_stimulus_project/saved_data/subject_<subject_id>/test_<test_number>/
+```
+
+Behavioral CSV output is stored inside each test folder.
+
+Important: re-running the same test can overwrite that test's `data.csv`.
+
+## Host And Client Workflow
+
+Use this only when the experiment presentation machine is separate from the data-collection machine.
+
+### Host Steps
+
+1. Enter `Subject ID` and `Test Number`.
+2. Click `Start as Data Collection Computer (Host)`.
+3. The host listens on port `9999`.
+4. The control window opens only after a client connects.
+5. Subject/test folders are created after the connection is established.
+
+### Client Steps
+
+1. Enter the host IP in `Host IP`.
+2. Optionally choose custom alcohol and neutral image folders.
+3. Click `Start Experimenter Computer (Client)`.
+4. The experiment window opens after the connection succeeds.
+
+Important client note: the client does not create its own subject/test data tree. It is the stimulus-presentation node.
+
+## Custom Assets
+
+The launcher accepts optional folders for:
+
+- alcohol images
+- non-alcohol images
+
+Current behavior:
+
+- default packaged images are still loaded when present
+- custom folders are added on top of the defaults, not used as an exclusive replacement
+- if neutral images are still missing, fallback behavior may use personalized image content
+
+If you need a tightly controlled neutral set, provide an explicit neutral folder and verify the order in `Stimulus Order` before running participants.
+
+## Useful Built-In Tools
+
+### Latency Checker
+
+The sidebar includes `Latency Checker`.
+
+Current behavior:
+
+- the test runs for 5 seconds
+- it sends 10 pings per second
+- it reports the average latency after 50 samples
+
+### Record Baseline
+
+The sidebar includes `Record Baseline`.
+
+This opens a dedicated baseline display flow. In local mode, if LabRecorder is connected, the baseline recording is written under a `Baseline` folder in the current subject/test tree.
+
+## Common First-Run Problems
+
+### Import Or Dependency Errors
+
+```bash
+pip install -r requirements.txt
+```
+
+### Host Cannot Start
+
+Check whether port `9999` is already in use.
+
+### LabRecorder Does Not Connect
+
+Check whether LabRecorder is running and listening on port `22345`.
+
+### Windows Diagnostics
+
+Run:
+
+```text
+test_troubleshooting.bat
+```
+
+## Next Documents To Read
+
+- `DATA_COLLECTION_HOST_GUIDE.md`
+- `EXPERIMENTER_CLIENT_GUIDE.md`
+- `TROUBLESHOOTING.md`
+- `DEVELOPER_DOCUMENTATION.md`
