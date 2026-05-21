@@ -211,7 +211,7 @@ class RemoteScriptGUI(QMainWindow):
 
         # Load hardware configuration
         hardware_config = config.get('hardware.tactile', {})
-        self.threshold = hardware_config.get('threshold', 500)
+        self.threshold = hardware_config.get('threshold', 200)
         self.last_force = 0
         self.baseline_force = hardware_config.get('baseline_force', 0)
         self.force_history = []

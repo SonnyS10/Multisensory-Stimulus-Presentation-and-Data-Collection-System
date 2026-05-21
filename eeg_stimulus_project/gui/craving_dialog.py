@@ -125,8 +125,8 @@ class CravingRatingDialog(QDialog):
         if not self.base_dir or not self.subject_id:
             return
         
-        # Create or update manual_craving_ratings.csv
-        ratings_file = os.path.join(self.base_dir, "manual_craving_ratings.csv")
+        # Create or update craving_rating.csv
+        ratings_file = os.path.join(self.base_dir, "craving_rating.csv")
         
         file_exists = os.path.isfile(ratings_file)
         
