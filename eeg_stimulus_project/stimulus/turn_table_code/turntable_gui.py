@@ -2,7 +2,7 @@ import sys
 import math
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QDialog, QMessageBox,
-    QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem
+    QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem, QCheckBox, QSpinBox, QFrame
 )
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
 from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSlot
@@ -22,10 +22,18 @@ def bay_label_to_index(bay_label):
     raise ValueError(f"Bay label out of range: {bay_label}")
 
 
+def bay_index_to_label(bay_index):
+    """Map a physical 0-based position back to the displayed bay label."""
+    bay_index = bay_index % 16
+    if bay_index % 2 == 1:
+        return (bay_index + 1) // 2
+    return (bay_index // 2) + 9
+
+
 def paired_empty_bay_slot(bay_label):
     """Return the paired half-bay slot that should remain empty."""
-    if 1 <= bay_label < 8:
-        return bay_label + 1
+    if bay_label in (2, 4, 6, 8):
+        return bay_label - 1
     return None
 
 class TurntableWidget(QWidget):
@@ -35,74 +43,125 @@ class TurntableWidget(QWidget):
         self.setMinimumSize(500, 500)
         self.inner_buttons = []
         self.outer_buttons = []
+        self.button_by_label = {}
         self.init_buttons()
 
     def init_buttons(self):
-        for btn in self.inner_buttons + self.outer_buttons:
-            btn.setParent(None)
-        self.inner_buttons = []
-        self.outer_buttons = []
-
-        cx, cy = self.width() // 2, self.height() // 2
-        r_inner = min(cx, cy) * 0.55
-        r_outer = min(cx, cy) * 0.80
+        if self.button_by_label:
+            return
 
         # Inner buttons: 1-8
         for i in range(8):
             inner_num = i + 1
             physical_index = bay_label_to_index(inner_num)
-            angle = -90 + (i + 0.5) * (360 / 8)  # Centered between dividers
-            rad = math.radians(angle)
-            x = cx + r_inner * math.cos(rad)
-            y = cy + r_inner * math.sin(rad)
             btn = QPushButton(str(inner_num), self)
-            btn.setFixedSize(36, 36)
-            btn.move(int(x - 18), int(y - 18))
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #e0e0e0;
-                    border-radius: 18px;
-                }
-                QPushButton:hover {
-                    background-color: #ffd700;
-                }
-                QPushButton:pressed {
-                    background-color: #bbbbbb;
-                    border: 2px inset #888888;
-                }
-            """)
+            btn.setFixedSize(42, 42)
+            btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
+            self.apply_bay_button_style(btn, "inner")
             btn.clicked.connect(lambda checked, bay=physical_index: self.controller.move_to_bay(bay))
+            btn.clicked.connect(lambda checked, label=inner_num: self.manual_move_complete(label))
             self.inner_buttons.append(btn)
+            self.button_by_label[inner_num] = btn
 
         # Outer buttons: 9-16
         for i in range(8):
             outer_num = i + 9
             physical_index = bay_label_to_index(outer_num)
+            btn2 = QPushButton(str(outer_num), self)
+            btn2.setFixedSize(42, 42)
+            btn2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            btn2.setFont(QFont("Segoe UI", 11, QFont.Bold))
+            self.apply_bay_button_style(btn2, "outer")
+            btn2.clicked.connect(lambda checked, bay=physical_index: self.controller.move_to_bay(bay))
+            btn2.clicked.connect(lambda checked, label=outer_num: self.manual_move_complete(label))
+            self.outer_buttons.append(btn2)
+            self.button_by_label[outer_num] = btn2
+        self.position_buttons()
+
+    def position_buttons(self):
+        cx, cy = self.width() // 2, self.height() // 2
+        r_inner = min(cx, cy) * 0.55
+        r_outer = min(cx, cy) * 0.80
+
+        for i, btn in enumerate(self.inner_buttons):
+            angle = -90 + (i + 0.5) * (360 / 8)  # Centered between dividers
+            rad = math.radians(angle)
+            x = cx + r_inner * math.cos(rad)
+            y = cy + r_inner * math.sin(rad)
+            btn.move(int(x - btn.width() / 2), int(y - btn.height() / 2))
+            btn.raise_()
+            btn.show()
+
+        for i, btn in enumerate(self.outer_buttons):
             angle_outer = -90 + i * (360 / 8)
             rad_outer = math.radians(angle_outer)
             x2 = cx + r_outer * math.cos(rad_outer)
             y2 = cy + r_outer * math.sin(rad_outer)
-            btn2 = QPushButton(str(outer_num), self)
-            btn2.setFixedSize(36, 36)
-            btn2.move(int(x2 - 18), int(y2 - 18))
-            btn2.setStyleSheet("""
-                QPushButton {
-                    background-color: #b0c4de;
-                    border-radius: 18px;
-                }
-                QPushButton:hover {
-                    background-color: #ffa500;
-                }
-                QPushButton:pressed {
-                    background-color: #7a9cc6;
-                    border: 2px inset #555555;
-                }
-            """)
-            btn2.clicked.connect(lambda checked, bay=physical_index: self.controller.move_to_bay(bay))
-            self.outer_buttons.append(btn2)
+            btn.move(int(x2 - btn.width() / 2), int(y2 - btn.height() / 2))
+            btn.raise_()
+            btn.show()
+
+    def apply_bay_button_style(self, button, ring="inner", highlight=None):
+        if highlight == "front":
+            background = "#43A047"
+            border = "#1B5E20"
+            color = "white"
+        elif highlight == "unload":
+            background = "#D32F2F"
+            border = "#7F1D1D"
+            color = "white"
+        elif ring == "outer":
+            background = "#B0C4DE"
+            border = "#7A9CC6"
+            color = "#22223b"
+        else:
+            background = "#E0E0E0"
+            border = "#BDBDBD"
+            color = "#22223b"
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {background};
+                color: {color};
+                border-radius: 21px;
+                border: 3px solid {border};
+                min-width: 42px;
+                max-width: 42px;
+                min-height: 42px;
+                max-height: 42px;
+                padding: 0px;
+                margin: 0px;
+                font-weight: 700;
+                font-size: 11pt;
+                text-align: center;
+            }}
+            QPushButton:hover {{
+                background-color: #42A5F5;
+                color: white;
+            }}
+            QPushButton:pressed {{
+                background-color: #1976D2;
+                border: 3px inset #555555;
+            }}
+        """)
+
+    def manual_move_complete(self, clicked_label):
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "manual_bay_move_complete"):
+            parent.manual_bay_move_complete(clicked_label)
+
+    def update_bay_highlights(self, front_label, unload_label):
+        for label, button in self.button_by_label.items():
+            ring = "outer" if label > 8 else "inner"
+            if label == front_label:
+                self.apply_bay_button_style(button, ring, "front")
+            elif label == unload_label:
+                self.apply_bay_button_style(button, ring, "unload")
+            else:
+                self.apply_bay_button_style(button, ring)
 
     def resizeEvent(self, event):
-        self.init_buttons()
+        self.position_buttons()
         super().resizeEvent(event)
 
     def paintEvent(self, event):
@@ -148,11 +207,68 @@ class TurntableWindow(QWidget):
         self.tactile_mode = tactile_mode
         self.send_message = send_message
         self.controller = TurntableController()
-        self.door_controller = DoorController()
+        self.controller.set_label_formatter(bay_index_to_label)
+        self.door_controller = None
         self.setWindowTitle("Turntable GUI")
+        self.setMinimumSize(1100, 780)
+        self.resize(1200, 850)
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f5f5fa;
+                color: #22223b;
+                font-family: "Segoe UI";
+                font-size: 13px;
+            }
+            QFrame#HeaderFrame {
+                background-color: #7E57C2;
+                border-radius: 12px;
+            }
+            QFrame#HeaderFrame QCheckBox {
+                background-color: transparent;
+                color: white;
+            }
+            QFrame#Panel {
+                background-color: #ede7f6;
+                border: 1.5px solid #bc85fa;
+                border-radius: 12px;
+            }
+            QFrame#Panel QLabel {
+                background-color: transparent;
+            }
+            QPushButton {
+                background-color: #42A5F5;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 14px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+            QPushButton:disabled {
+                background-color: #bdbdbd;
+                color: #eeeeee;
+            }
+            QCheckBox {
+                padding: 4px 6px;
+                font-weight: 600;
+            }
+            QCheckBox::indicator {
+                width: 20px;
+                height: 20px;
+            }
+            QSpinBox {
+                background: white;
+                border: 1px solid #bc85fa;
+                border-radius: 6px;
+                padding: 5px 8px;
+            }
+        """)
 
         # Top bar with Connection and Zero buttons
         top_bar = QHBoxLayout()
+        top_bar.setSpacing(10)
         self.open_btn = QPushButton("Open")
         self.close_btn = QPushButton("Close")
         self.de_energize_btn = QPushButton("De-energize")
@@ -161,15 +277,26 @@ class TurntableWindow(QWidget):
         self.pause_btn = QPushButton("Pause")
         self.resume_btn = QPushButton("Resume")
         self.stop_btn = QPushButton("Stop")
+        self.auto_doors_checkbox = QCheckBox("Auto Doors")
+        self.auto_doors_checkbox.setChecked(False)
+        self.manual_replacement_checkbox = QCheckBox("Manual replacement pause")
+        self.manual_replacement_checkbox.setChecked(True)
+        self.replacement_dwell_box = QSpinBox()
+        self.replacement_dwell_box.setRange(1, 300)
+        self.replacement_dwell_box.setValue(20)
+        self.replacement_dwell_box.setSuffix(" sec")
+        self.replacement_continue_btn = QPushButton("Replacement complete / Continue")
+        self.replacement_continue_btn.setEnabled(False)
 
-        self.open_btn.clicked.connect(self.door_controller.open)
-        self.close_btn.clicked.connect(self.door_controller.close)
+        self.open_btn.clicked.connect(self.open_doors_manually)
+        self.close_btn.clicked.connect(self.close_doors_manually)
         self.de_energize_btn.clicked.connect(self.controller.de_energize)
         self.energize_btn.clicked.connect(self.controller.energize)
         self.start_btn.clicked.connect(self.run_test_sequence)
         self.pause_btn.clicked.connect(self.pause_test_sequence)
         self.resume_btn.clicked.connect(self.resume_test_sequence)
         self.stop_btn.clicked.connect(self.stop_test_sequence)
+        self.replacement_continue_btn.clicked.connect(self.continue_replacement_pause)
 
         top_bar.addWidget(self.open_btn)
         top_bar.addWidget(self.close_btn)
@@ -179,7 +306,21 @@ class TurntableWindow(QWidget):
         top_bar.addWidget(self.pause_btn)
         top_bar.addWidget(self.resume_btn)
         top_bar.addWidget(self.stop_btn)
+        top_bar.addWidget(self.auto_doors_checkbox)
         top_bar.addStretch()
+
+        header_frame = QFrame(self)
+        header_frame.setObjectName("HeaderFrame")
+        header_layout = QVBoxLayout(header_frame)
+        header_layout.setContentsMargins(16, 14, 16, 14)
+        header_layout.setSpacing(10)
+
+        header_label = QLabel("Turntable Control", self)
+        header_label.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        header_label.setAlignment(Qt.AlignCenter)
+        header_label.setStyleSheet("background: transparent; color: white;")
+        header_layout.addWidget(header_label)
+        header_layout.addLayout(top_bar)
 
         # Centered turntable
         self.turntable = TurntableWidget(self, controller=self.controller)
@@ -226,47 +367,186 @@ class TurntableWindow(QWidget):
         self.auto_bay_btn.clicked.connect(self.auto_bay_sequential)
         self.auto_bay_gap_btn.clicked.connect(self.auto_bay_with_gaps)
 
+        self.sequence_status_label = QLabel("Status: Ready")
+        self.sequence_status_label.setWordWrap(True)
+        self.sequence_status_label.setStyleSheet("color: #22223b; font-size: 13px; padding: 4px;")
+
+        self.instructions_toggle_btn = QPushButton("Hide Instructions")
+        self.instructions_toggle_btn.clicked.connect(self.toggle_instructions)
+        self.instructions_panel = QLabel(
+            "<b>Button guide</b><br>"
+            "<b>Open / Close:</b> manually moves the booth door. These buttons initialize the door motor on demand.<br>"
+            "<b>Energize / De-energize:</b> powers the turntable motor on or off. Moves auto-energize when needed.<br>"
+            "<b>Start Test:</b> runs the current bay sequence. <b>Pause</b> holds the sequence; <b>Resume</b> continues; <b>Stop</b> resets it.<br>"
+            "<b>Auto-Bay 1-8:</b> assigns objects to bays 1 through 8 in order.<br>"
+            "<b>Auto-Bay 1-8 (Half-Bays Empty):</b> assigns objects to filled bays 2, 4, 6, and 8, then moves through 1-8 in order.<br><br>"
+            "<b>Doors and replacement</b><br>"
+            "<b>Auto Doors:</b> when checked, filled/stimulus bays open, dwell, close, and continue. Manual Open/Close always works even when Auto Doors is off.<br>"
+            "<b>Manual replacement pause:</b> waits for Replacement complete / Continue during replacement steps. When unchecked, the Dwell timer advances automatically.<br>"
+            "Replacement starts after 6 total half-empty moves. Odd bays are empty/control; even bays hold bottles.<br><br>"
+            "<b>Bay labels</b><br>"
+            "GUI bay labels are the experiment-facing bay numbers used in the table, status text, and command-line logs.<br><br>"
+            "<b>Safety notes</b><br>"
+            "Empty/control bays never arm the tactile box and never trigger Auto Doors. Confirm bay assignments before Start Test, keep hands clear while moving, and use Stop before changing the sequence."
+        )
+        self.instructions_panel.setTextFormat(Qt.RichText)
+        self.instructions_panel.setWordWrap(True)
+        self.instructions_panel.setStyleSheet("""
+            QLabel {
+                background: #eef4ff;
+                border: 1px solid #b0c4de;
+                border-radius: 8px;
+                padding: 10px;
+                color: #22223b;
+                font-size: 13px;
+            }
+        """)
+
+        replacement_row = QHBoxLayout()
+        replacement_row.addWidget(self.manual_replacement_checkbox)
+        replacement_row.addWidget(QLabel("Dwell:"))
+        replacement_row.addWidget(self.replacement_dwell_box)
+
         assignment_panel = QVBoxLayout()
+        assignment_panel.setSpacing(10)
         assignment_panel.addWidget(self.auto_bay_btn)
         assignment_panel.addWidget(self.auto_bay_gap_btn)
+        assignment_panel.addWidget(self.instructions_toggle_btn)
+        assignment_panel.addWidget(self.instructions_panel)
+        assignment_panel.addLayout(replacement_row)
+        assignment_panel.addWidget(self.replacement_continue_btn)
+        assignment_panel.addWidget(self.sequence_status_label)
         assignment_panel.addWidget(self.assignment_list)
 
         # Main layout: turntable left, assignments right
+        turntable_panel = QFrame(self)
+        turntable_panel.setObjectName("Panel")
+        turntable_panel_layout = QVBoxLayout(turntable_panel)
+        turntable_panel_layout.setContentsMargins(16, 16, 16, 16)
+        turntable_panel_layout.setSpacing(12)
+        turntable_panel_layout.addWidget(self.turntable, alignment=Qt.AlignCenter)
+
+        assignment_frame = QFrame(self)
+        assignment_frame.setObjectName("Panel")
+        assignment_frame.setMinimumWidth(380)
+        assignment_frame_layout = QVBoxLayout(assignment_frame)
+        assignment_frame_layout.setContentsMargins(16, 16, 16, 16)
+        assignment_frame_layout.addLayout(assignment_panel)
+
         center_layout = QHBoxLayout()
-        center_layout.addWidget(self.turntable, alignment=Qt.AlignCenter)
-        center_layout.addLayout(assignment_panel)
+        center_layout.setSpacing(18)
+        center_layout.addWidget(turntable_panel, stretch=3)
+        center_layout.addWidget(assignment_frame, stretch=2)
 
         main_layout = QVBoxLayout(self)
-        main_layout.addLayout(top_bar)
+        main_layout.setContentsMargins(18, 18, 18, 18)
+        main_layout.setSpacing(18)
+        main_layout.addWidget(header_frame)
         main_layout.addLayout(center_layout)
         self.setLayout(main_layout)
-        self.resize(850, 700)
 
         self.test_order = test_order or []
         self.object_to_bay = object_to_bay or {}
         self.current_index = 0
+        self.sequence_steps = []
 
         # State variables for pause/resume/stop
         self._paused = False
         self._stopped = False
+        self._sequence_running = False
+        self._waiting_for_replacement = False
         self._pending_timer = QTimer(self)
         self._pending_timer.setSingleShot(True)
         self._pending_timer.timeout.connect(self._timer_callback)
         self._timer_callback_func = None
+        self._auto_doors_opened_for_current_item = False
 
         self.assignment_list.cellChanged.connect(self.handle_bay_edit)
         self._updating_table = False  # Prevent recursion
         self._gap_replacement_objects = set()
         self._show_empty_slot_bays = False
+        self._half_empty_mode = False
+        self.replacement_start_after_moves = 6
 
         if not self.object_to_bay and self.test_order:
             self.auto_assign_bays(list(range(1, 9)), "1-8", show_message=False)
 
         self.update_assignment_list()
+        self.update_position_indicators()
+
+    def front_bay_label(self):
+        return bay_index_to_label(getattr(self.controller, "current_bay", 0))
+
+    def unload_bay_label(self):
+        front_label = self.front_bay_label()
+        return ((front_label - 1 + 3) % 8) + 1
+
+    def update_position_indicators(self):
+        # Diagram highlighting is intentionally disabled for now.
+        # Keep front/unload helpers and update_bay_highlights() available for a later UI pass.
+        return
+
+    def manual_bay_move_complete(self, clicked_label):
+        self.update_position_indicators()
+        front_label = self.front_bay_label()
+        if front_label == clicked_label:
+            self.sequence_status_label.setText(f"Manual move complete. Front: Bay {front_label}.")
+        else:
+            self.sequence_status_label.setText(
+                f"Manual move did not complete to Bay {clicked_label}. Front remains Bay {front_label}."
+            )
+
+    def toggle_instructions(self):
+        show_instructions = not self.instructions_panel.isVisible()
+        self.instructions_panel.setVisible(show_instructions)
+        self.instructions_toggle_btn.setText("Hide Instructions" if show_instructions else "Show Instructions")
+
+    def auto_doors_enabled(self):
+        return self.auto_doors_checkbox.isChecked()
+
+    def get_door_controller(self):
+        if self.door_controller is not None:
+            return self.door_controller
+        try:
+            self.door_controller = DoorController()
+            return self.door_controller
+        except Exception as e:
+            self.report_door_error("initialize", e)
+            return None
+
+    def report_door_error(self, action, error):
+        message = f"Could not {action} doors: {error}"
+        print(message)
+        QMessageBox.warning(self, "Door Control Error", message)
+
+    def run_door_command(self, command_name, action_label):
+        door_controller = self.get_door_controller()
+        if door_controller is None:
+            return False
+        try:
+            getattr(door_controller, command_name)()
+            return True
+        except Exception as e:
+            self.report_door_error(action_label, e)
+            return False
+
+    def open_doors_manually(self):
+        self.run_door_command("open", "open")
+
+    def close_doors_manually(self):
+        self.run_door_command("close", "close")
+
+    def open_doors_automatically(self):
+        return self.run_door_command("open", "open")
+
+    def close_doors_automatically(self):
+        return self.run_door_command("close", "close")
 
     def auto_assign_bays(self, bay_sequence, mode_name, show_message=True):
         self._gap_replacement_objects.clear()
         self._show_empty_slot_bays = False
+        self._half_empty_mode = False
+        self.sequence_steps = []
         self.object_to_bay = {}
         for i, obj in enumerate(self.test_order):
             if i < len(bay_sequence):
@@ -289,24 +569,26 @@ class TurntableWindow(QWidget):
     def auto_bay_with_gaps(self):
         self._gap_replacement_objects.clear()
         self._show_empty_slot_bays = True
+        self._half_empty_mode = True
+        self.sequence_steps = []
 
-        # Keep every second bay empty by using only 1, 3, 5, 7 and wrapping with duplicates.
+        # Keep odd bays empty/control and assign objects to even filled bays.
         self.object_to_bay = {}
-        gap_bays = [1, 3, 5, 7]
+        filled_bays = [2, 4, 6, 8]
 
         for i, obj in enumerate(self.test_order):
-            bay = gap_bays[i % len(gap_bays)]
+            bay = filled_bays[i % len(filled_bays)]
             self.object_to_bay[obj] = bay
-            if i >= len(gap_bays):
+            if i >= len(filled_bays):
                 self._gap_replacement_objects.add(obj)
 
         self.update_assignment_list()
 
-        if len(self.test_order) > 8:
+        if len(self.test_order) > len(filled_bays):
             QMessageBox.information(
                 self,
                 "Auto-Bay Complete",
-                "Assigned with empty gap bays using 1, 3, 5, 7. Items beyond 4 wrapped and duplicate earlier bay assignments.",
+                "Assigned filled bays using 2, 4, 6, 8. Odd bays 1, 3, 5, 7 remain empty/control. Items beyond 4 wrapped and duplicate earlier bay assignments.",
             )
 
     def update_assignment_list(self):
@@ -381,6 +663,8 @@ class TurntableWindow(QWidget):
         obj = self.test_order[row]
         self._gap_replacement_objects.discard(obj)
         self._show_empty_slot_bays = False
+        self._half_empty_mode = False
+        self.sequence_steps = []
         text = self.assignment_list.item(row, 1).text().strip()
         if text == "":
             self.object_to_bay[obj] = None
@@ -408,31 +692,156 @@ class TurntableWindow(QWidget):
                 font.setItalic(True)
                 self.assignment_list.item(row, 1).setFont(font)
 
+    def build_run_sequence(self):
+        if self._half_empty_mode:
+            return self.build_half_empty_sequence()
+
+        steps = []
+        for obj in self.test_order:
+            bay = self.object_to_bay.get(obj)
+            if bay is None:
+                print(f"No bay assigned for object: {obj}")
+                continue
+            steps.append({"type": "stimulus", "bay": bay, "object": obj})
+        return steps
+
+    def build_half_empty_sequence(self):
+        filled_bays = [2, 4, 6, 8]
+        objects_by_bay = {bay: [] for bay in filled_bays}
+        for obj in self.test_order:
+            bay = self.object_to_bay.get(obj)
+            if bay in objects_by_bay:
+                objects_by_bay[bay].append(obj)
+            elif bay is not None:
+                print(f"Ignoring {obj}: half-empty mode only uses filled bays 2, 4, 6, 8.")
+
+        max_cycles = max(1, max((len(items) for items in objects_by_bay.values()), default=0))
+        steps = []
+        for cycle in range(max_cycles):
+            for bay in range(1, 9):
+                if bay % 2 == 1:
+                    steps.append({"type": "empty_control", "bay": bay})
+                else:
+                    bay_objects = objects_by_bay.get(bay, [])
+                    if cycle < len(bay_objects):
+                        steps.append({"type": "stimulus", "bay": bay, "object": bay_objects[cycle]})
+                    else:
+                        steps.append({"type": "empty_unfilled", "bay": bay})
+        return steps
+
+    def start_new_sequence(self):
+        self.sequence_steps = self.build_run_sequence()
+        self.current_index = 0
+        self._sequence_running = True
+        self._waiting_for_replacement = False
+        self._auto_doors_opened_for_current_item = False
+        self.replacement_continue_btn.setEnabled(False)
+        self.update_position_indicators()
+
+    def replacement_due_for_step(self, step):
+        move_number = self.current_index + 1
+        return (
+            self._half_empty_mode
+            and step.get("type") == "empty_control"
+            and move_number > self.replacement_start_after_moves
+        )
+
+    def handle_control_step(self, step):
+        if self.replacement_due_for_step(step):
+            bay = step.get("bay")
+            if self.manual_replacement_checkbox.isChecked():
+                self._waiting_for_replacement = True
+                self.replacement_continue_btn.setEnabled(True)
+                self.sequence_status_label.setText(
+                    f"Replacement pause at empty bay {bay}. Replace bottles, then click Continue."
+                )
+                return
+
+            dwell_ms = self.replacement_dwell_box.value() * 1000
+            self.sequence_status_label.setText(
+                f"Replacement dwell at empty bay {bay} for {self.replacement_dwell_box.value()} seconds."
+            )
+            self._start_timer(dwell_ms, self.complete_current_step)
+            return
+
+        bay = step.get("bay")
+        self.sequence_status_label.setText(f"Control dwell at bay {bay}.")
+        self._start_timer(2000, self.complete_current_step)
+
+    def continue_replacement_pause(self):
+        if not self._waiting_for_replacement:
+            return
+        if self._paused:
+            self.sequence_status_label.setText("Sequence is paused. Resume before continuing replacement.")
+            return
+        self._waiting_for_replacement = False
+        self.replacement_continue_btn.setEnabled(False)
+        self.sequence_status_label.setText("Replacement complete. Continuing sequence.")
+        self.complete_current_step()
+
+    def complete_current_step(self):
+        if self._stopped or self._paused:
+            return
+        self.current_index += 1
+        self._start_timer(1000, self.run_test_sequence)
+
     def run_test_sequence(self):
         # Only reset if stopped, not at end
         if self._stopped:
             self._stopped = False
             self._paused = False
             self.current_index = 0
+            self._sequence_running = False
 
-        if self._stopped:
-            print("Test stopped.")
-            return
         if self._paused:
             print("Test paused.")
             return
-        if self.current_index >= len(self.test_order):
+        if not self._sequence_running:
+            self.start_new_sequence()
+        if not self.sequence_steps:
+            print("No assigned turntable sequence to run.")
+            self.sequence_status_label.setText("No assigned turntable sequence to run.")
+            self._sequence_running = False
+            return
+        if self.current_index >= len(self.sequence_steps):
             print("Test complete!")
+            self.sequence_status_label.setText("Test complete.")
+            self._sequence_running = False
             return
-        object_name = self.test_order[self.current_index]
-        bay = self.object_to_bay.get(object_name)
-        if bay is None:
-            print(f"No bay assigned for object: {object_name}")
-            self.current_index += 1
-            self._start_timer(1000, self.run_test_sequence)
+
+        step = self.sequence_steps[self.current_index]
+        bay = step.get("bay")
+        self._auto_doors_opened_for_current_item = False
+        if step.get("type") == "stimulus":
+            object_name = step.get("object")
+            print(f"Moving to bay {bay} for object {object_name}")
+            self.sequence_status_label.setText(f"Moving to filled bay {bay}: {object_name}")
+        else:
+            print(f"Moving to control bay {bay}")
+            self.sequence_status_label.setText(f"Moving to control bay {bay}")
+
+        try:
+            move_success = self.controller.move_to_bay(bay_label_to_index(bay))
+        except Exception as e:
+            message = f"Could not move to bay {bay}: {e}"
+            print(message)
+            self.sequence_status_label.setText(message)
+            QMessageBox.warning(self, "Turntable Movement Error", message)
+            self._sequence_running = False
             return
-        print(f"Moving to bay {bay} for object {object_name}")
-        self.controller.move_to_bay(bay_label_to_index(bay), wait=True)
+        self.update_position_indicators()
+        if not move_success:
+            message = f"Turntable move to bay {bay} timed out. Sequence stopped."
+            print(message)
+            self.sequence_status_label.setText(message)
+            QMessageBox.warning(self, "Turntable Movement Timeout", message)
+            self._sequence_running = False
+            return
+
+        if step.get("type") != "stimulus":
+            self.handle_control_step(step)
+            return
+
         if self.tactile_mode:
             print("Waiting for touch signal from tactile box...")
             self.waiting_for_touch = True
@@ -440,23 +849,27 @@ class TurntableWindow(QWidget):
                 self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
-            self.door_controller.open()
+            if self.auto_doors_enabled():
+                self._auto_doors_opened_for_current_item = self.open_doors_automatically()
             self._start_timer(2000, self.close_doors_and_continue)
 
     @pyqtSlot()
     def on_object_touched(self):
         if self.tactile_mode and self.waiting_for_touch:
-            print("Touch detected! Opening doors.")
+            print("Touch detected!")
             self.waiting_for_touch = False
-            self.door_controller.open()
+            if self.auto_doors_enabled():
+                print("Opening doors.")
+                self._auto_doors_opened_for_current_item = self.open_doors_automatically()
             self._start_timer(2000, self.close_doors_and_continue)
 
     def close_doors_and_continue(self):
         if self._stopped or self._paused:
             return
-        self.door_controller.close()
-        self.current_index += 1
-        self._start_timer(1000, self.run_test_sequence)
+        if self._auto_doors_opened_for_current_item:
+            self.close_doors_automatically()
+            self._auto_doors_opened_for_current_item = False
+        self.complete_current_step()
 
     def _start_timer(self, ms, callback):
         self._timer_callback_func = callback
@@ -472,14 +885,19 @@ class TurntableWindow(QWidget):
     def pause_test_sequence(self):
         print("Pausing test sequence.")
         self._paused = True
+        self.update_position_indicators()
 
     def resume_test_sequence(self):
         if not self._paused:
             return
         print("Resuming test sequence.")
         self._paused = False
+        self.update_position_indicators()
         # Resume immediately if not stopped and not at end
-        if not self._stopped and self.current_index < len(self.test_order):
+        if self._waiting_for_replacement:
+            self.sequence_status_label.setText("Replacement pause active. Click Continue when ready.")
+            return
+        if not self._stopped and self._sequence_running and self.current_index < len(self.sequence_steps):
             self.run_test_sequence()
 
     def stop_test_sequence(self):
@@ -487,7 +905,13 @@ class TurntableWindow(QWidget):
         self._stopped = True
         self._paused = False
         self.current_index = 0
+        self.sequence_steps = []
+        self._sequence_running = False
+        self._waiting_for_replacement = False
+        self.replacement_continue_btn.setEnabled(False)
+        self.sequence_status_label.setText("Status: Stopped")
         self._pending_timer.stop()  # Immediately stop any pending timer
+        self.update_position_indicators()
 
     def open_assign_bays_dialog(self):
         from eeg_stimulus_project.stimulus.turn_table_code.object_to_bay_dialog import ObjectToBayDialog
