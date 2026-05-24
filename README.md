@@ -1,216 +1,188 @@
 # Multisensory Stimulus Presentation and Data Collection System
 
-A portable, cross-platform software system for presenting and synchronizing multisensory stimuli (visual, tactile, olfactory) while collecting EEG, eye tracking, and behavioral data.
+This repository contains the active multisensory experiment application under `eeg_stimulus_project/` and a set of legacy prototypes under `Old_Code/`.
+
+The current application supports:
+
+- local single-computer test runs through `Developer Mode`
+- distributed host/client experiments over TCP on port `9999`
+- behavioral data saving to CSV
+- LabRecorder control for XDF capture on port `22345`
+- visual, tactile, olfactory, and turntable-assisted experiment flows
+
+## Repository Status
+
+The active codebase is usable, but it is not fully de-personalized yet. Before deploying on a new lab machine, review the current site-specific defaults in code and configuration, especially:
+
+- host/client IP defaults
+- tactile system host and credentials
+- eye-tracker IP defaults
+- Windows-specific hardware executable paths
+
+`Old_Code/` should be treated as historical reference unless a feature is explicitly restored into `eeg_stimulus_project/`.
 
 ## Quick Start
 
 ### Installation
+
 ```bash
-# Clone the repository
 git clone https://github.com/SonnyS10/Multisensory-Stimulus-Presentation-and-Data-Collection-System.git
 cd Multisensory-Stimulus-Presentation-and-Data-Collection-System
 
-# Install dependencies
-pip install -r requirements.txt
+python -m venv venv
 
-# Run the application
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
 python -m eeg_stimulus_project.main.main
 ```
 
-### For Windows Users
-Double-click `eeg_stimulus_project/utils/run_eeg_stimulus.bat`
+### Launchers
 
-### For Linux/Mac Users
-```bash
-./eeg_stimulus_project/utils/run_eeg_stimulus.sh
+- Windows: `eeg_stimulus_project/utils/run_eeg_stimulus.bat`
+- macOS/Linux: `eeg_stimulus_project/utils/run_eeg_stimulus.sh`
+
+## Run Modes
+
+### Developer Mode
+
+Use this for a single-computer test run.
+
+What happens:
+
+1. Enter `Subject ID` and `Test Number` (`1` or `2`) in the launcher.
+2. Click `Developer Mode`.
+3. The app creates the subject/test folder tree immediately.
+4. A control window and an experiment window open on the same machine.
+
+### Data Collection Computer (Host)
+
+Use this when the data collection machine is separate from the experiment presentation machine.
+
+What happens:
+
+1. Enter `Subject ID` and `Test Number` in the launcher.
+2. Click `Start as Data Collection Computer (Host)`.
+3. The host starts listening on port `9999`.
+4. The control window is launched only after a client connects.
+5. Subject/test directories are created after that client connection is established.
+
+Important:
+
+- If you want to work without a client, use `Developer Mode` instead.
+- The host window refuses to close while a client is still connected.
+
+### Experimenter Computer (Client)
+
+Use this on the stimulus presentation machine.
+
+What happens:
+
+1. Enter the host IP in `Host IP`.
+2. Optionally choose custom alcohol and neutral image folders.
+3. Click `Start Experimenter Computer (Client)`.
+4. The experiment window opens after the client connects to the host.
+
+Important:
+
+- Client mode does not create local `subject_.../test_...` output directories.
+- The client is the presentation node, not the primary data-storage node.
+
+## Data Layout
+
+The active application writes data under:
+
+```text
+eeg_stimulus_project/saved_data/
+  subject_<subject_id>/
+    test_<test_number>/
+      <Test Name>/
+        data.csv
+        subj_<subject_id>_<test_name>_<timestamp>.xdf
 ```
 
-## Key Features
+Notes:
 
-✅ **Cross-Platform Compatibility**: Works on Windows, Linux, and macOS
-✅ **Portable Configuration**: No hardcoded paths - works on any computer
-✅ **Multi-modal Stimulus Presentation**: Visual, tactile, and olfactory stimuli
-✅ **Real-time Data Collection**: EEG, eye tracking, and behavioral responses
-✅ **Distributed Architecture**: Host/client setup for multi-computer experiments
-✅ **Synchronization**: Lab Streaming Layer (LSL) for precise timing
-✅ **Easy Setup**: Automated installation and configuration
+- Folder names use the display names of the tests, including spaces and punctuation.
+- LabRecorder filenames are sanitized by replacing spaces with underscores.
+- Starting the same test again in the same session can overwrite that test's `data.csv`.
+- Host mode creates the subject/test tree only after the client connects.
 
-## System Requirements
+## Control Window Hardware Workflow
 
-### Software Requirements
-- Python 3.8 or higher
-- PyQt5 for GUI
-- PyLSL for data streaming
-- Additional dependencies listed in `requirements.txt`
+The current control window exposes these device rows:
 
-### Hardware Components (Optional)
-- HTC VIVE Pro Eye VR headset
-- EMOTIV EPOC Flex (32-channel EEG)
-- Eyelink 1000 Plus eye tracker
-- Custom odor delivery system
-- Custom tactile presentation box
-- Arduino-controlled viewing booth
+- `Actichamp`
+- `LabRecorder`
+- `Eye Tracker`
+- `Tactile Box`
+- `Virtual Reality`
+- `Turntable`
+- `Olfactory System`
 
-## Project Structure
+It also includes:
 
-```
-Multisensory-Stimulus-Presentation-and-Data-Collection-System/
-├── eeg_stimulus_project/           # Main project package
-│   ├── main/                       # Application entry point
-│   │   └── main.py                 # Main GUI launcher
-│   ├── config/                     # Configuration system
-│   │   ├── settings.yaml           # Main configuration file
-│   │   └── config_manager.py       # Configuration management
-│   ├── gui/                        # User interface components
-│   ├── stimulus/                   # Stimulus presentation modules
-│   ├── data/                       # Data handling modules
-│   ├── lsl/                        # Lab Streaming Layer integration
-│   ├── utils/                      # Utility modules
-│   └── assets/                     # Asset management
-├── requirements.txt                # Python dependencies
-├── setup.py                       # Package installation
-├── INSTALLATION.md                # Detailed setup guide
-├── DEVELOPER_DOCUMENTATION.md     # Developer documentation
-└── README.md                      # This file
-```
+- a log panel
+- `Validate Olfactory Ports`
+- per-device status indicators
 
-## Configuration
+The LabRecorder row launches the configured LabRecorder executable and then connects to its remote-control socket on port `22345`.
 
-The system uses a centralized configuration file (`eeg_stimulus_project/config/settings.yaml`) that allows customization of:
+## Experiment Window Highlights
 
-- **File paths**: All paths are relative to the project root
-- **Network settings**: Host/client communication and hardware connections
-- **Hardware configuration**: EEG, eye tracker, and tactile system settings
-- **Experiment parameters**: Test types, timing, and data collection settings
-- **Platform-specific settings**: Windows, Linux, and macOS configurations
+The experiment window currently includes:
 
-### Key Configuration Sections
+- passive and Stroop test pages
+- `Start`, `Stop`, `Pause`, `Resume`, and `Next` buttons
+- output-mode selectors such as `Display`, `VR`, and `Turntable`
+- `Instructions`
+- `Stimulus Order`
+- `Latency Checker`
+- `Record Baseline`
 
-```yaml
-# File and directory paths (automatically relative to project root)
-paths:
-  data_directory: "eeg_stimulus_project/saved_data"
-  assets_directory: "eeg_stimulus_project/assets"
+The baseline workflow runs a dedicated crosshair-based recording view and writes into a `Baseline` folder when the relevant recording path is available.
 
-# Network configuration
-network:
-  host_port: 9999
-  tactile_system:
-    host: "10.115.12.225"
-    username: "your_username"
-    password: "your_password"
+## Configuration Checklist
 
-# Hardware settings
-hardware:
-  eeg:
-    device_type: "EMOTIV"
-    sampling_rate: 256
-  tactile:
-    threshold: 500
-```
+Review these before first use on a new machine:
 
-## Multi-Computer Setup
+- `eeg_stimulus_project/config/settings.yaml`
+- tactile system host, username, and password
+- LabRecorder executable path for the current platform
+- Actichamp executable path for Windows setups
+- launcher default host IP
+- eye-tracker IP used at connect time
 
-### Host Computer
-1. Run the application
-2. Select "Host" mode
-3. Configure firewall to allow port 9999
-4. Share the IP address with client computers
+Known current defaults worth reviewing:
 
-### Client Computer
-1. Run the application
-2. Select "Client" mode
-3. Enter the host computer's IP address
-4. Connect and synchronize with the host
+- host/client communication port: `9999`
+- LabRecorder remote control port: `22345`
+- launcher host IP default: `169.254.37.25`
+- tactile host in `settings.yaml`: `129.21.60.54`
+- tactile fallback host in config manager defaults: `10.115.12.225`
 
-## Data Collection
+## Documentation Map
 
-The system collects and synchronizes:
-- **EEG data**: Via EMOTIV Pro and LabRecorder
-- **Eye tracking**: Via Eyelink or Pupil Labs
-- **Behavioral responses**: User inputs and reaction times
-- **Stimulus timing**: Precise event markers via LSL
-- **Tactile feedback**: Force sensor data
+- `GETTING_STARTED.md`: first-run setup and local workflow
+- `DATA_COLLECTION_HOST_GUIDE.md`: host-side setup and operations
+- `EXPERIMENTER_CLIENT_GUIDE.md`: client-side operations
+- `TROUBLESHOOTING.md`: common failure modes and recovery steps
+- `EMERGENCY_REFERENCE.md`: quick incident response card
+- `DEVELOPER_DOCUMENTATION.md`: implementation notes and technical caveats
+- `EEG_STREAM_README.md`: legacy note for a removed EEG Stream Window workflow
 
-All data is automatically saved to organized directories with timestamps and metadata.
+## Troubleshooting Quick Checks
 
-## Hardware Integration
+If something fails early, check these first:
 
-### EEG System (EMOTIV)
-- Start LabRecorder before running the application
-- Connect EEG device and ensure streaming
-- Use "Connect LabRecorder" in the control window
+1. `python --version`
+2. `pip install -r requirements.txt`
+3. `test_troubleshooting.bat` on Windows
+4. Port `9999` availability for host/client startup
+5. Port `22345` availability for LabRecorder remote control
 
-### Eye Tracker (Eyelink/Pupil Labs)
-- Calibrate according to manufacturer instructions
-- Ensure LSL streams are available
-- Use "Connect Eye Tracker" in the control window
-
-### Tactile System
-- Configure SSH access in `settings.yaml`
-- Ensure remote Python environment is set up
-- System connects automatically when needed
-
-## Development
-
-### Setting Up Development Environment
-```bash
-# Install in development mode
-pip install -e .
-
-# Run tests
-python test_configuration.py
-
-# Follow development guidelines
-# See DEVELOPER_DOCUMENTATION.md for detailed information
-```
-
-### Key Development Guidelines
-- Use the centralized configuration system
-- Maintain cross-platform compatibility
-- Follow the existing code structure
-- Test on multiple platforms when possible
-
-## Troubleshooting
-
-🆘 **For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
-
-### Quick Fixes
-1. **Import errors**: Install dependencies with `pip install -r requirements.txt`
-2. **Connection issues**: Check firewall settings and network connectivity  
-3. **Hardware issues**: Verify device connections and driver installations
-4. **Application hangs**: Run `./test_troubleshooting.sh` for system diagnostics
-
-### Emergency Procedures
-- **System failure during experiment**: See [Emergency Procedures](TROUBLESHOOTING.md#emergency-procedures)
-- **Data collection issues**: See [Data Collection Failures](TROUBLESHOOTING.md#data-collection-failures)
-- **Network problems**: See [Network Communication Issues](TROUBLESHOOTING.md#network-communication-issues)
-
-### Getting Help
-- **Primary**: Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solutions
-- **Setup**: Review [GETTING_STARTED.md](GETTING_STARTED.md) for installation help
-- **Technical**: See [DEVELOPER_DOCUMENTATION.md](DEVELOPER_DOCUMENTATION.md) for system details
-- **Support**: Check the project's GitHub issues or view `app.log` for debugging information
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-We welcome contributions! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## Acknowledgments
-
-- Research team for system requirements and testing
-- Open source communities for the underlying technologies
-- Hardware manufacturers for integration support
-
----
-
-**Note**: This system has been refactored to be fully portable and cross-platform compatible. All hardcoded paths have been removed and replaced with a flexible configuration system.
+Be aware that `eeg_stimulus_project/stimulus/tactile_box_code/tactile_receive.py` also binds port `9999`, so it can conflict with host mode if run on the same machine.

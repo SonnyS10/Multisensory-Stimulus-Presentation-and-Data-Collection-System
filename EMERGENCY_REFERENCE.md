@@ -1,163 +1,97 @@
-# 🆘 Emergency Quick Reference Card
+# Emergency Quick Reference Card
 
-**Print this page and keep it accessible during experiments**
+Keep this page available during sessions.
 
-## 🚨 IMMEDIATE EMERGENCY ACTIONS
+## Immediate Participant Safety Actions
 
-### Participant Distress/Emergency
-1. **STOP STIMULI**: Uncheck "Start Display" or press Ctrl+Alt+Q
-2. **Remove hardware**: VR headset, tactile devices
-3. **Participant safety**: Check wellbeing, follow institutional procedures
-4. **Document**: Note time and circumstances
+### If The Participant Needs The Session To Stop Now
 
-### Complete System Failure
-1. **Participant first**: Ensure safety, remove stimulation
-2. **Preserve data**: Don't force-close, let auto-save complete
-3. **Note time**: Record exact failure time for data recovery
-4. **Alert team**: Use backup communication if needed
+1. Click `Stop` in the active experiment page if the UI is responsive.
+2. Close or remove the participant-facing display if needed.
+3. Remove or pause any attached hardware that is actively stimulating.
+4. Check participant wellbeing and follow institutional emergency procedures.
+5. Record the time, active test name, and subject ID.
 
-## 🔧 QUICK DIAGNOSTIC COMMANDS
+Important: do not rely on undocumented keyboard shortcuts. Use the visible UI controls.
 
-### Check System Status
-```bash
-# Run system health check
-./test_troubleshooting.sh
+## Immediate System Failure Actions
 
-# Check processes
-ps aux | grep eeg_stimulus
+1. Preserve data first.
+2. Do not force-kill the app immediately unless it is completely unresponsive.
+3. Note the active test, current machine role, and failure time.
+4. Keep `app.log` and the subject folder intact.
+5. Coordinate host/client shutdown in the correct order if possible.
 
-# Check memory and disk
-free -h && df -h
+## Quick Checks
 
-# Check network
-ping [HOST_IP]
-netstat -tuln | grep 9999
+### Windows
+
+```text
+test_troubleshooting.bat
 ```
 
-### Emergency Recovery
-```bash
-# Stop all processes
-pkill -f "eeg_stimulus"
-
-# Clean restart
-cd /path/to/project
-python -m eeg_stimulus_project.main.main
+```powershell
+netstat -ano | findstr :9999
+netstat -ano | findstr :22345
+tasklist | findstr python
+type app.log
 ```
 
-## 🌐 NETWORK ISSUES
+### Linux Or macOS
 
-### Host Cannot Start
-- **Port busy**: `netstat -tuln | grep 9999` then `kill [PID]`
-- **Firewall**: `sudo ufw allow 9999/tcp`
-
-### Client Cannot Connect  
-- **Check IP**: Get host IP with `hostname -I`
-- **Test connection**: `ping [HOST_IP]` and `telnet [HOST_IP] 9999`
-- **Firewall**: Allow app through Windows Defender
-
-### Connection Drops
-- **Switch to ethernet** from WiFi
-- **Check cables** and power management settings
-
-## 🖥️ HARDWARE ISSUES
-
-### EEG (EMOTIV/LabRecorder)
-1. **Check EMOTIV Pro**: Must be running with good signals
-2. **Restart LabRecorder**: Close and reopen application
-3. **Verify port**: `netstat -an | grep 22345`
-4. **Check electrodes**: Impedance and contact quality
-
-### Eye Tracker
-1. **Restart software**: Eyelink/Pupil Labs applications
-2. **Recalibrate**: Run calibration sequence
-3. **Check positioning**: Participant head position and distance
-
-### Tactile System
-1. **Test SSH**: `ssh username@10.115.12.225`
-2. **Check network**: `ping 10.115.12.225`
-3. **Verify credentials**: Username/password in config
-
-## 💾 DATA ISSUES
-
-### Data Not Saving
 ```bash
-# Check disk space
-df -h
-
-# Check permissions
-ls -la eeg_stimulus_project/saved_data/
-
-# Fix permissions
-chmod -R 755 eeg_stimulus_project/saved_data/
-```
-
-### Missing Data Files
-```bash
-# Look for backups
-find . -name "*.csv.bak" -o -name "*.xdf.tmp"
-
-# Check data directory
-ls -la eeg_stimulus_project/saved_data/subject_*/
-```
-
-## 🐛 SOFTWARE CRASHES
-
-### Application Freeze
-```bash
-# Check resources
-top
-
-# Find process ID
+netstat -an | grep 9999
+netstat -an | grep 22345
 ps aux | grep python
-
-# Graceful kill
-kill [PID]
-
-# Force kill if needed
-kill -9 [PID]
+tail -f app.log
 ```
 
-### Import Errors
-```bash
-# Reinstall dependencies
-pip install -r requirements.txt
+## Critical Ports
 
-# Check virtual environment
-which python
-```
+- `9999`: host/client control channel
+- `22345`: LabRecorder remote control
 
-## 📞 EMERGENCY CONTACTS
+Note: `tactile_receive.py` also binds `9999` if run directly, which can block host mode.
 
-**During Failures:**
-- Technical Support: ________________
-- System Administrator: ________________  
-- Research Supervisor: ________________
-- IT Help Desk: ________________
+## Fast Failure Triage
 
-**Hardware Support:**
-- EMOTIV Support: ________________
-- Eye Tracker Support: ________________
-- Network/IT: ________________
+### Host Will Not Start
 
-## 📋 INCIDENT DOCUMENTATION
+- Check whether port `9999` is already in use.
+- Confirm no other copy of the app is still running.
 
-**Record for every incident:**
-- [ ] Date and time of failure
-- [ ] What was happening when it failed
-- [ ] Error messages (exact text)
-- [ ] Which systems were affected
-- [ ] Steps taken to recover
-- [ ] Data status (saved/lost/partial)
-- [ ] Participant impact
+### Client Will Not Connect
 
-## 📖 DETAILED HELP
+- Confirm the host was started first.
+- Confirm the host IP is correct.
+- Confirm the host is waiting for a client.
 
-**For complete troubleshooting procedures:**
-- **Main Guide**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **Setup Help**: [GETTING_STARTED.md](GETTING_STARTED.md)  
-- **Technical Details**: [DEVELOPER_DOCUMENTATION.md](DEVELOPER_DOCUMENTATION.md)
-- **Application Logs**: Check `app.log` file in project directory
+### LabRecorder Not Recording
 
----
-**Last Updated**: [Current Date] | **Version**: 1.0  
-**Keep this reference accessible during all experimental sessions**
+- Confirm LabRecorder is open.
+- Confirm remote control is enabled.
+- Confirm port `22345` is listening.
+
+### No Saved Data Appears
+
+- Confirm whether the run was local, host, or client-only.
+- Client-only mode does not create the main subject/test output tree.
+- Re-running a test can overwrite that test's `data.csv`.
+
+## Incident Notes To Capture
+
+- Date and time
+- Subject ID
+- Test name
+- Machine role: host, client, or local
+- Error message text
+- Whether CSV or XDF files were created
+- What recovery steps were attempted
+
+## Detailed References
+
+- `TROUBLESHOOTING.md`
+- `GETTING_STARTED.md`
+- `DEVELOPER_DOCUMENTATION.md`
+
+Last updated: 2026-05-07
