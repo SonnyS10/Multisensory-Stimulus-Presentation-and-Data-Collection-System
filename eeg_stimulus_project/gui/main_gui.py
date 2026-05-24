@@ -430,11 +430,8 @@ class GUI(QMainWindow):
                                 logging.info("Olfactory ports swapped")
                         
                         elif msg.get("action") == "connect_turntable":
-                            from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
                             from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
                             try:
-                                door_controller = DoorController()
-                                time.sleep(2)  # Give some time for the door controller to initialize
                                 turntable_controller = TurntableController()
                                 time.sleep(2)  # Give some time for the turntable controller to initialize
                                 response = {"action": "turntable_connected", "success": True}
@@ -442,6 +439,9 @@ class GUI(QMainWindow):
                                 self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
                             except Exception as e:
                                 logging.info(f"Error connecting to turntable: {e}")
+                                self.shared_status['turntable_connected'] = False
+                                response = {"action": "turntable_connected", "success": False}
+                                self.connection.sendall((json.dumps(response) + "\n").encode('utf-8'))
                 except Exception as e:
                     logging.info(f"Listener error: {e}")
                     self.send_message({"action": "client_log", "message": f"Listener error: {e}"})

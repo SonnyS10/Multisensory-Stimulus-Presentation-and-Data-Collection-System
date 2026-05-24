@@ -9,6 +9,8 @@ class TurntableController:
         self.interval_steps = interval_steps
         self.num_bays = num_bays
         self.current_bay = 0
+        self.is_energized = False
+        self.label_formatter = None
         self.ticcmd_path = r'C:\Program Files (x86)\Pololu\Tic\Bin\ticcmd.exe'
         self.home()
 
@@ -27,6 +29,14 @@ class TurntableController:
         status = yaml.safe_load(self.ticcmd('-s', '--full'))
         return status['Current position']
 
+    def set_label_formatter(self, formatter):
+        self.label_formatter = formatter
+
+    def bay_label(self, bay_index):
+        if self.label_formatter is not None:
+            return self.label_formatter(bay_index)
+        return bay_index + 1
+
     def home(self):
         # Home to position 0
         #self.ticcmd('--exit-safe-start', '--position', '0')
@@ -38,6 +48,7 @@ class TurntableController:
         """Move to the specified bay (0-based index) using the shortest path.
         If wait=True, block until the move is complete or timeout (in seconds) is reached.
         """
+        self.ensure_energized()
         diff = (bay_index - self.current_bay) % self.num_bays
         if diff > self.num_bays // 2:
             # Move clockwise (reverse previous direction)
@@ -50,7 +61,7 @@ class TurntableController:
         current_steps = self.get_position()
         target_steps = current_steps + steps
 
-        print(f"Moving from bay {self.current_bay + 1} to {bay_index + 1}")
+        print(f"Moving from bay {self.bay_label(self.current_bay)} to {self.bay_label(bay_index)}")
         #print(f"Current steps: {current_steps}, Target steps: {target_steps}")
 
         self.ticcmd('--exit-safe-start', '--position', str(target_steps))
@@ -64,19 +75,26 @@ class TurntableController:
                 if abs(pos - target_steps) < 5:  # Increased tolerance
                     break
                 if time.time() - start_time > timeout:
-                    print("Warning: move_to_bay timed out.")
-                    break
+                    print(f"Warning: move_to_bay timed out moving to bay {self.bay_label(bay_index)}.")
+                    return False
                 time.sleep(0.2)  # Slower polling
 
         self.current_bay = bay_index
+        return True
 
     def move_by_bays(self, num_bays):
-        self.move_to_bay((self.current_bay + num_bays) % self.num_bays)
+        return self.move_to_bay((self.current_bay + num_bays) % self.num_bays)
 
     def de_energize(self):
         print("De-energizing motor...")
         self.ticcmd("--deenergize")
+        self.is_energized = False
 
     def energize(self):
         print("Energizing motor...")
         self.ticcmd("--energize")
+        self.is_energized = True
+
+    def ensure_energized(self):
+        if not self.is_energized:
+            self.energize()
