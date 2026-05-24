@@ -782,34 +782,21 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
             
-        # --- Olfactory connection check (mandatory for Stroop olfactory tests) ---
-        is_stroop_olfactory = current_test in ['Stroop Multisensory Alcohol (Visual & Olfactory)', 
-                                                 'Stroop Multisensory Neutral (Visual & Olfactory)']
+        # --- Olfactory connection check ---
         is_olfactory = "Olfactory" in current_test
         
-        if is_stroop_olfactory and not self.shared_status.get('olfactory_connected', False):
-            # For Stroop olfactory tests, olfactory connection is MANDATORY
+        if is_olfactory and not self.shared_status.get('olfactory_connected', False):
+            # For olfactory tests, olfactory connection is MANDATORY
             QMessageBox.critical(
                 self,
                 "Olfactory System Required",
-                "The olfactory system must be connected to run this Stroop test. Please connect the olfactory system in the Control Window before starting.",
+                "The olfactory system must be connected to run this test. Please connect the olfactory system in the Control Window before starting.",
                 QMessageBox.Ok
             )
             return
-        elif is_olfactory and not self.shared_status.get('olfactory_connected', False):
-            # For non-Stroop olfactory tests, show warning
-            reply = QMessageBox.question(
-                self,
-                "Olfactory System Not Connected",
-                "The olfactory system is not connected, are you sure you want to proceed?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            if reply != QMessageBox.Yes:
-                return
-            
+
         # --- Turntable connection warning ---
-        if not self.is_stroop_test:  # Only show turntable warning for non-Stroop tests since Stroop tests require tactile connection, which implies turntable connection
+        if not self.is_stroop_test:  # Only show turntable warning for non-Stroop tests since Stroop tests do not require turntable connection
             is_turntable = self.turntable_button.isChecked()
             if is_turntable and not self.shared_status.get('turntable_connected', False):
                reply = QMessageBox.question(
@@ -1029,100 +1016,210 @@ class InstructionFrame(QWidget):
         self.pages = []
         self.add_instruction_page(
             "<h2>👋 Welcome to the Experiment GUI!</h2>"
-            "<p>This guide will walk you through the process of running an experiment using the Experiment Graphical User Interface.</p>"
+            "<p>This guide walks you through running experiments using the Experiment Graphical User Interface.</p>"
+            "<p>This system is designed to manage:</p>"
             "<ul>"
-            "<li>You can exit this guide at any time by clicking your desired test or the 'Hide Instructions' button.</li>"
-            "<li>Use the <b>Next</b> button below to continue.</li>"
+            "<li>Real-time EEG stimulus presentation (visual, olfactory, tactile)</li>"
+            "<li>Multi-modal experimental designs (passive viewing and Stroop tasks)</li>"
+            "<li>Data collection from multiple synchronized devices</li>"
+            "<li>Customizable stimulus orders and parameters</li>"
+            "</ul>"
+            "<p>You can exit this guide at any time by clicking a test or the 'Hide Instructions' button. Click <b>Next</b> to continue.</p>"
+        )
+        self.add_instruction_page(
+            "<h2>🧭 Interface Overview</h2>"
+            "<p><b>Main components of the Experiment GUI:</b></p>"
+            "<ul>"
+            "<li><b>Sidebar (Left):</b> Lists all 10 available tests organized by type</li>"
+            "<li><b>Main Frame (Center):</b> Displays controls for the selected test</li>"
+            "<li><b>Universal Buttons (Bottom Left):</b>"
+            "<ul>"
+            "<li>📋 <b>Instructions:</b> Show/hide this guide</li>"
+            "<li>⏱️ <b>Latency Checker:</b> Test network responsiveness</li>"
+            "<li>🗂️ <b>Stimulus Order:</b> Customize stimulus presentation</li>"
+            "<li>⚖️ <b>Record Baseline:</b> Record 4-minute crosshair baseline</li>"
+            "<li>🧬 <b>Manual Craving Rating:</b> Displays the craving rating window</li>"
+            "</ul>"
+            "</li>"
             "</ul>"
         )
         self.add_instruction_page(
-            "<h2>🧭 Navigation Overview</h2>"
+            "<h2>📊 Test Types: Passive vs Stroop</h2>"
+            "<p><b>Passive Viewing Tests (6 tests):</b><br>"
+            "Participants view stimuli without responding. Ideal for studying automatic responses.</p>"
             "<ul>"
-            "<li><b>Sidebar:</b> Select different experimental tests and modalities.</li>"
-            "<li><b>Instructions Button:</b> Open/close this guide.</li>"
-            "<li><b>Latency Checker:</b> Measure network latency (see next page).</li>"
-            "<li><b>Stimulus Order Management:</b> View and edit the order of stimuli for each test.</li>"
-            "<li><b>Main Area:</b> Controls and status for the selected experiment.</li>"
+            "<li>Unisensory Neutral/Alcohol Visual</li>"
+            "<li>Multisensory Neutral/Alcohol Visual & Olfactory</li>"
+            "<li>Multisensory Neutral/Alcohol Visual, Tactile & Olfactory</li>"
             "</ul>"
-            "<p>Use the <b>Start</b>, <b>Stop</b>, <b>Pause</b>, <b>Resume</b>, and <b>Next</b> buttons to control the experiment flow.</p>"
+            "<p><b>Stroop Tests (4 tests):</b><br>"
+            "Participants respond to multisensory stimuli conflicts. Ideal for studying cognitive control.</p>"
+            "<ul>"
+            "<li>Stroop Multisensory Alcohol/Neutral (Visual & Tactile)</li>"
+            "<li>Stroop Multisensory Alcohol/Neutral (Visual & Olfactory)</li>"
+            "</ul>"
+            "<p><b>Key Difference:</b> Passive tests are run through 3 different modes (Display, VR, Turntable); Stroop tests require participant interaction via buttons (Only Display mode).</p>"
         )
         self.add_instruction_page(
-            "<h2>🕹️ Button Functions</h2>"
+            "<h2>🖥️ Display Modes & Device Requirements</h2>"
+            "<p><b>Three presentation modes (select only one):</b></p>"
             "<ul>"
-            "<li><b>Start:</b> Begins the selected test.</li>"
-            "<li><b>Stop:</b> Ends the current test and saves all data from connected devices.</li>"
-            "<li><b>Pause:</b> Temporarily halts the test.</li>"
-            "<li><b>Resume:</b> Continues a paused test.</li>"
-            "<li><b>Next:</b> Displays instructions for the participant to interact with the tactile box (only for tactile tests).</li>"
+            "<li>🖥️ <b>Display:</b> Standard 2D monitor presentation</li>"
+            "<li>🕶️ <b>VR:</b> Virtual Reality headset (immersive 3D experience)</li>"
+            "<li>🔬 <b>Turntable:</b> Physical stimulus rotation platform</li>"
             "</ul>"
-            "<p><b>Display/VR/Turntable:</b> Select the output mode for the experiment. Only one may be selected at a time:</p>"
-            "<ul>"
-            "<li>🖥️ <b>Display:</b> Shows the 2D experiment on the main screen.</li>"
-            "<li>🕶️ <b>VR:</b> Activates the VR headset for a 3D experience.</li>"
-            "<li>🔬 <b>Turntable:</b> Uses the Turntable for the experiment.</li>"
-            "</ul>"
+            "<p><b>Device requirements by test:</b></p>"
+            "<table border='1' cellpadding='8' cellspacing='0' style='font-size: 26px;'>"
+            "<tr><th>Test</th><th>Display</th><th>EEG</th><th>Olfactory</th><th>Tactile</th></tr>"
+            "<tr><td>Visual tests</td><td>✓ Required</td><td>✓ Required</td><td>✗</td><td>✗</td></tr>"
+            "<tr><td>Olfactory tests</td><td>✓ Required</td><td>✓ Required</td><td>✓ Required</td><td>✗</td></tr>"
+            "<tr><td>Tactile tests</td><td>✓ Required</td><td>✓ Required</td><td>✗</td><td>✓ Required</td></tr>"
+            "<tr><td>Tactile+Olfactory</td><td>✓ Required</td><td>✓ Required</td><td>✓ Required</td><td>✓ Required</td></tr>"
+            "</table>"
         )
         self.add_instruction_page(
-            "<h2>⏱️ Latency Checker</h2>"
+            "<h2>🕹️ Control Buttons & Workflows</h2>"
+            "<p><b>Test Control Buttons (all tests):</b></p>"
+            "<ul>"
+            "<li><b>Start:</b> Begins stimulus presentation and data collection</li>"
+            "<li><b>Stop:</b> Ends test, saves all EEG/device data</li>"
+            "<li><b>Pause/Resume:</b> Temporarily halt and continue (display tests only)</li>"
+            "</ul>"
+            "<p><b>Stroop-Specific Buttons:</b></p>"
+            "<ul>"
+            "<li><b>Response Buttons:</b> Participant uses these to indicate congruency/incongruency</li>"
+            "<li><b>Next:</b> Advance to next stimulus</li>"
+            "</ul>"
+            "<p><b>Passive Test Workflow:</b></p>"
             "<ol>"
-            "<li>Click the <b>Latency Checker</b> button in the sidebar.</li>"
-            "<li>Click <b>Start Latency Test</b> to begin measuring.</li>"
-            "<li>The average latency will be displayed after the test completes.</li>"
-            "<li>Verify the latency is within acceptable limits (typically below <b>2 ms</b>).</li>"
+            "<li>Select display mode (Display/VR/Turntable)</li>"
+            "<li>Click Start - stimuli present automatically</li>"
+            "<li>Click Stop when complete</li>"
             "</ol>"
-            "<p><i>The Latency Checker runs for 5 seconds, sending 10 pings per second, and displays the average latency for 50 total pings.</i></p>"
-        )
-        self.add_instruction_page(
-            "<h2>🗂️ Stimulus Order Management Frame</h2>"
-            "<ul>"
-            "<li>🔽 <b>Test Picker (Top Dropdown):</b><br>"
-            "Select which test's stimulus order you want to view or edit.</li><br>"
-            "<li>🖼️ <b>Current Order Window:</b><br>"
-            "Shows the current working order of images for the selected test.<br>"
-            "You can drag and drop images to rearrange their order.</li><br>"
-            "<li>🖱️ <b>Drag and Drop:</b><br>"
-            "Click and drag images within the list to change their presentation order.</li><br>"
-            "<li>📁 <b>Available Assets:</b><br>"
-            "Shows all images that can be added to the current test.<br>"
-            "Select an asset and click <b>Add Selected Asset</b> to add it to the working order.</li><br>"
-            "<li>➕ <b>Add Assets:</b><br>"
-            "Use the <b>Add Selected Asset</b> button to insert the chosen asset into the current order.</li><br>"
-            "<li>🗑️ <b>Delete Assets:</b><br>"
-            "Select an image in the current order and click <b>Delete Selected Stimulus</b> to remove it.</li><br>"
-            "<li>📄 <b>Import from CSV/XLSX:</b><br>"
-            "Use <b>Import Order from CSV</b> to load a custom order from a CSV or Excel file.<br>"
-            "The file should list image names in the desired order (one per row).</li><br>"
-            "<li>🔄 <b>Reset Order:</b><br>"
-            "Click <b>Reset Working Order</b> to revert to the original order for the selected test.</li><br>"
-            "<li>✅ <b>Apply Order:</b><br>"
-            "Click <b>Apply Custom Order</b> to save your changes. This order will be used during the experiment.</li><br>"
-            "<li>🎲 <b>Randomizer & Repetitions:</b><br>"
-            "Use the randomization options to shuffle cues and/or set how many times each image appears.<br>"
-            "Click <b>Randomize Now</b> to apply these settings to the working order.</li>"
-            "</ul>"
-            "<p><b>Remember:</b> Changes are only used in the experiment after you click <b>Apply Custom Order</b>.</p>"
-        )        
-        self.add_instruction_page(
-            "<h2>🧪 Running a Test</h2>"
+            "<p><b>Stroop Test Workflow:</b></p>"
             "<ol>"
-            "<li>Select the desired test from the sidebar.</li>"
-            "<li>Ensure all required external devices are connected in the Control Window.</li>"
-            "<li>Choose the display mode (<b>Display</b>, <b>VR</b>, or <b>Turntable</b>).</li>"
-            "<li>Click <b>Start</b> to begin.</li>"
-            "<li>Follow on-screen prompts and monitor the status indicators.</li>"
-            "<li>Click <b>Stop</b> to end and save the test.</li>"
+            "<li>Select display mode</li>"
+            "<li>Click Start</li>"
+            "<li>Participant responds to each stimulus</li>"
+            "<li>Click Next to advance</li>"
+            "<li>Click Stop when complete</li>"
             "</ol>"
-            "<p><b>Tip:</b> For tactile tests, wait for the experimenter to switch the object before pressing <b>Next</b>.</p>"
         )
         self.add_instruction_page(
-            "<h2>🛠️ Troubleshooting & Tips</h2>"
+            "<h2>⏱️ Latency Checker & Baseline Recording</h2>"
+            "<p><b>Latency Checker:</b></p>"
+            "<ol>"
+            "<li>Click 'Latency Checker' in the sidebar</li>"
+            "<li>Click 'Start Latency Test' button</li>"
+            "<li>Wait 5 seconds for 50 pings (10 pings/sec)</li>"
+            "<li>View average round-trip time (should be &lt;2 ms)</li>"
+            "<li>Return to a test when ready</li>"
+            "</ol>"
+            "<p><b>Baseline Recording:</b></p>"
+            "<ol>"
+            "<li>Click 'Baseline' in the sidebar</li>"
+            "<li>Participant fixates on crosshair for 4 minutes</li>"
+            "<li>EEG/device data recorded without stimuli</li>"
+            "<li>Establishes resting state baseline</li>"
+            "</ol>"
+        )
+        self.add_instruction_page(
+            "<h2>🗂️ Stimulus Order Management</h2>"
+            "<p><b>Core Features:</b></p>"
             "<ul>"
-            "<li>If a warning appears for any device, check the connection in the Control Window and try again.</li>"
-            "<li>Use the latency check to verify network responsiveness.</li>"
-            "<li>For further help, consult the experiment protocol or contact the lead researcher.</li>"
-            "<li>Always ensure participant safety and comfort.</li>"
+            "<li><b>Test Selector:</b> Choose which test to edit</li>"
+            "<li><b>Working Order:</b> Drag/drop images to rearrange</li>"
+            "<li><b>Available Assets:</b> Browse all images by category (Default/Custom)</li>"
+            "<li><b>Add/Delete:</b> Dynamically modify current order</li>"
             "</ul>"
-            "<p>Click <b>Continue</b> to exit this guide and proceed to the first test.</p>"
+            "<p><b>Advanced Options:</b></p>"
+            "<ul>"
+            "<li><b>Import from CSV/XLSX:</b> Load predefined stimulus orders</li>"
+            "<li><b>Randomize:</b> Shuffle alcohol/non-alcohol cues with optional seed</li>"
+            "<li><b>Repetitions:</b> Set how many times each stimulus appears</li>"
+            "<li><b>Scent Assignment (Olfactory tests only):</b> Assign scent numbers (1-8) to each odor</li>"
+            "</ul>"
+            "<p><b>⚠️ Important:</b> Click 'Apply Custom Order' to save changes for use in experiments.</p>"
+        )
+        self.add_instruction_page(
+            "<h2>🧬 Craving Rating & Data Collection</h2>"
+            "<p><b>Craving Rating During Experiments:</b></p>"
+            "<ul>"
+            "<li><b>Craving Rating Asset:</b> Special stimulus that prompts participant to rate cravings (1-7 scale)</li>"
+            "<li>Automatically included at end of passive tests</li>"
+            "<li>Can be inserted anywhere in stimulus order via Stimulus Order Management</li>"
+            "</ul>"
+            "<p><b>Manual Craving Rating Button:</b></p>"
+            "<ul>"
+            "<li>Located in the sidebar (orange button: 'Manual Craving Rating')</li>"
+            "<li>Use this to collect craving ratings <b>outside</b> of test runs</li>"
+            "<li>Useful for baseline craving measurements or between test blocks</li>"
+            "<li>Opens dialog allowing participant to enter craving rating (0-100)</li>"
+            "<li>Data saved with timestamp for later analysis</li>"
+            "</ul>"
+            "<p><b>What Gets Recorded During Tests:</b></p>"
+            "<ul>"
+            "<li>EEG signals from Actichamp/LabRecorder</li>"
+            "<li>Eye tracking data from Pupil Labs</li>"
+            "<li>Tactile response timing</li>"
+            "<li>Olfactory port activation timing</li>"
+            "<li>Stimulus presentation timing via LSL markers</li>"
+            "<li>Craving ratings (both asset-based and manual)</li>"
+            "<li>Stroop responses and reaction times</li>"
+            "</ul>"
+            "<p><b>Data Organization:</b> All data saved with timestamp synchronization across devices in the subject's data directory.</p>"
+        )
+        self.add_instruction_page(
+            "<h2>✅ Pre-Experiment Checklist</h2>"
+            "<p><b>Before Starting ANY Test:</b></p>"
+            "<ul>"
+            "<li>✓ All devices connected in Control Window (check green status icons)</li>"
+            "<li>✓ LabRecorder and Eye Tracker successfully linked</li>"
+            "<li>✓ Latency Checker passes (&lt;2 ms)</li>"
+            "<li>✓ Stimulus order reviewed and applied</li>"
+            "</ul>"
+            "<p><b>For Olfactory Tests ONLY:</b></p>"
+            "<ul>"
+            "<li>✓ Olfactory system connected in Control Window</li>"
+            "<li>✓ Olfactory ports validated via 'Validate Olfactory Ports'</li>"
+            "<li>✓ Scent assignments completed (all stimuli have scent numbers 1-8)</li>"
+            "</ul>"
+            "<p><b>For Tactile Tests ONLY:</b></p>"
+            "<ul>"
+            "<li>✓ Tactile Box connected (green indicator)</li>"
+            "<li>✓ Test objects ready for experimenter</li>"
+            "</ul>"
+            "<p><b>General Preparation:</b></p>"
+            "<ul>"
+            "<li>✓ Participant seated comfortably</li>"
+            "<li>✓ Display/VR/Turntable mode selected</li>"
+            "<li>✓ Instructions explained to participant</li>"
+            "<li>✓ Baseline recording completed (optional but recommended)</li>"
+            "<li>✓ Data save directory configured</li>"
+            "</ul>"
+        )
+        self.add_instruction_page(
+            "<h2>🛠️ Troubleshooting & Common Issues</h2>"
+            "<p><b>Device Connection Failures:</b></p>"
+            "<ul>"
+            "<li> Actichamp won't link → Check Control Window, verify USB connection</li>"
+            "<li> LabRecorder fails → Ensure Actichamp linked first, restart LabRecorder</li>"
+            "<li> Eye Tracker timeout → Verify IP address, check network connectivity</li>"
+            "<li> Tactile Box no LSL → Restart Tactile setup, may require multiple attempts</li>"
+            "</ul>"
+            "<p><b>Stimulus Order Issues:</b></p>"
+            "<ul>"
+            "<li> Changes not taking effect → Must click 'Apply Custom Order' to save</li>"
+            "<li> Passive test won't start → Max 8 unique stimuli limit - reduce duplicates</li>"
+            "<li> Olfactory test blocked → Must assign scents to all assets first</li>"
+            "</ul>"
+            "<p><b>During Experiment:</b></p>"
+            "<ul>"
+            "<li> Test stops unexpectedly → Check log in Control Window for errors</li>"
+            "<li> Data not saving → Verify base directory and permissions</li>"
+            "<li> Latency spike → Network congestion - retry after latency check</li>"
+            "</ul>"
+            "<p><b>Need Help?</b> Refer to README.md, TROUBLESHOOTING.md, or contact us.</p>"
         )
 
         # --- Navigation Buttons ---

@@ -1263,10 +1263,22 @@ class StimulusOrderFrame(QWidget):
         dialog.setWindowTitle("Assign Scent Numbers")
         layout = QFormLayout(dialog)
         scent_selectors = {}
+        
+        # Collect unique assets by filename to avoid showing duplicates
+        seen_keys = set()
+        unique_images = []
         for img in images:
-            # Only assign to images, not craving rating
+            # Skip craving rating assets
             if isinstance(img, CravingRatingAsset):
                 continue
+            key = getattr(img, "filename", None)
+            # Only add to unique_images if we haven't seen this filename before
+            if key not in seen_keys:
+                seen_keys.add(key)
+                unique_images.append(img)
+        
+        # Create combo boxes only for unique assets
+        for img in unique_images:
             display_name = getattr(img, "display_name", os.path.splitext(os.path.basename(getattr(img, "filename", "Image")))[0])
             combo = QComboBox()
             combo.addItem("None")
@@ -1279,6 +1291,7 @@ class StimulusOrderFrame(QWidget):
                 combo.setCurrentText(str(scent))
             layout.addRow(display_name, combo)
             scent_selectors[key] = combo
+        
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         layout.addWidget(buttons)
         buttons.accepted.connect(dialog.accept)
@@ -1288,7 +1301,33 @@ class StimulusOrderFrame(QWidget):
                 val = combo.currentText()
                 self.scent_numbers[key] = int(val) if val.isdigit() else None
             self.update_image_list()
-
+    def validate_olfactory_scent_assignments(self, test_name):
+        """
+        Validate that all olfactory assets in the test have scent numbers assigned.
+        Returns (is_valid, missing_scents_list)
+        """
+        if "olfactory" not in test_name.lower():
+            # Not an olfactory test, so no validation needed
+            return True, []
+        
+        images = self.working_orders.get(test_name, [])
+        missing_scents = []
+        
+        for img in images:
+            # Skip craving rating assets
+            if isinstance(img, CravingRatingAsset):
+                continue
+            
+            # Get the key for scent lookup
+            key = getattr(img, "filename", None)
+            
+            # Check if this asset has a scent assigned
+            scent = self.scent_numbers.get(key, None)
+            if scent is None:
+                display_name = getattr(img, "display_name", os.path.splitext(os.path.basename(key if key else "Unknown"))[0])
+                missing_scents.append(display_name)
+        
+        return len(missing_scents) == 0, missing_scents
 class CravingRatingAsset:
     def __init__(self):
         self.asset_type = "craving_rating"

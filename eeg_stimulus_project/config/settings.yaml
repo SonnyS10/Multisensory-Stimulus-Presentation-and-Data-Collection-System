@@ -66,7 +66,7 @@ hardware:
     
   # Tactile system settings
   tactile:
-    threshold: 500
+    threshold: 200
     baseline_force: 0
     rezero_time: 2  # seconds
     rezero_threshold: 50  # force units

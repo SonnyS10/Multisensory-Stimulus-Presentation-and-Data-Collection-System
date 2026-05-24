@@ -182,7 +182,7 @@ class ControlWindow(QMainWindow):
         self.device_frame_layout.addLayout(eyetracker_row)
 
         # --- Touch Box Row ---
-        lsl_touch_label = QLabel("LSL stream ready for Touch:", self)
+        lsl_touch_label = QLabel("LSL Stream Ready for Touch:", self)
         lsl_touch_label.setFont(QFont("Segoe UI", 11))
         self.lsl_touch_icon = QFrame(self)
         self.lsl_touch_icon.setFixedWidth(120)
@@ -511,7 +511,7 @@ class ControlWindow(QMainWindow):
                 return
             
             # Schedule stop
-            QTimer.singleShot(6000, self._stop_scent_and_ask)
+            QTimer.singleShot(8000, self._stop_scent_and_ask)
         
         elif state['step'] == 'await_response':
             # Ask user if scent was correct
@@ -819,41 +819,103 @@ class ControlInstructionsFrame(QWidget):
 
         self.pages = []
         self.add_instruction_page(
-            "Welcome to the Control Window!\n\n"
-            "This guide explains how to use the Control Window to manage device connections and monitor experiment progress.\n\n"
-            "Click 'Next' to continue."
+            "<h2>👋 Welcome to the Control Window!</h2>"
+            "<p>This guide explains how to use the Control Window to manage device connections and monitor experiment progress.</p>"
+            "<p>This window allows you to:</p>"
+            "<ul>"
+            "<li>Start and connect all experimental hardware and software</li>"
+            "<li>Monitor the status of each device in real-time</li>"
+            "<li>View logs and troubleshoot any connection issues</li>"
+            "</ul>"
+            "<p>Click 'Next' to continue.</p>"
         )
         self.add_instruction_page(
-            "Device Buttons & Status Icons:\n\n"
-            "- Each row represents a device (Actichamp, LabRecorder, Eye Tracker, Tactile Box, VR, Turntable, Olfactory System).\n"
-            "- The button on each row will attempt to connect or launch the corresponding device/software.\n"
-            "- The red/green icon next to each device shows its connection status:\n"
-            "    • Red = Not connected\n"
-            "    • Green = Connected\n"
-            "- Some devices (like Tactile Box) have additional indicators for LSL stream readiness.\n"
-            "    • This icon turns green when the experiment is ready to receive tactile input via LSL to continue.\n"
+            "<h2>🔌 Device Connection Overview</h2>"
+            "<p>The Control Window displays seven main devices:</p>"
+            "<ul>"
+            "<li><b>Actichamp:</b> EEG amplifier - shows 'Linked Status'</li>"
+            "<li><b>LabRecorder:</b> Records LSL streams - shows 'Connection Status'</li>"
+            "<li><b>Eye Tracker:</b> Pupil Labs eye tracking system - shows 'Connection Status'</li>"
+            "<li><b>Tactile Box:</b> Touch stimulus device - shows 'Connection Status' + 'LSL stream ready' indicator</li>"
+            "<li><b>Virtual Reality:</b> VR system - shows 'Connection Status'</li>"
+            "<li><b>Turntable:</b> Stimulus presentation platform - shows 'Connection Status'</li>"
+            "<li><b>Olfactory System:</b> Scent delivery system - shows 'Connection Status' + 'Validate Olfactory Ports' button</li>"
+            "</ul>"
+            "<p><b>Status Icons:</b> Red = Not connected, Green = Connected</p>"
         )
         self.add_instruction_page(
-            "How to Use:\n\n"
-            "1. Click each device's button to connect or launch its software.\n"
-            "2. Watch the status icon to confirm successful connection (icon turns green).\n"
-            "   Note: The Tactile Box will require you to manually connect by clicking the 'Start Remote Script' button after it has been launched.\n"
-            "3. If a device fails to connect, check cables, power, and software, then try again."
+            "<h2>🚀 Getting Started: Connection Steps</h2>"
+            "<p><b>Recommended order for connecting devices:</b></p>"
+            "<ol>"
+            "<li><b>Actichamp:</b> Click 'Actichamp' button to launch and auto-link with the EEG stream</li>"
+            "<li><b>LabRecorder:</b> Click 'LabRecorder' button to open and connect to the LSL stream</li>"
+            "<li><b>Eye Tracker:</b> Click 'Eye Tracker' button and confirm the IP address in the dialog</li>"
+            "<li><b>Tactile Box:</b> Click 'Tactile Box' button to launch the setup interface</li>"
+            "<li><b>Turntable:</b> Click 'Turntable' button to initialize the turntable system</li>"
+            "<li><b>Olfactory System:</b> Click 'Olfactory System' button to connect the scent delivery system</li>"
+            "</ol>"
+            "<p><b>Watch the status icons turn green as each device connects successfully.</b></p>"
         )
         self.add_instruction_page(
-            "Monitoring Progress & Errors:\n\n"
-            "- The Log Output panel at the bottom displays real-time status updates, progress messages, and any errors.\n"
-            "- Always watch the log for confirmation of device connections and troubleshooting information.\n"
-            "- If you see an error, follow the instructions in the log or consult the experiment protocol."
+            "<h2>🌬️ Olfactory System Setup</h2>"
+            "<p>The Olfactory System requires special validation:</p>"
+            "<ol>"
+            "<li>First, click 'Olfactory System' to establish connection</li>"
+            "<li>Click 'Validate Olfactory Ports' to test scent assignments</li>"
+            "<li>The validation process will:</li>"
+            "<ul>"
+            "<li>Dispense scents one at a time</li>"
+            "<li>Ask you to confirm the scent is correct</li>"
+            "<li>Test if ports need to be swapped</li>"
+            "<li>Save the correct port configuration</li>"
+            "</ul>"
+            "<li><b>Complete olfactory validation before running any olfactory tests</b></li>"
+            "</ol>"
         )
         self.add_instruction_page(
-            "Tips & Troubleshooting:\n\n"
-            "- If a device does not connect, restart its software and check all connections.\n"
-            "- Ensure all devices are powered on and properly configured before starting the experiment.\n"
-            "- For the Tactile Box, it may require you to start the remote script multiple times before it connects.\n"
-            "    • If it still does not connect, try closing the application and relaunching it before messing with the hardware.\n"
-            "- For persistent issues, refer to the experiment documentation or contact technical support.\n"
-            "- You can close these instructions at any time and return to the main Control Window."
+            "<h2>🖥️ Tactile Box & LSL Streams</h2>"
+            "<p>The Tactile Box has a special dual-status indicator:</p>"
+            "<ul>"
+            "<li><b>Connection Status:</b> Shows if the physical device is connected</li>"
+            "<li><b>LSL Stream Ready for Touch:</b> Shows when the tactile box is expecting the participant to touch the object and continue the experiment</li>"
+            "</ul>"
+            "<p><b>To prepare Tactile Box for testing:</b></p>"
+            "<ol>"
+            "<li>Click 'Tactile Box' to open tactile data stream window</li>"
+            "<li>Click 'Start Remote Script' in the the new window to start transmitting force data to the system</li>"
+            "<li>Change threshold value if needed (preset of 200 units should be fine)</li>"
+            "</ol>"
+            "<p><b>When the tactile box is ready for a touch during a test, the 'LSL Stream Ready for Touch' icon will turn green.</b></p>"
+            "<p><b>After the participant touches the object, the icon will turn red again until the next touch is expected.</b></p>"
+        )
+        self.add_instruction_page(
+            "<h2>📊 Monitoring & Troubleshooting</h2>"
+            "<p><b>Log Output Panel:</b></p>"
+            "<ul>"
+            "<li>Located at the bottom of the window</li>"
+            "<li>Displays real-time status messages, connection confirmations, and errors</li>"
+            "<li>Check the log when devices fail to connect</li>"
+            "</ul>"
+            "<p><b>Common Issues & Solutions:</b></p>"
+            "<ul>"
+            "<li><b>Device won't connect:</b> Check hardware power and cable connections, then retry</li>"
+            "<li><b>Actichamp won't link:</b> Ensure EEG amplifier is powered and USB is connected</li>"
+            "<li><b>LabRecorder connection fails:</b> Check that Actichamp is linked first</li>"
+            "<li><b>Eye Tracker timeout:</b> Verify IP address is correct and device is on same network</li>"
+            "<li><b>Tactile Box issues:</b> Restart the Tactile Box setup and close/reopen the tactile stream window, may need multiple attempts</li>"
+            "</ul>"
+        )
+        self.add_instruction_page(
+            "<h2>✅ Pre-Experiment Checklist</h2>"
+            "<p>Before starting an experiment, ensure:</p>"
+            "<ul>"
+            "<li>✓ All required device status icons are <b>green</b></li>"
+            "<li>✓ For Olfactory experiments: Olfactory ports have been <b>validated</b></li>"
+            "<li>✓ Log output shows all connections successful</li>"
+            "<li>✓ Participant is ready and informed</li>"
+            "<li>✓ Verify that the experimenter computer checklist has been completed</li>"
+            "</ul>"
+            "<p><b>Once all devices are connected, switch to the Experiment GUI to start testing.</b></p>"
         )
 
         # --- Navigation Buttons ---
