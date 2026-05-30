@@ -34,6 +34,7 @@ class StimulusOrderFrame(QWidget):
         self.working_orders = {}  # Store working orders for each test (what user is currently editing)
         self.original_assets = {}  # Store original asset order
         self.scent_numbers = {}  # {asset: scent_number}
+        self.applied_scent_numbers = {}  # {test_name: {asset: scent_number}}
         
         # Add randomization and repetitions settings
         self.randomize_cues = False
@@ -737,9 +738,23 @@ class StimulusOrderFrame(QWidget):
 
         if not self.validate_passive_unique_stimulus_limit():
             return
+
+        scents_valid, missing_scents = self.validate_olfactory_scent_assignments(self.current_test_name)
+        if not scents_valid:
+            preview = "\n".join(f"- {name}" for name in missing_scents[:12])
+            extra = "" if len(missing_scents) <= 12 else f"\n...and {len(missing_scents) - 12} more"
+            QMessageBox.critical(
+                self,
+                "Missing Scent Assignments",
+                "Every image in an olfactory test must have a scent number assigned before applying.\n\n"
+                f"Missing scent number for:\n{preview}{extra}",
+                QMessageBox.Ok
+            )
+            return
         
         # Copy working order to applied custom order
         self.custom_orders[self.current_test_name] = self.working_orders[self.current_test_name].copy()
+        self.applied_scent_numbers[self.current_test_name] = self.current_scent_assignments(self.current_test_name)
         
         # Update the parent's asset handler to use custom order
         if hasattr(self.parent, 'update_custom_orders'):
@@ -989,13 +1004,26 @@ class StimulusOrderFrame(QWidget):
         # Get working order
         working_order = self.working_orders.get(self.current_test_name, [])
         
-        # Get applied order (custom order if exists, otherwise original order)
-        if self.current_test_name in self.custom_orders:
-            applied_order = self.custom_orders[self.current_test_name]
-        else:
-            applied_order = self.original_assets.get(self.current_test_name, [])
-        
-        return working_order == applied_order
+        if self.current_test_name not in self.custom_orders:
+            return False
+
+        applied_order = self.custom_orders[self.current_test_name]
+        if working_order != applied_order:
+            return False
+
+        if "olfactory" in self.current_test_name.lower():
+            applied_scents = self.applied_scent_numbers.get(self.current_test_name)
+            return applied_scents == self.current_scent_assignments(self.current_test_name)
+        return True
+
+    def current_scent_assignments(self, test_name):
+        """Return scent assignments for the non-craving assets currently in a test."""
+        images = self.working_orders.get(test_name, self.custom_orders.get(test_name, []))
+        return {
+            img.filename: self.scent_numbers.get(img.filename)
+            for img in images
+            if getattr(img, "asset_type", None) != "craving_rating" and getattr(img, "filename", None)
+        }
 
     def update_apply_button_state(self):
         """Enable/disable the apply button based on whether the order is applied."""

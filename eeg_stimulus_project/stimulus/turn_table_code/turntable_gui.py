@@ -1,5 +1,6 @@
 import sys
 import math
+import logging
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QDialog, QMessageBox,
     QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem, QCheckBox, QSpinBox, QFrame
@@ -225,11 +226,12 @@ class AssignmentTableWidget(QTableWidget):
 
 class TurntableWindow(QWidget):
     def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None,
-                 on_sequence_started=None, on_sequence_stopped=None):
+                 require_scent_assignments=False, on_sequence_started=None, on_sequence_stopped=None):
         super().__init__()
         print(test_order)
         self.tactile_mode = tactile_mode
         self.send_message = send_message
+        self.require_scent_assignments = require_scent_assignments
         self.on_sequence_started = on_sequence_started
         self.on_sequence_stopped = on_sequence_stopped
         self._session_started = False
@@ -773,6 +775,23 @@ class TurntableWindow(QWidget):
         self.replacement_continue_btn.setEnabled(False)
         self.update_position_indicators()
 
+    def missing_scent_assignments_for_sequence(self):
+        if not self.require_scent_assignments:
+            return []
+        missing = []
+        for step in self.sequence_steps:
+            if step.get("type") != "stimulus":
+                continue
+            obj = step.get("object")
+            scent_number = stimulus_scent_number(obj)
+            try:
+                scent_number = int(scent_number)
+            except (TypeError, ValueError):
+                scent_number = None
+            if scent_number is None or not 1 <= scent_number <= 8:
+                missing.append(f"Bay {step.get('bay')}: {stimulus_label(obj)}")
+        return missing
+
     def object_assigned_to_bay(self, bay):
         for obj in self.test_order:
             if self.object_to_bay.get(obj) == bay:
@@ -816,7 +835,7 @@ class TurntableWindow(QWidget):
         if scent_number is not None:
             label_parts.append(f"scent={scent_number}")
         label = " | ".join(label_parts)
-        self.send_message({"action": "label", "label": label})
+        self.emit_turntable_label(label)
 
     def ensure_olfactory_controller(self):
         if self.olfactory_controller is not None and self.olfactory_connected:
@@ -867,7 +886,7 @@ class TurntableWindow(QWidget):
                     f" | bay={bay}"
                     f" | object={stimulus_label(obj)}"
                 )
-                self.send_message({"action": "label", "label": label})
+                self.emit_turntable_label(label)
 
     def replacement_due_for_step(self, step):
         move_number = self.current_index + 1
@@ -929,6 +948,19 @@ class TurntableWindow(QWidget):
             return
         if not self._sequence_running:
             self.start_new_sequence()
+            missing_scents = self.missing_scent_assignments_for_sequence()
+            if missing_scents:
+                preview = "\n".join(f"- {item}" for item in missing_scents[:12])
+                extra = "" if len(missing_scents) <= 12 else f"\n...and {len(missing_scents) - 12} more"
+                QMessageBox.critical(
+                    self,
+                    "Missing Scent Assignments",
+                    "Every filled olfactory bay must have a scent number assigned before starting.\n\n"
+                    f"Missing scent number for:\n{preview}{extra}",
+                )
+                self.sequence_status_label.setText("Cannot start: missing scent assignments.")
+                self._sequence_running = False
+                return
         if not self.sequence_steps:
             print("No assigned turntable sequence to run.")
             self.sequence_status_label.setText("No assigned turntable sequence to run.")
@@ -981,8 +1013,6 @@ class TurntableWindow(QWidget):
             self.handle_control_step(step)
             return
 
-        self.trigger_scent_for_step(step)
-
         if self.tactile_mode:
             print("Waiting for touch signal from tactile box...")
             self.waiting_for_touch = True
@@ -990,6 +1020,7 @@ class TurntableWindow(QWidget):
                 self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
+            self.trigger_scent_for_step(step)
             if self.auto_doors_enabled():
                 self._auto_doors_opened_for_current_item = self.open_doors_automatically()
             self._start_timer(2000, self.close_doors_and_continue)
@@ -999,6 +1030,15 @@ class TurntableWindow(QWidget):
         if self.tactile_mode and self.waiting_for_touch:
             print("Touch detected!")
             self.waiting_for_touch = False
+            step = self.sequence_steps[self.current_index]
+            if self.send_message:
+                label = (
+                    f"Turntable Touch Detected"
+                    f" | bay={step.get('bay')}"
+                    f" | object={stimulus_label(step.get('object'))}"
+                )
+                self.emit_turntable_label(label)
+            self.trigger_scent_for_step(step)
             if self.auto_doors_enabled():
                 print("Opening doors.")
                 self._auto_doors_opened_for_current_item = self.open_doors_automatically()
@@ -1022,6 +1062,13 @@ class TurntableWindow(QWidget):
         if self._timer_callback_func:
             self._pending_timer.stop()
             self._timer_callback_func()
+
+    def emit_turntable_label(self, label):
+        if not self.send_message:
+            return
+        self.send_message({"action": "label", "label": label})
+        self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+        logging.info(f"Turntable label emitted: {label}")
 
     def pause_test_sequence(self):
         print("Pausing test sequence.")

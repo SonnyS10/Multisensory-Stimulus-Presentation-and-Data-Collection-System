@@ -363,6 +363,7 @@ class DisplayWindow(QMainWindow):
         self.ready_for_space = False  # Flag to indicate if the space bar can be pressed to start the trial
         self.showing_touch_instruction = False  # Flag to indicate if the touch instruction is being shown
         self.waiting_for_initial_touch = False
+        self._dispense_scent_before_next_image = False
         self.next_is_craving = False  # Flag to indicate if the next image is a craving rating image
         # Step 4: Load assets using user folders if provided
         Display.test_assets = Display.get_assets(
@@ -439,7 +440,7 @@ class DisplayWindow(QMainWindow):
     #This method is called when the user presses the pause button to pause the trial, it stops the timer and the image transition timer, it also stores the current image index and the elapsed time, it also tells the mirror widget to pause
     def pause_trial(self, event=None):
         label = "Paused Trial"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.timer.stop()
         self.image_transition_timer.stop()  # Stop the image transition timer
         if hasattr(self, 'stroop_transition_timer'):
@@ -459,7 +460,7 @@ class DisplayWindow(QMainWindow):
     #It also calls the run_trial method to start the trial again
     def resume_trial(self, event=None):
         label = "Resumed Trial"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.Paused = False
         self.run_trial()  # Resume the trial
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -471,6 +472,9 @@ class DisplayWindow(QMainWindow):
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
+            if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
+                self.scent_function(img)
+                self._dispense_scent_before_next_image = False
             pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
@@ -481,7 +485,7 @@ class DisplayWindow(QMainWindow):
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 self.current_label = label
-                if "Olfactory" in self.current_test:
+                if "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch():
                     self.scent_function(img)
             if "Tactile" in self.current_test:
                 # For tactile, show image for 2 seconds, then show crosshair and wait for touch
@@ -506,6 +510,9 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
+        if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
+            self.scent_function(img)
+            self._dispense_scent_before_next_image = False
         pixmap = QPixmap(img.filename)
         self.current_pixmap = pixmap
         self.update_image_label()
@@ -513,7 +520,7 @@ class DisplayWindow(QMainWindow):
             label = self.build_image_label(img)
             self.emit_marker(label)
             self.current_label = label
-            if "Olfactory" in self.current_test:
+            if "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch():
                 self.scent_function(img)
         if "Tactile" in self.current_test:
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
@@ -551,7 +558,7 @@ class DisplayWindow(QMainWindow):
         self.clear_overlay()
 
         label = "Crosshair Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         duration_ms = random.randint(2000, 6000)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
@@ -594,7 +601,7 @@ class DisplayWindow(QMainWindow):
 
     def show_touch_instruction(self, initial=False):
         label = "Touch Instruction Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
 
         # Always set the instruction text for both display and mirror
         if "Olfactory" in self.current_test:
@@ -630,9 +637,10 @@ class DisplayWindow(QMainWindow):
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
-        #if "Olfactory" in self.current_test:
-        #    # send scent and wait for 1 second?
-        #    pass
+        phase = "initial" if self.waiting_for_initial_touch else "advance"
+        self.emit_marker(f"Touch Detected | phase={phase}")
+        if self.should_dispense_scent_after_touch():
+            self._dispense_scent_before_next_image = True
         if self.waiting_for_initial_touch:
             self.waiting_for_initial_touch = False
             self.showing_touch_instruction = False
@@ -669,7 +677,7 @@ class DisplayWindow(QMainWindow):
             else:
                 label = "Passive Test Ended"
 
-            self.send_message({"action": "label", "label": label})
+            self.emit_marker(label)
             #self.label_stream.push_label("Test Ended")
             self.paused_image_index = 0
             self.paused_time = 0
@@ -724,9 +732,10 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
-        label = "Response Instructions Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
         img = self.images[self.current_image_index]
+        image_name = os.path.splitext(os.path.basename(img.filename))[0]
+        label = f"Response Instructions Shown | image={image_name}"
+        self.emit_marker(label)
         text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -737,12 +746,7 @@ class DisplayWindow(QMainWindow):
         # Update the mirror
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(text, font)
-        if hasattr(img, 'filename'):
-            label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
-            self.push_local_label(label)
-            logging.info(f"Current label: {label}")
-            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
-            self.current_label = label
+        self.current_label = label
         self.waiting_for_stroop_response = True  # <--- Add this line
 
     #This method is called to wait for the user input, it installs an event filter to capture the key press events
@@ -759,20 +763,14 @@ class DisplayWindow(QMainWindow):
                     if event.key() == Qt.Key_Y:
                         self.user_data['user_inputs'].append('Yes') # Store the user input
                         if hasattr(img, 'filename'):
-                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
-                            self.send_message({"action": "label", "label": label})
-                            self.push_local_label(label)
-                            logging.info(f"Current label: {label}")
-                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                            label = self.build_response_label(img, "Yes")
+                            self.emit_marker(label)
                             self.current_label = label  # Push label to LSL stream
                     else:
                         self.user_data['user_inputs'].append('No')  # Store the user input
                         if hasattr(img, 'filename'):
-                            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
-                            self.send_message({"action": "label", "label": label})
-                            self.push_local_label(label)
-                            logging.info(f"Current label: {label}")
-                            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                            label = self.build_response_label(img, "No")
+                            self.emit_marker(label)
                             self.current_label = label  # Push label to LSL stream
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
                     self.removeEventFilter(self)
@@ -820,7 +818,7 @@ class DisplayWindow(QMainWindow):
     #This method is called to start the countdown, it hides the instruction label and shows the countdown label, it also starts the countdown timer
     def start_countdown(self):
         label = "Starting countdown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.instructions_label.setVisible(False)
         self.countdown_label.setVisible(True)
         self.countdown_seconds = 3
@@ -841,7 +839,7 @@ class DisplayWindow(QMainWindow):
             self.countdown_timer.stop()
             self.countdown_label.setText("Go!")
             label = "Countdown Finished, starting experiment"
-            self.send_message({"action": "label", "label": label})  # Send label to the server
+            self.emit_marker(label)
             QTimer.singleShot(1000, self.after_countdown)
 
     def after_countdown(self):
@@ -905,7 +903,7 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         label = "End Screen Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
         logging.info("Test has ended, please press the stop button to close the test.")
         self.send_message({"action": "client_log", "message": "Test has ended, please press the stop button to close the test."})
@@ -925,7 +923,7 @@ class DisplayWindow(QMainWindow):
             return
         # Show your pre-instructions
         label = "Crosshair Instructions Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 4 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -944,7 +942,7 @@ class DisplayWindow(QMainWindow):
             return
         # Show a crosshair for 4 minutes
         label = "Crosshair Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -968,7 +966,7 @@ class DisplayWindow(QMainWindow):
             return
         # Restore your original instructions and allow the experiment to proceed
         label = "Main Instructions Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
         #self.instructions_label.setFont(QFont("Arial", 18))
         self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
         self.instructions_label.setVisible(True)
@@ -1006,9 +1004,20 @@ class DisplayWindow(QMainWindow):
             return None
         return scent_number
 
+    def should_dispense_scent_after_touch(self):
+        return "Tactile" in self.current_test and "Olfactory" in self.current_test
+
     def build_image_label(self, img):
         image_name = os.path.splitext(os.path.basename(img.filename))[0]
         label = f"{image_name} Image"
+        scent_number = self.scent_number_for_image(img)
+        if "Olfactory" in self.current_test and scent_number:
+            label = f"{label} | scent={scent_number}"
+        return label
+
+    def build_response_label(self, img, response):
+        image_name = os.path.splitext(os.path.basename(img.filename))[0]
+        label = f"Response | image={image_name} | response={response}"
         scent_number = self.scent_number_for_image(img)
         if "Olfactory" in self.current_test and scent_number:
             label = f"{label} | scent={scent_number}"
@@ -1128,7 +1137,7 @@ class DisplayWindow(QMainWindow):
         self.overlay_layout.addLayout(vcenter_layout)
 
         label = "Craving Rating Instructions Shown"
-        self.send_message({"action": "label", "label": label})  # Send label to the server
+        self.emit_marker(label)
 
         # Mirror widget update
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -1170,7 +1179,14 @@ class DisplayWindow(QMainWindow):
             }
         """)
         self.craving_response = value
-        self.send_message({"action": "crave", "crave": self.craving_response})  # Send label to the server
+        craving_label = f"craving_rating_{self.craving_response}"
+        if self.client:
+            self.send_message({"action": "crave", "crave": self.craving_response})
+        else:
+            self.push_local_label(craving_label)
+            logging.info(f"Current label: {craving_label}")
+            if self.eyetracker is not None:
+                self.eyetracker.send_marker(craving_label)
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
         QTimer.singleShot(500, self.show_crosshair_after_craving)
@@ -1179,6 +1195,7 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         # Show crosshair for a short period after craving rating
+        self.emit_marker("Crosshair Shown | phase=after_craving")
         self.clear_overlay()
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
@@ -1208,6 +1225,7 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         # Show crosshair for a short period before craving rating
+        self.emit_marker("Crosshair Shown | phase=before_craving")
         self.clear_overlay()
         self.instructions_label.setText("+")
         self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))

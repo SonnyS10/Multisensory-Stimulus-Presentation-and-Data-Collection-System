@@ -790,6 +790,63 @@ class Frame(QFrame):
             self.label_stream.push_label(label)
             logging.info(f"Local session marker pushed: {label}")
 
+    def _current_test_order(self, test_name):
+        order_frame = self.parent.stimulus_order_frame
+        return order_frame.custom_orders.get(test_name, [])
+
+    def _require_applied_custom_order(self, test_name):
+        order_frame = self.parent.stimulus_order_frame
+        previous_test = order_frame.current_test_name
+        if previous_test != test_name:
+            order_frame.select_test(test_name)
+        is_applied = order_frame.is_current_order_applied()
+        if not is_applied:
+            QMessageBox.critical(
+                self,
+                "Apply Custom Order Required",
+                "Review the stimulus order and scent assignments, then click "
+                "'Apply Custom Order' before starting this test.",
+                QMessageBox.Ok
+            )
+        return is_applied
+
+    def _missing_scent_assignments(self, test_name, test_order=None):
+        if "olfactory" not in test_name.lower():
+            return []
+        order_frame = self.parent.stimulus_order_frame
+        if test_order is None:
+            test_order = self._current_test_order(test_name)
+
+        missing = []
+        seen = set()
+        for img in test_order:
+            if getattr(img, "asset_type", None) == "craving_rating":
+                continue
+            filename = getattr(img, "filename", None)
+            if not filename or filename in seen:
+                continue
+            seen.add(filename)
+            scent_number = order_frame.scent_numbers.get(filename)
+            try:
+                scent_number = int(scent_number)
+            except (TypeError, ValueError):
+                scent_number = None
+            if scent_number is None or not 1 <= scent_number <= 8:
+                display_name = getattr(img, "display_name", os.path.splitext(os.path.basename(filename))[0])
+                missing.append(display_name)
+        return missing
+
+    def _warn_missing_scent_assignments(self, missing_scents):
+        preview = "\n".join(f"- {name}" for name in missing_scents[:12])
+        extra = "" if len(missing_scents) <= 12 else f"\n...and {len(missing_scents) - 12} more"
+        QMessageBox.critical(
+            self,
+            "Missing Scent Assignments",
+            "Every image in an olfactory test must have a scent number assigned before starting.\n\n"
+            f"Missing scent number for:\n{preview}{extra}",
+            QMessageBox.Ok
+        )
+
     #Function to handle what happens when the start button is clicked for stroop tests and passive tests
     def start_button_clicked(self):
         #print(self.shared_status['lab_recorder_connected'])
@@ -848,6 +905,13 @@ class Frame(QFrame):
             
         # --- Olfactory connection check ---
         is_olfactory = "Olfactory" in current_test
+        if not self._require_applied_custom_order(current_test):
+            return
+        test_order = self._current_test_order(current_test)
+        missing_scents = self._missing_scent_assignments(current_test, test_order)
+        if missing_scents:
+            self._warn_missing_scent_assignments(missing_scents)
+            return
         
         if is_olfactory and not self.shared_status.get('olfactory_connected', False):
             # For olfactory tests, olfactory connection is MANDATORY
@@ -913,14 +977,9 @@ class Frame(QFrame):
         if turntable_selected:
             test_name = self.parent.get_current_test()
             order_frame = self.parent.stimulus_order_frame
-            if order_frame.current_test_name == test_name:
-                order_frame.sync_working_order_with_ui()
-            test_order = (
-                order_frame.working_orders.get(test_name)
-                or order_frame.custom_orders.get(test_name)
-                or order_frame.original_assets.get(test_name)
-                or []
-            )
+            test_order = self._current_test_order(test_name)
+            if self.local_mode and self.label_stream is None:
+                self.label_stream = LSLLabelStream()
 
             from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow, TurntableStimulusItem
             turntable_items = []
@@ -943,13 +1002,13 @@ class Frame(QFrame):
                 if self.client:
                     try:
                         self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
+                        logging.info(f"Turntable message sent to host: {msg}")
                     except Exception as e:
                         logging.info(f"Error sending message: {e}")
                 elif self.local_mode and msg.get("action") == "label":
-                    if self.label_stream is None:
-                        self.label_stream = LSLLabelStream()
-                    self.label_stream.push_label(msg.get("label", ""))
-                    logging.info(f"Local turntable label pushed: {msg.get('label', '')}")
+                    self._push_local_session_marker(msg.get("label", ""))
+                elif msg.get("action") == "label":
+                    logging.warning(f"Turntable label could not be routed: {msg.get('label', '')}")
 
             def start_turntable_recording():
                 self._start_recording_session(test_name)
@@ -964,6 +1023,7 @@ class Frame(QFrame):
                     object_to_bay={},
                     tactile_mode=True,
                     send_message=send_message_from_turntable,
+                    require_scent_assignments=is_olfactory,
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording
                 )
@@ -973,6 +1033,7 @@ class Frame(QFrame):
                     object_to_bay={},
                     tactile_mode=False,
                     send_message=send_message_from_turntable,
+                    require_scent_assignments=is_olfactory,
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording
                 )
