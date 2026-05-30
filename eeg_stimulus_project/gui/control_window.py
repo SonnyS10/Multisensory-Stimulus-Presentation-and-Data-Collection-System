@@ -433,7 +433,8 @@ class ControlWindow(QMainWindow):
             if self.labrecorder.s is not None:
                 self.shared_status['lab_recorder_connected'] = True
                 logging.info("Connected to LabRecorder.")
-                self.connection.sendall((json.dumps({"action": "labrecorder_connected"}) + "\n").encode('utf-8'))
+                if self.connection:
+                    self.connection.sendall((json.dumps({"action": "labrecorder_connected"}) + "\n").encode('utf-8'))
             else:
                 raise Exception()
         except Exception:
@@ -763,11 +764,43 @@ class ControlWindow(QMainWindow):
         if self.label_stream is None:
             self.label_stream = LSLLabelStream()
 
+        test_name = self.current_test if self.current_test else "default_test"
+        self.current_test = test_name
+        self.label_log = []
+
         if self.labrecorder and self.labrecorder.s is not None:
-            test_name = self.current_test if self.current_test else "default_test"
-            self.labrecorder.Start_Recorder(test_name)
+            result = self.labrecorder.Start_Recorder(test_name)
+            if result.get("ok"):
+                xdf_path = result.get("path")
+                stream_count = result.get("stream_count")
+                stream_text = "unknown" if stream_count is None else str(stream_count)
+                logging.info(f"LabRecorder recording started: {xdf_path} ({stream_text} LSL streams visible)")
+                if self.connection:
+                    self.connection.sendall((json.dumps({
+                        "action": "labrecorder_recording_started",
+                        "path": xdf_path,
+                        "test": test_name,
+                        "stream_count": stream_count
+                    }) + "\n").encode('utf-8'))
+            else:
+                error = result.get("error", "Unknown LabRecorder start error")
+                logging.info(error)
+                if self.connection:
+                    self.connection.sendall((json.dumps({
+                        "action": "labrecorder_recording_failed",
+                        "error": error,
+                        "test": test_name,
+                        "stream_count": result.get("stream_count")
+                    }) + "\n").encode('utf-8'))
         else:
-            logging.info("LabRecorder not connected")
+            error = "LabRecorder not connected"
+            logging.info(error)
+            if self.connection:
+                self.connection.sendall((json.dumps({
+                    "action": "labrecorder_recording_failed",
+                    "error": error,
+                    "test": test_name
+                }) + "\n").encode('utf-8'))
 
         #if self.eyetracker is None or self.eyetracker.device is None:
         #    self.eyetracker = PupilLabs()
@@ -776,10 +809,27 @@ class ControlWindow(QMainWindow):
         else:
             logging.info("Eyetracker not connected")
 
+        start_label = f"{test_name} Started"
+        self.label_push(start_label)
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.send_marker(start_label)
+        logging.info(f"Host: Test marker pushed: {start_label}")
+
     def stop_test(self):
+        test_name = self.current_test if self.current_test else "default_test"
+        stop_label = f"{test_name} Stopped"
+        self.label_push(stop_label)
+        if self.eyetracker and self.eyetracker.device is not None:
+            self.eyetracker.send_marker(stop_label)
+        logging.info(f"Host: Test marker pushed: {stop_label}")
+
         # Stop LabRecorder if connected
         if self.labrecorder and self.labrecorder.s is not None:
-            self.labrecorder.Stop_Recorder()
+            result = self.labrecorder.Stop_Recorder()
+            if result.get("ok"):
+                logging.info(f"LabRecorder recording stopped: {result.get('path')}")
+            else:
+                logging.info(result.get("error", "Unknown LabRecorder stop error"))
         # Stop the eyetracker if connected`
         if self.eyetracker and self.eyetracker.device is not None:
             self.eyetracker.stop_recording()

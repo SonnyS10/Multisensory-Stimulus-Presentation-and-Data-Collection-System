@@ -391,6 +391,14 @@ class GUI(QMainWindow):
                         elif msg.get("action") == "labrecorder_connected":
                             self.labrecorder_connected = True
                             self.shared_status['lab_recorder_connected'] = True
+                        elif msg.get("action") == "labrecorder_recording_started":
+                            path = msg.get("path", "")
+                            stream_count = msg.get("stream_count")
+                            stream_text = "unknown" if stream_count is None else str(stream_count)
+                            logging.info(f"LabRecorder recording started: {path} ({stream_text} LSL streams visible)")
+                        elif msg.get("action") == "labrecorder_recording_failed":
+                            error = msg.get("error", "Unknown LabRecorder start error")
+                            logging.info(f"LabRecorder recording failed: {error}")
                         elif msg.get("action") == "eyetracker_connected":
                             self.shared_status['eyetracker_connected'] = True
                             self.eyetracker_connected = True
@@ -725,8 +733,40 @@ class Frame(QFrame):
             if btn is not None:
                 btn.setStyleSheet(button_style)
 
-    #Function to handle what happens when the start button is clicked for stroop tests and passive tests when the display button is checked
-    #IN THE FUTURE WE NEED TO ADD WHAT HAPPENS WHEN THE OTHER BUTTONS ARE CHECKED(VR, Turntable)
+    def _start_recording_session(self, current_test):
+        if self.client:
+            self.send_message({"action": "start_button", "test": current_test})
+            return
+
+        if not self.local_mode:
+            return
+
+        if self.shared_status.get('lab_recorder_connected', False):
+            if self.labrecorder is None or self.labrecorder.s is None:
+                self.labrecorder = LabRecorder(self.base_dir)
+            if self.labrecorder and self.labrecorder.s is not None:
+                result = self.labrecorder.Start_Recorder(current_test)
+                if result.get("ok"):
+                    stream_count = result.get("stream_count")
+                    stream_text = "unknown" if stream_count is None else str(stream_count)
+                    logging.info(f"LabRecorder recording started: {result.get('path')} ({stream_text} LSL streams visible)")
+                else:
+                    logging.info(result.get("error", "Unknown LabRecorder start error"))
+            else:
+                logging.info("LabRecorder not connected")
+                self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
+        else:
+            logging.info("LabRecorder not connected in Control Window")
+            self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
+
+        self._push_local_session_marker(f"{current_test} Started")
+
+    def _push_local_session_marker(self, label):
+        if self.local_mode and self.label_stream is not None:
+            self.label_stream.push_label(label)
+            logging.info(f"Local session marker pushed: {label}")
+
+    #Function to handle what happens when the start button is clicked for stroop tests and passive tests
     def start_button_clicked(self):
         #print(self.shared_status['lab_recorder_connected'])
         #print(self.shared_status['eyetracker_connected'])
@@ -823,27 +863,23 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
 
-        if hasattr(self, 'display_button') and self.display_button.isChecked():
-            self.send_message({"action": "start_button", "test": self.parent.get_current_test()})
+        if self.client:
+            self._start_recording_session(current_test)
+
+        display_selected = hasattr(self, 'display_button') and self.display_button.isChecked()
+        if self.local_mode and self.label_stream is None:
+            self.label_stream = LSLLabelStream()
+
+        if display_selected:
             if self.label_stream is None:                
                 self.label_stream = LSLLabelStream()
-                self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
-                self.start_button.setEnabled(False)  # Disable the start button after starting the stream
-            if self.local_mode:
-                if self.shared_status.get('lab_recorder_connected', False):
-                    if self.labrecorder is None or self.labrecorder.s is None:
-                        self.labrecorder = LabRecorder(self.base_dir)
-                    if self.labrecorder and self.labrecorder.s is not None:
-                        self.labrecorder.Start_Recorder(self.parent.get_current_test())
-                    else:
-                        logging.info("LabRecorder not connected")
-                        self.send_message({"action": "client_log", "message": "LabRecorder not connected"})
-                else:
-                    logging.info("LabRecorder not connected in Control Window")
-                    self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
-            
+            self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
         else:
             self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
+
+        if not self.client:
+            self._start_recording_session(current_test)
+        self.start_button.setEnabled(False)
 
         # After successfully starting the test, add it to the set
         self.tests_run.add(current_test)
@@ -904,8 +940,13 @@ class Frame(QFrame):
             logging.info(f"Error saving data: {e}")
             self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # Stop LabRecorder if connected
+        self._push_local_session_marker(f"{self.parent.get_current_test()} Stopped")
         if self.labrecorder and self.labrecorder.s is not None:
-            self.labrecorder.Stop_Recorder()
+            result = self.labrecorder.Stop_Recorder()
+            if result.get("ok"):
+                logging.info(f"LabRecorder recording stopped: {result.get('path')}")
+            else:
+                logging.info(result.get("error", "Unknown LabRecorder stop error"))
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()
@@ -944,8 +985,13 @@ class Frame(QFrame):
             logging.info(f"Error saving data: {e}")
             self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # Stop LabRecorder if connected
+        self._push_local_session_marker(f"{self.parent.get_current_test()} Stopped")
         if self.labrecorder and self.labrecorder.s is not None:
-            self.labrecorder.Stop_Recorder()
+            result = self.labrecorder.Stop_Recorder()
+            if result.get("ok"):
+                logging.info(f"LabRecorder recording stopped: {result.get('path')}")
+            else:
+                logging.info(result.get("error", "Unknown LabRecorder stop error"))
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()
@@ -1511,7 +1557,13 @@ class BaselineFrame(QFrame):
             if self.labrecorder is None or getattr(self.labrecorder, 's', None) is None:
                 self.labrecorder = LabRecorder(self.parent.base_dir)
             if self.labrecorder and self.labrecorder.s is not None:
-                self.labrecorder.Start_Recorder("Baseline")
+                result = self.labrecorder.Start_Recorder("Baseline")
+                if result.get("ok"):
+                    stream_count = result.get("stream_count")
+                    stream_text = "unknown" if stream_count is None else str(stream_count)
+                    logging.info(f"LabRecorder baseline recording started: {result.get('path')} ({stream_text} LSL streams visible)")
+                else:
+                    logging.info(result.get("error", "Unknown LabRecorder baseline start error"))
 
         self.start_button.setEnabled(False)
 
@@ -1521,7 +1573,11 @@ class BaselineFrame(QFrame):
 
         # Stop LabRecorder
         if self.labrecorder and getattr(self.labrecorder, 's', None) is not None:
-            self.labrecorder.Stop_Recorder()
+            result = self.labrecorder.Stop_Recorder()
+            if result.get("ok"):
+                logging.info(f"LabRecorder baseline recording stopped: {result.get('path')}")
+            else:
+                logging.info(result.get("error", "Unknown LabRecorder baseline stop error"))
 
         # Close display widget
         if self.display_widget is not None:
