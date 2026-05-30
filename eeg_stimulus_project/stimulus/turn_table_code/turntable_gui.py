@@ -36,6 +36,29 @@ def paired_empty_bay_slot(bay_label):
         return bay_label - 1
     return None
 
+
+class TurntableStimulusItem:
+    def __init__(self, display_name, sequence_number=None, source_path=None, scent_number=None):
+        self.display_name = display_name
+        self.sequence_number = sequence_number
+        self.source_path = source_path
+        self.scent_number = scent_number
+
+    def __str__(self):
+        return self.display_name
+
+
+def stimulus_label(stimulus):
+    return getattr(stimulus, "display_name", str(stimulus))
+
+
+def stimulus_sequence_number(stimulus):
+    return getattr(stimulus, "sequence_number", None)
+
+
+def stimulus_scent_number(stimulus):
+    return getattr(stimulus, "scent_number", None)
+
 class TurntableWidget(QWidget):
     def __init__(self, parent=None, controller=None):
         super().__init__(parent)
@@ -201,14 +224,20 @@ class AssignmentTableWidget(QTableWidget):
         painter.end()
 
 class TurntableWindow(QWidget):
-    def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None):
+    def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None,
+                 on_sequence_started=None, on_sequence_stopped=None):
         super().__init__()
         print(test_order)
         self.tactile_mode = tactile_mode
         self.send_message = send_message
+        self.on_sequence_started = on_sequence_started
+        self.on_sequence_stopped = on_sequence_stopped
+        self._session_started = False
         self.controller = TurntableController()
         self.controller.set_label_formatter(bay_index_to_label)
         self.door_controller = None
+        self.olfactory_controller = None
+        self.olfactory_connected = False
         self.setWindowTitle("Turntable GUI")
         self.setMinimumSize(1100, 780)
         self.resize(1200, 850)
@@ -467,6 +496,8 @@ class TurntableWindow(QWidget):
         self._show_empty_slot_bays = False
         self._half_empty_mode = False
         self.replacement_start_after_moves = 6
+        self.starting_bay_label = 1
+        self._starting_bay_label_emitted = False
 
         if not self.object_to_bay and self.test_order:
             self.auto_assign_bays(list(range(1, 9)), "1-8", show_message=False)
@@ -603,7 +634,10 @@ class TurntableWindow(QWidget):
         duplicate_bays = {bay for bay, count in bay_counts.items() if count > 1}
 
         for i, obj in enumerate(self.test_order):
-            obj_item = QTableWidgetItem(str(obj))
+            seq = stimulus_sequence_number(obj)
+            label = stimulus_label(obj)
+            display_text = f"{seq}. {label}" if seq is not None else label
+            obj_item = QTableWidgetItem(display_text)
             obj_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Not editable
             bay = self.object_to_bay.get(obj)
             if bay is None or str(bay).strip() == "":
@@ -700,7 +734,7 @@ class TurntableWindow(QWidget):
         for obj in self.test_order:
             bay = self.object_to_bay.get(obj)
             if bay is None:
-                print(f"No bay assigned for object: {obj}")
+                print(f"No bay assigned for object: {stimulus_label(obj)}")
                 continue
             steps.append({"type": "stimulus", "bay": bay, "object": obj})
         return steps
@@ -713,7 +747,7 @@ class TurntableWindow(QWidget):
             if bay in objects_by_bay:
                 objects_by_bay[bay].append(obj)
             elif bay is not None:
-                print(f"Ignoring {obj}: half-empty mode only uses filled bays 2, 4, 6, 8.")
+                print(f"Ignoring {stimulus_label(obj)}: half-empty mode only uses filled bays 2, 4, 6, 8.")
 
         max_cycles = max(1, max((len(items) for items in objects_by_bay.values()), default=0))
         steps = []
@@ -735,8 +769,105 @@ class TurntableWindow(QWidget):
         self._sequence_running = True
         self._waiting_for_replacement = False
         self._auto_doors_opened_for_current_item = False
+        self._starting_bay_label_emitted = False
         self.replacement_continue_btn.setEnabled(False)
         self.update_position_indicators()
+
+    def object_assigned_to_bay(self, bay):
+        for obj in self.test_order:
+            if self.object_to_bay.get(obj) == bay:
+                return obj
+        return None
+
+    def starting_bay_step(self):
+        obj = self.object_assigned_to_bay(self.starting_bay_label)
+        if obj is None:
+            return {"type": "empty_start", "bay": self.starting_bay_label}
+        return {"type": "stimulus_start", "bay": self.starting_bay_label, "object": obj}
+
+    def emit_starting_bay_label_if_needed(self):
+        if self._starting_bay_label_emitted:
+            return
+        self._starting_bay_label_emitted = True
+        if self.sequence_steps and self.sequence_steps[0].get("bay") == self.starting_bay_label:
+            return
+        self.emit_bay_label(self.starting_bay_step(), phase="start_position")
+
+    def emit_bay_label(self, step, phase="shown"):
+        if not self.send_message:
+            return
+        bay = step.get("bay")
+        step_type = step.get("type", "unknown")
+        obj = step.get("object")
+        object_name = stimulus_label(obj) if obj is not None else "Empty"
+        sequence_number = stimulus_sequence_number(obj) if obj is not None else None
+        scent_number = stimulus_scent_number(obj) if obj is not None else None
+        current_step = self.current_index + 1 if self.sequence_steps else 0
+        total_steps = len(self.sequence_steps)
+        label_parts = [
+            f"Turntable Bay {bay} Shown",
+            f"phase={phase}",
+            f"type={step_type}",
+            f"object={object_name}",
+            f"step={current_step}/{total_steps}",
+        ]
+        if sequence_number is not None:
+            label_parts.append(f"stimulus_order={sequence_number}")
+        if scent_number is not None:
+            label_parts.append(f"scent={scent_number}")
+        label = " | ".join(label_parts)
+        self.send_message({"action": "label", "label": label})
+
+    def ensure_olfactory_controller(self):
+        if self.olfactory_controller is not None and self.olfactory_connected:
+            return True
+        try:
+            from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
+            self.olfactory_controller = OlfactoryController()
+            self.olfactory_connected = self.olfactory_controller.connect()
+            return self.olfactory_connected
+        except Exception as e:
+            print(f"Could not connect olfactory controller: {e}")
+            self.olfactory_controller = None
+            self.olfactory_connected = False
+            return False
+
+    def stop_scent_if_connected(self, scent_number):
+        if self.olfactory_controller is not None and self.olfactory_connected:
+            self.olfactory_controller.stop_scent(scent_number)
+
+    def close_olfactory_controller(self):
+        if self.olfactory_controller is not None:
+            self.olfactory_controller.close()
+        self.olfactory_controller = None
+        self.olfactory_connected = False
+
+    def trigger_scent_for_step(self, step):
+        obj = step.get("object")
+        scent_number = stimulus_scent_number(obj)
+        if scent_number is None:
+            return
+        try:
+            scent_number = int(scent_number)
+        except (TypeError, ValueError):
+            print(f"Ignoring invalid scent number for {stimulus_label(obj)}: {scent_number}")
+            return
+        if not 1 <= scent_number <= 8:
+            print(f"Ignoring out-of-range scent number for {stimulus_label(obj)}: {scent_number}")
+            return
+        if not self.ensure_olfactory_controller():
+            print(f"Could not trigger scent {scent_number}: olfactory controller is not connected.")
+            return
+        if self.olfactory_controller.trigger_scent(scent_number):
+            QTimer.singleShot(3000, lambda scent=scent_number: self.stop_scent_if_connected(scent))
+            if self.send_message:
+                bay = step.get("bay")
+                label = (
+                    f"Scent {scent_number} Dispensed"
+                    f" | bay={bay}"
+                    f" | object={stimulus_label(obj)}"
+                )
+                self.send_message({"action": "label", "label": label})
 
     def replacement_due_for_step(self, step):
         move_number = self.current_index + 1
@@ -807,15 +938,19 @@ class TurntableWindow(QWidget):
             print("Test complete!")
             self.sequence_status_label.setText("Test complete.")
             self._sequence_running = False
+            self._notify_sequence_stopped()
             return
+
+        self._notify_sequence_started()
+        self.emit_starting_bay_label_if_needed()
 
         step = self.sequence_steps[self.current_index]
         bay = step.get("bay")
         self._auto_doors_opened_for_current_item = False
         if step.get("type") == "stimulus":
             object_name = step.get("object")
-            print(f"Moving to bay {bay} for object {object_name}")
-            self.sequence_status_label.setText(f"Moving to filled bay {bay}: {object_name}")
+            print(f"Moving to bay {bay} for object {stimulus_label(object_name)}")
+            self.sequence_status_label.setText(f"Moving to filled bay {bay}: {stimulus_label(object_name)}")
         else:
             print(f"Moving to control bay {bay}")
             self.sequence_status_label.setText(f"Moving to control bay {bay}")
@@ -828,6 +963,7 @@ class TurntableWindow(QWidget):
             self.sequence_status_label.setText(message)
             QMessageBox.warning(self, "Turntable Movement Error", message)
             self._sequence_running = False
+            self._notify_sequence_stopped()
             return
         self.update_position_indicators()
         if not move_success:
@@ -836,11 +972,16 @@ class TurntableWindow(QWidget):
             self.sequence_status_label.setText(message)
             QMessageBox.warning(self, "Turntable Movement Timeout", message)
             self._sequence_running = False
+            self._notify_sequence_stopped()
             return
+
+        self.emit_bay_label(step)
 
         if step.get("type") != "stimulus":
             self.handle_control_step(step)
             return
+
+        self.trigger_scent_for_step(step)
 
         if self.tactile_mode:
             print("Waiting for touch signal from tactile box...")
@@ -911,7 +1052,27 @@ class TurntableWindow(QWidget):
         self.replacement_continue_btn.setEnabled(False)
         self.sequence_status_label.setText("Status: Stopped")
         self._pending_timer.stop()  # Immediately stop any pending timer
+        self._notify_sequence_stopped()
         self.update_position_indicators()
+
+    def _notify_sequence_started(self):
+        if self._session_started:
+            return
+        self._session_started = True
+        if self.on_sequence_started:
+            self.on_sequence_started()
+
+    def _notify_sequence_stopped(self):
+        if not self._session_started:
+            return
+        self._session_started = False
+        if self.on_sequence_stopped:
+            self.on_sequence_stopped()
+        self.close_olfactory_controller()
+
+    def closeEvent(self, event):
+        self.close_olfactory_controller()
+        super().closeEvent(event)
 
     def open_assign_bays_dialog(self):
         from eeg_stimulus_project.stimulus.turn_table_code.object_to_bay_dialog import ObjectToBayDialog

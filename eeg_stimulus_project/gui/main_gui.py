@@ -1,5 +1,4 @@
 import sys
-sys.path.append('\\Users\\cpl4168\\Documents\\Paid Research\\Software-for-Paid-Research-')
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
@@ -496,6 +495,7 @@ class Frame(QFrame):
         self.labrecorder_connected = labrecorder_connected
         self.local_mode = local_mode
         self.is_stroop_test = is_stroop_test
+        self.recording_session_active = False
 
         # --- Aesthetic Styles ---
         self.setStyleSheet("""
@@ -734,8 +734,12 @@ class Frame(QFrame):
                 btn.setStyleSheet(button_style)
 
     def _start_recording_session(self, current_test):
+        if self.recording_session_active:
+            return
+
         if self.client:
             self.send_message({"action": "start_button", "test": current_test})
+            self.recording_session_active = True
             return
 
         if not self.local_mode:
@@ -760,6 +764,26 @@ class Frame(QFrame):
             self.send_message({"action": "client_log", "message": "LabRecorder not connected in Control Window"})
 
         self._push_local_session_marker(f"{current_test} Started")
+        self.recording_session_active = True
+
+    def _stop_recording_session(self, current_test):
+        if not self.recording_session_active:
+            return
+
+        if self.client:
+            self.send_message({"action": "stop_button", "test": current_test})
+            self.recording_session_active = False
+            return
+
+        if self.local_mode:
+            self._push_local_session_marker(f"{current_test} Stopped")
+            if self.labrecorder and self.labrecorder.s is not None:
+                result = self.labrecorder.Stop_Recorder()
+                if result.get("ok"):
+                    logging.info(f"LabRecorder recording stopped: {result.get('path')}")
+                else:
+                    logging.info(result.get("error", "Unknown LabRecorder stop error"))
+            self.recording_session_active = False
 
     def _push_local_session_marker(self, label):
         if self.local_mode and self.label_stream is not None:
@@ -863,7 +887,9 @@ class Frame(QFrame):
             if reply != QMessageBox.Yes:
                 return
 
-        if self.client:
+        turntable_selected = hasattr(self, 'turntable_button') and self.turntable_button.isChecked()
+
+        if self.client and not turntable_selected:
             self._start_recording_session(current_test)
 
         display_selected = hasattr(self, 'display_button') and self.display_button.isChecked()
@@ -871,41 +897,85 @@ class Frame(QFrame):
             self.label_stream = LSLLabelStream()
 
         if display_selected:
-            if self.label_stream is None:                
+            if self.local_mode and self.label_stream is None:
                 self.label_stream = LSLLabelStream()
             self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
         else:
             self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
 
-        if not self.client:
+        if not self.client and not turntable_selected:
             self._start_recording_session(current_test)
         self.start_button.setEnabled(False)
 
-        # After successfully starting the test, add it to the set
-        self.tests_run.add(current_test)
+        if not turntable_selected:
+            self.tests_run.add(current_test)
 
-        if hasattr(self, 'turntable_button') and self.turntable_button.isChecked():
+        if turntable_selected:
             test_name = self.parent.get_current_test()
-            test_order = self.parent.stimulus_order_frame.working_orders.get(test_name, [])
-            test_order_names = [os.path.splitext(os.path.basename(img.filename))[0] for img in test_order if hasattr(img, 'filename')]
+            order_frame = self.parent.stimulus_order_frame
+            if order_frame.current_test_name == test_name:
+                order_frame.sync_working_order_with_ui()
+            test_order = (
+                order_frame.working_orders.get(test_name)
+                or order_frame.custom_orders.get(test_name)
+                or order_frame.original_assets.get(test_name)
+                or []
+            )
 
-            from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow
+            from eeg_stimulus_project.stimulus.turn_table_code.turntable_gui import TurntableWindow, TurntableStimulusItem
+            turntable_items = []
+            for idx, img in enumerate(test_order):
+                filename = getattr(img, 'filename', None)
+                if not filename:
+                    continue
+                display_name = os.path.splitext(os.path.basename(filename))[0]
+                scent_number = order_frame.scent_numbers.get(filename)
+                turntable_items.append(
+                    TurntableStimulusItem(
+                        display_name,
+                        sequence_number=idx + 1,
+                        source_path=filename,
+                        scent_number=scent_number,
+                    )
+                )
+
             def send_message_from_turntable(msg):
                 if self.client:
                     try:
                         self.connection.sendall((json.dumps(msg) + "\n").encode('utf-8'))
                     except Exception as e:
                         logging.info(f"Error sending message: {e}")
+                elif self.local_mode and msg.get("action") == "label":
+                    if self.label_stream is None:
+                        self.label_stream = LSLLabelStream()
+                    self.label_stream.push_label(msg.get("label", ""))
+                    logging.info(f"Local turntable label pushed: {msg.get('label', '')}")
+
+            def start_turntable_recording():
+                self._start_recording_session(test_name)
+                self.tests_run.add(test_name)
+
+            def stop_turntable_recording():
+                self._stop_recording_session(test_name)
 
             if "Tactile" in test_name:
                 self.turntable_window = TurntableWindow(
-                    test_order=test_order_names,
+                    test_order=turntable_items,
                     object_to_bay={},
                     tactile_mode=True,
-                    send_message=send_message_from_turntable  # <-- pass this function
+                    send_message=send_message_from_turntable,
+                    on_sequence_started=start_turntable_recording,
+                    on_sequence_stopped=stop_turntable_recording
                 )
             else:
-                self.turntable_window = TurntableWindow(test_order=test_order_names, object_to_bay={}, tactile_mode=False)
+                self.turntable_window = TurntableWindow(
+                    test_order=turntable_items,
+                    object_to_bay={},
+                    tactile_mode=False,
+                    send_message=send_message_from_turntable,
+                    on_sequence_started=start_turntable_recording,
+                    on_sequence_stopped=stop_turntable_recording
+                )
             self.turntable_window.show()
 
     #Function to handle what happens when the stop button is clicked for stroop tests(calls the data_saving file)
@@ -922,7 +992,7 @@ class Frame(QFrame):
         if reply == QMessageBox.No:
             return  # Cancel the stop operation
         
-        self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
+        self._stop_recording_session(self.parent.get_current_test())
 
         save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
@@ -939,14 +1009,7 @@ class Frame(QFrame):
         except Exception as e:
             logging.info(f"Error saving data: {e}")
             self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
-        # Stop LabRecorder if connected
-        self._push_local_session_marker(f"{self.parent.get_current_test()} Stopped")
-        if self.labrecorder and self.labrecorder.s is not None:
-            result = self.labrecorder.Stop_Recorder()
-            if result.get("ok"):
-                logging.info(f"LabRecorder recording stopped: {result.get('path')}")
-            else:
-                logging.info(result.get("error", "Unknown LabRecorder stop error"))
+        # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()
@@ -971,7 +1034,7 @@ class Frame(QFrame):
         if reply == QMessageBox.No:
             return  # Cancel the stop operation
         
-        self.send_message({"action": "stop_button", "test": self.parent.get_current_test()})
+        self._stop_recording_session(self.parent.get_current_test())
 
         save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
@@ -984,14 +1047,7 @@ class Frame(QFrame):
         except Exception as e:
             logging.info(f"Error saving data: {e}")
             self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
-        # Stop LabRecorder if connected
-        self._push_local_session_marker(f"{self.parent.get_current_test()} Stopped")
-        if self.labrecorder and self.labrecorder.s is not None:
-            result = self.labrecorder.Stop_Recorder()
-            if result.get("ok"):
-                logging.info(f"LabRecorder recording stopped: {result.get('path')}")
-            else:
-                logging.info(result.get("error", "Unknown LabRecorder stop error"))
+        # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
         #    self.eyetracker.stop_recording()

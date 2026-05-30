@@ -118,6 +118,12 @@ class ConfigManager:
                     "baseline_force": 0,
                     "rezero_time": 2,
                     "rezero_threshold": 50
+                },
+                "olfactory": {
+                    "arduino1_port": "COM9",
+                    "arduino2_port": "COM8",
+                    "baud_rate": 115200,
+                    "startup_delay": 2
                 }
             }
         }

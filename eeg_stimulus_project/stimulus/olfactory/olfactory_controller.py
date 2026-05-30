@@ -1,12 +1,14 @@
 import serial
 import time
+from eeg_stimulus_project.config import config
 
 class OlfactoryController:
     def __init__(self):
-        # Arduino settings
-        self.arduino1_port = 'COM9'  # Scents 1-4
-        self.arduino2_port = 'COM8'  # Scents 5-8
-        self.baud_rate = 115200
+        olfactory_config = config.get('hardware.olfactory', {})
+        self.arduino1_port = olfactory_config.get('arduino1_port', 'COM9')  # Scents 1-4
+        self.arduino2_port = olfactory_config.get('arduino2_port', 'COM8')  # Scents 5-8
+        self.baud_rate = olfactory_config.get('baud_rate', 115200)
+        self.startup_delay = olfactory_config.get('startup_delay', 2)
         self.ser1 = None
         self.ser2 = None
 
@@ -15,10 +17,11 @@ class OlfactoryController:
         try:
             self.ser1 = serial.Serial(self.arduino1_port, self.baud_rate, timeout=1)
             self.ser2 = serial.Serial(self.arduino2_port, self.baud_rate, timeout=1)
-            time.sleep(2)  # Wait for Arduinos to initialize
+            time.sleep(self.startup_delay)  # Wait for Arduinos to initialize
             return True
         except Exception as e:
             print(f"Error connecting to Arduinos: {e}")
+            self.close()
             return False
     def swap_ports(self):
         """Swap the Arduino port assignments."""

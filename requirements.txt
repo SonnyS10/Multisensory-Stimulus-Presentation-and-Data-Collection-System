@@ -11,6 +11,7 @@ Pillow>=8.3.0
 pylsl>=1.16.0
 paramiko>=2.11.0
 pyxdf>=1.16.0
+pyserial>=3.5
 pupil-labs-realtime-api>=1.0.0
 
 # Windows-specific automation (optional)
@@ -18,3 +19,5 @@ pywinauto>=0.6.8; sys_platform == "win32"
 
 # Other dependencies
 PyYAML>=6.0
+pynput>=1.7.0
+openpyxl>=3.1.0

@@ -19,7 +19,6 @@ from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
 from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
 import threading
 import json
-import time
 import logging
 import random
 from logging.handlers import QueueHandler
@@ -229,7 +228,7 @@ class DisplayWindow(QMainWindow):
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
         self.eyetracker = eyetracker
         self.client = client
-        self.label_stream = label_stream if label_stream else LSLLabelStream()
+        self.label_stream = label_stream if label_stream else (LSLLabelStream() if local_mode else None)
         self.alcohol_folder = alcohol_folder
         self.non_alcohol_folder = non_alcohol_folder
         self.randomize_cues = randomize_cues
@@ -472,22 +471,18 @@ class DisplayWindow(QMainWindow):
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
-            if "Olfactory" in self.current_test:
-                self.scent_function()
-                time.sleep(3)
             pixmap = QPixmap(img.filename)
             self.current_pixmap = pixmap
             self.update_image_label()
             # Push the filename (without extension) as label
             if hasattr(img, 'filename'):
-                label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-                self.send_message({"action": "label", "label": label})  # Send label to the server
-                self.label_stream.push_label(label)
-                logging.info(f"Current label: {label}")
-                self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+                label = self.build_image_label(img)
+                self.emit_marker(label)
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)  # Send label to Pupil Labs
                 self.current_label = label
+                if "Olfactory" in self.current_test:
+                    self.scent_function(img)
             if "Tactile" in self.current_test:
                 # For tactile, show image for 2 seconds, then show crosshair and wait for touch
                 QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
@@ -511,19 +506,15 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
-        if "Olfactory" in self.current_test:
-            self.scent_function()
-            time.sleep(3)
         pixmap = QPixmap(img.filename)
         self.current_pixmap = pixmap
         self.update_image_label()
         if hasattr(img, 'filename'):
-            label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image"
-            self.send_message({"action": "label", "label": label})
-            self.label_stream.push_label(label)
-            logging.info(f"Current label: {label}")
-            self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+            label = self.build_image_label(img)
+            self.emit_marker(label)
             self.current_label = label
+            if "Olfactory" in self.current_test:
+                self.scent_function(img)
         if "Tactile" in self.current_test:
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
             QTimer.singleShot(2000, self.hide_image)
@@ -748,7 +739,7 @@ class DisplayWindow(QMainWindow):
             self.mirror_widget.set_instruction_text(text, font)
         if hasattr(img, 'filename'):
             label = f"Instruction Text: {os.path.splitext(os.path.basename(img.filename))[0]} Image"
-            self.label_stream.push_label(label)
+            self.push_local_label(label)
             logging.info(f"Current label: {label}")
             self.send_message({"action": "client_log", "message": f"Current label: {label}"})
             self.current_label = label
@@ -770,7 +761,7 @@ class DisplayWindow(QMainWindow):
                         if hasattr(img, 'filename'):
                             label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: Yes"
                             self.send_message({"action": "label", "label": label})
-                            self.label_stream.push_label(label)
+                            self.push_local_label(label)
                             logging.info(f"Current label: {label}")
                             self.send_message({"action": "client_log", "message": f"Current label: {label}"})
                             self.current_label = label  # Push label to LSL stream
@@ -779,7 +770,7 @@ class DisplayWindow(QMainWindow):
                         if hasattr(img, 'filename'):
                             label = f"{os.path.splitext(os.path.basename(img.filename))[0]} Image: No"
                             self.send_message({"action": "label", "label": label})
-                            self.label_stream.push_label(label)
+                            self.push_local_label(label)
                             logging.info(f"Current label: {label}")
                             self.send_message({"action": "client_log", "message": f"Current label: {label}"})
                             self.current_label = label  # Push label to LSL stream
@@ -997,6 +988,31 @@ class DisplayWindow(QMainWindow):
             except Exception as e:
                 logging.info(f"Error sending message: {e}")
                 # Don't call send_message here to avoid infinite recursion
+
+    def push_local_label(self, label):
+        if self.label_stream is not None:
+            self.label_stream.push_label(label)
+
+    def emit_marker(self, label):
+        self.send_message({"action": "label", "label": label})
+        self.push_local_label(label)
+        logging.info(f"Current label: {label}")
+        self.send_message({"action": "client_log", "message": f"Current label: {label}"})
+
+    def scent_number_for_image(self, img):
+        key = getattr(img, "filename", None)
+        scent_number = self.scent_numbers.get(key, None)
+        if scent_number in ("", "None"):
+            return None
+        return scent_number
+
+    def build_image_label(self, img):
+        image_name = os.path.splitext(os.path.basename(img.filename))[0]
+        label = f"{image_name} Image"
+        scent_number = self.scent_number_for_image(img)
+        if "Olfactory" in self.current_test and scent_number:
+            label = f"{label} | scent={scent_number}"
+        return label
 
     def clear_overlay(self):
         # Clear the overlay layout and widgets
@@ -1260,12 +1276,16 @@ class DisplayWindow(QMainWindow):
             QApplication.postEvent(self, event)
 
     # Something to start scent workflow
-    def scent_function(self):
-        img = self.images[self.current_image_index]
-        key = getattr(img, "filename", None)
-        scent_number = self.scent_numbers.get(key, None)
+    def scent_function(self, img=None):
+        if img is None:
+            img = self.images[self.current_image_index]
+        scent_number = self.scent_number_for_image(img)
         if self.olfactory_connected and scent_number:
             # Send scent command to olfactory controller
-            self.olfactory_controller.trigger_scent(scent_number)
-            QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent(scent_number))  # Stop scent after 3 seconds
-
+            if self.olfactory_controller.trigger_scent(scent_number):
+                image_name = os.path.splitext(os.path.basename(img.filename))[0]
+                label = f"Scent {scent_number} Dispensed | image={image_name}"
+                self.emit_marker(label)
+                if self.eyetracker is not None:
+                    self.eyetracker.send_marker(label)
+                QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent(scent_number))  # Stop scent after 3 seconds

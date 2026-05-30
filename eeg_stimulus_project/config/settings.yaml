@@ -71,6 +71,13 @@ hardware:
     rezero_time: 2  # seconds
     rezero_threshold: 50  # force units
 
+  # Olfactory system settings
+  olfactory:
+    arduino1_port: "COM9"  # Scents 1-4
+    arduino2_port: "COM8"  # Scents 5-8
+    baud_rate: 115200
+    startup_delay: 2  # seconds
+
 # Experiment configuration
 experiment:
   # Default test types
