@@ -32,7 +32,7 @@ network:
   # Tactile system configuration
   tactile_system:
     # Tactile control computer IP
-    host: "129.21.60.54"
+    host: "129.21.189.162"
     # SSH username
     username: "benja"
     # SSH password (can use environment variable: ${TACTILE_PASSWORD:neuro})
