@@ -103,7 +103,7 @@ class MirroredDisplayWindow(QWidget):
     #Method to update the mirror text        
     def set_instruction_text(self, text=None, font=None):
         if text is None:
-            text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
+            text = "Press the Right Arrow key if congruent.\nPress the Left Arrow key if incongruent."
         self.image_label.clear()
         self.instructions_label.setText(text)
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -736,7 +736,7 @@ class DisplayWindow(QMainWindow):
         image_name = os.path.splitext(os.path.basename(img.filename))[0]
         label = f"Response Instructions Shown | image={image_name}"
         self.emit_marker(label)
-        text = "Press the 'Y' key if congruent.\nPress the 'N' key if incongruent."
+        text = "Press the Right Arrow key if congruent.\nPress the Left Arrow key if incongruent."
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
         label_height = self.image_label.height()
@@ -753,14 +753,14 @@ class DisplayWindow(QMainWindow):
     def wait_for_input(self):
         self.installEventFilter(self)
 
-    #This method is called to handle the key press events, it checks if the key pressed is 'Y' or 'N' and stores the user input and the elapsed time
+    #This method is called to handle the key press events, it checks if the key pressed is Right or Left Arrow and stores the user input and the elapsed time
     def eventFilter(self, source, event):
         # Only handle image input if index is valid
         if self.Paused == False and hasattr(self, 'images') and 0 <= self.current_image_index < len(self.images):
             if event.type() == QEvent.KeyPress:
-                if event.key() == Qt.Key_Y or event.key() == Qt.Key_N:
+                if event.key() == Qt.Key_Right or event.key() == Qt.Key_Left:
                     img = self.images[self.current_image_index]
-                    if event.key() == Qt.Key_Y:
+                    if event.key() == Qt.Key_Right:
                         self.user_data['user_inputs'].append('Yes') # Store the user input
                         if hasattr(img, 'filename'):
                             label = self.build_response_label(img, "Yes")
@@ -773,6 +773,7 @@ class DisplayWindow(QMainWindow):
                             self.emit_marker(label)
                             self.current_label = label  # Push label to LSL stream
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
+                    self.waiting_for_stroop_response = False
                     self.removeEventFilter(self)
                     if "Tactile" in self.current_test:
                         if self.next_asset_is_craving():
@@ -1255,18 +1256,19 @@ class DisplayWindow(QMainWindow):
 
     def handle_global_key(self, key):
         try:
+            if key in (keyboard.Key.right, keyboard.Key.left) and getattr(self, 'waiting_for_stroop_response', False):
+                key_name = 'RIGHT' if key == keyboard.Key.right else 'LEFT'
+                print(f"[DEBUG] Global key pressed: {key_name}")
+                # Only post event if window is not focused
+                if not self.isActiveWindow():
+                    self.post_key_event(key_name)
+                return
+
             if hasattr(key, 'char') and key.char is not None:
                 key_name = key.char.upper()
                 
-                # Handle Y/N for Stroop responses
-                if key_name in ['Y', 'N'] and getattr(self, 'waiting_for_stroop_response', False):
-                    print(f"[DEBUG] Global key pressed: {key_name}")
-                    # Only post event if window is not focused
-                    if not self.isActiveWindow():
-                        self.post_key_event(key_name)
-                
                 # Handle 1-7 for craving rating responses
-                elif key_name in ['1', '2', '3', '4', '5', '6', '7'] and hasattr(self, 'craving_response') and self.craving_response is None:
+                if key_name in ['1', '2', '3', '4', '5', '6', '7'] and hasattr(self, 'craving_response') and self.craving_response is None:
                     print(f"[DEBUG] Global craving key pressed: {key_name}")
                     # Only post event if window is not focused
                     if not self.isActiveWindow():
@@ -1278,8 +1280,8 @@ class DisplayWindow(QMainWindow):
     def post_key_event(self, key_name):
         # Map key_name to Qt key
         key_map = {
-            'Y': Qt.Key_Y, 
-            'N': Qt.Key_N,
+            'RIGHT': Qt.Key_Right,
+            'LEFT': Qt.Key_Left,
             '1': Qt.Key_1,
             '2': Qt.Key_2,
             '3': Qt.Key_3,

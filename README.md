@@ -102,13 +102,15 @@ eeg_stimulus_project/saved_data/
     test_<test_number>/
       <Test Name>/
         data.csv
-        subj_<subject_id>_<test_name>_<timestamp>.xdf
+      xdf/
+        <condition_alias>/
+          subj_<subject_id>_<condition_alias>_<timestamp>.xdf
 ```
 
 Notes:
 
 - Folder names use the display names of the tests, including spaces and punctuation.
-- LabRecorder filenames are sanitized by replacing spaces with underscores.
+- LabRecorder writes XDFs under short ASCII condition aliases to keep remote filename control stable.
 - XDF files contain EEG streams and precise LSL event markers, including the `labels` marker stream.
 - `data.csv` is behavioral response output, not an event-marker timing file.
 - Passive conditions may not produce meaningful CSV rows unless behavioral data is added later.
