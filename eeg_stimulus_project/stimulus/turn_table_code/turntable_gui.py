@@ -1023,9 +1023,9 @@ class TurntableWindow(QWidget):
                 self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
-            # Trigger scent first, wait 2 seconds for dispense, then open doors
+            # Trigger scent first, wait 4 seconds for dispense, then open doors
             self.trigger_scent_for_step(step)
-            self._start_timer(2000, self._open_doors_after_scent)
+            self._start_timer(4000, self._open_doors_after_scent)
 
     @pyqtSlot()
     def on_object_touched(self):

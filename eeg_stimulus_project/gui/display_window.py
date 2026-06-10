@@ -482,8 +482,8 @@ class DisplayWindow(QMainWindow):
             if should_delay_for_scent:
                 # Send scent first
                 self.scent_function(img)
-                # Wait 2 seconds for scent to dispense, then display image
-                QTimer.singleShot(2000, lambda: self._display_image_after_scent_delay(img))
+                # Wait 4 seconds for scent to dispense, then display image
+                QTimer.singleShot(4000, lambda: self._display_image_after_scent_delay(img))
             else:
                 # No scent delay needed, display image immediately
                 self._display_image_after_scent_delay(img)
@@ -536,8 +536,8 @@ class DisplayWindow(QMainWindow):
         if should_delay_for_scent:
             # Send scent first
             self.scent_function(img)
-            # Wait 2 seconds for scent to dispense, then display image
-            QTimer.singleShot(2000, lambda: self._display_stroop_image_after_scent_delay(img))
+            # Wait 4 seconds for scent to dispense, then display image
+            QTimer.singleShot(4000, lambda: self._display_stroop_image_after_scent_delay(img))
         else:
             # No scent delay needed, display image immediately
             self._display_stroop_image_after_scent_delay(img)
