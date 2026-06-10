@@ -479,7 +479,7 @@ class GUI(QMainWindow):
         # Client mode: base_dir is None so the dialog can't save locally;
         # forward the rating to the host which has the save path.
         if not self.base_dir and dialog.craving_response is not None:
-            self.send_message(action="crave_manual", crave=dialog.craving_response)
+            self.send_message({"action": "crave_manual", "crave": dialog.craving_response})
 
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):
