@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt, QTimer
 import os
 import csv
 from datetime import datetime
+import logging
 
 class CravingRatingDialog(QDialog):
     def __init__(self, parent=None, base_dir=None, subject_id=None):
@@ -117,21 +118,43 @@ class CravingRatingDialog(QDialog):
         self.craving_response = value
         self.save_craving_rating()
         
+        # Log the craving rating to control window
+        craving_label = f"craving_rating_{self.craving_response}"
+        logging.info(f"Manual craving rating recorded: {craving_label} for subject {self.subject_id}")
+        
         # Close after a brief delay
         QTimer.singleShot(500, self.accept)
     
     def save_craving_rating(self):
-        """Save the craving rating to a CSV file."""
+        """Save the craving rating to a CSV file with error handling and logging."""
         if not self.base_dir or not self.subject_id:
-            return
+            logging.error(f"Cannot save craving rating: base_dir={self.base_dir}, subject_id={self.subject_id}")
+            return False
         
-        # Create or update craving_rating.csv
-        ratings_file = os.path.join(self.base_dir, "craving_rating.csv")
-        
-        file_exists = os.path.isfile(ratings_file)
-        
-        with open(ratings_file, 'a', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating'])
-            writer.writerow([datetime.now().isoformat(), self.subject_id, self.craving_response])
+        try:
+            # Create subject-level directory path by going up from test directory
+            # Assuming base_dir is like: /path/subject_1/test_1/
+            # We want to save to: /path/subject_1/craving_rating.csv
+            subject_dir = os.path.dirname(self.base_dir)  # Go up one level from test directory
+            os.makedirs(subject_dir, exist_ok=True)
+            
+            ratings_file = os.path.join(subject_dir, "craving_rating.csv")
+            file_exists = os.path.isfile(ratings_file)
+            
+            with open(ratings_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating', 'Test_Number'])
+                writer.writerow([
+                    datetime.now().isoformat(), 
+                    self.subject_id, 
+                    self.craving_response,
+                    os.path.basename(self.base_dir)  # Save test number for reference
+                ])
+            
+            logging.info(f"Craving rating {self.craving_response} saved for subject {self.subject_id}")
+            return True
+            
+        except Exception as e:
+            logging.error(f"Failed to save craving rating: {e}", exc_info=True)
+            return False
