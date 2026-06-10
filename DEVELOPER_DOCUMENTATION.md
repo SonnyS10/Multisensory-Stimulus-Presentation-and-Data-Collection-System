@@ -140,14 +140,12 @@ eeg_stimulus_project/data/data_saving.py
 Responsibilities:
 
 - stroop CSV writeout
-- passive path setup
+- passive path setup only; passive tasks do not currently write a CSV
 
 Important current behavior:
 
 - `save_data_stroop()` deletes the existing `data.csv` before rewriting it
-- the data layer still imports `Old_Code.stream_manager`
-
-That legacy import is a real dependency, not just dead documentation.
+- `save_data_passive()` ensures the test folder exists but does not create `data.csv`
 
 ### Asset Loading
 
@@ -173,19 +171,18 @@ eeg_stimulus_project/saved_data/
   subject_<subject_id>/
     test_<test_number>/
       <Test Name>/
-        data.csv
-      xdf/
-        <condition_alias>/
-          subj_<subject_id>_<condition_alias>_<timestamp>.xdf
+        data.csv  (Stroop response tasks only)
+        subj_<subject_id>_<condition_alias>_<timestamp>.xdf
 ```
 
 Important implementation details:
 
 - test folders use GUI display names, including spaces and punctuation
-- LabRecorder writes XDFs under short ASCII condition aliases to keep remote filename control stable
+- XDF filenames use short ASCII condition aliases to keep LabRecorder remote filename control stable
+- during recording, LabRecorder may briefly write through an internal `_labrecorder_tmp/` folder; completed XDFs are moved back into the test folder on stop
 - XDF files contain EEG streams and precise LSL event markers, including the `labels` marker stream
-- `data.csv` is behavioral response output, not an event-marker timing file
-- passive conditions may not produce meaningful CSV rows unless behavioral data is added later
+- `data.csv` is written by the Stroop stop/save path and contains response labels plus elapsed-time values
+- passive conditions do not currently write `data.csv`; their event timing is in the XDF marker stream
 - `label_timestamps.txt` is no longer generated; marker timing should be read from the XDF
 - host setup clears existing `data.csv` files for the selected tests when creating the directory tree
 
@@ -342,9 +339,9 @@ High-risk areas:
 ## Development Priorities Suggested By Current State
 
 1. Remove remaining machine-specific paths and IP defaults.
-2. Decouple active data collection from `Old_Code.stream_manager`.
+2. Add active-package tests for startup, networking, and data saving.
 3. Resolve the `9999` port overlap between host mode and `tactile_receive.py`.
-4. Add active-package tests for startup, networking, and data saving.
+4. Expand behavioral CSV coverage if passive-response exports become required.
 5. Keep docs synchronized whenever UI labels or hardware workflows change.
 
 Document version: 2026-05-07

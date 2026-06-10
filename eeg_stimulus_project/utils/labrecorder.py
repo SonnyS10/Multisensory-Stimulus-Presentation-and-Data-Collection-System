@@ -37,6 +37,9 @@ class LabRecorder:
         self.base_dir = base_dir
         self.subject_id = subject_id
         self.last_xdf_path = None
+        self.recording_xdf_path = None
+        self.final_xdf_path = None
+        self.recording_xdf_root = None
         self.is_recording = False
         
         # Get LabRecorder configuration
@@ -73,16 +76,18 @@ class LabRecorder:
         condition_dir.mkdir(parents=True, exist_ok=True)
 
         alias = self._condition_alias(current_test)
-        xdf_root = base_dir / "xdf" / alias
+        xdf_root = base_dir / "_labrecorder_tmp" / alias
         xdf_root.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         subject_str = f"subj_{self._sanitize_filename_part(self.subject_id)}_" if self.subject_id else ""
         filename = f"{subject_str}{alias}_{timestamp}.xdf"
         xdf_path = xdf_root / filename
+        final_xdf_path = condition_dir / filename
 
         # Defensive path containment check before sending anything to LabRecorder.
         xdf_path.resolve().relative_to(base_dir)
+        final_xdf_path.resolve().relative_to(base_dir)
 
         return {
             "condition_dir": condition_dir,
@@ -90,6 +95,7 @@ class LabRecorder:
             "xdf_root": xdf_root,
             "filename": filename,
             "xdf_path": xdf_path,
+            "final_xdf_path": final_xdf_path,
         }
 
     def _send_command(self, command):
@@ -118,6 +124,60 @@ class LabRecorder:
         warning = f"LabRecorder output has not appeared after start: {xdf_path}"
         return {"exists": False, "size": last_size, "warning": warning}
 
+    def _cleanup_empty_recording_dirs(self):
+        for path_value in (self.recording_xdf_root,):
+            if not path_value:
+                continue
+            path = Path(path_value)
+            try:
+                path.rmdir()
+                parent = path.parent
+                if parent.name == "_labrecorder_tmp":
+                    parent.rmdir()
+            except OSError:
+                pass
+
+    def _move_finished_xdf_to_test_folder(self):
+        if not self.recording_xdf_path or not self.final_xdf_path:
+            return {"path": self.last_xdf_path, "moved": False, "warning": None}
+
+        source = Path(self.recording_xdf_path)
+        destination = Path(self.final_xdf_path)
+
+        for _ in range(20):
+            if source.exists():
+                break
+            time.sleep(0.25)
+
+        if not source.exists():
+            warning = f"Could not move XDF into test folder because the source file was not found: {source}"
+            logging.warning(warning)
+            print(f"WARNING: {warning}")
+            return {"path": str(destination), "moved": False, "warning": warning}
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        last_error = None
+        try:
+            for _ in range(20):
+                try:
+                    source.replace(destination)
+                    self.last_xdf_path = str(destination)
+                    self._cleanup_empty_recording_dirs()
+                    message = f"LabRecorder XDF moved to test folder: {destination}"
+                    logging.info(message)
+                    print(message)
+                    return {"path": str(destination), "moved": True, "warning": None}
+                except PermissionError as e:
+                    last_error = e
+                    time.sleep(0.25)
+        except Exception as e:
+            last_error = e
+
+        warning = f"Could not move XDF into test folder: {last_error}"
+        logging.warning(warning)
+        print(f"WARNING: {warning}")
+        return {"path": str(source), "moved": False, "warning": warning}
+
     def _get_visible_lsl_streams(self):
         if resolve_streams is None:
             return None
@@ -137,12 +197,13 @@ class LabRecorder:
             xdf_root = recording_paths["xdf_root"].resolve()
             filename = recording_paths["filename"]
             xdf_path = recording_paths["xdf_path"].resolve()
+            final_xdf_path = recording_paths["final_xdf_path"].resolve()
 
             streams = self._get_visible_lsl_streams()
             if streams is not None and len(streams) == 0:
                 error = "No LSL streams visible to LabRecorder at start time."
                 print(error)
-                return {"ok": False, "path": str(xdf_path), "error": error, "stream_count": 0}
+                return {"ok": False, "path": str(final_xdf_path), "error": error, "stream_count": 0}
 
             # Reset any previous recording state before selecting streams. LabRecorder tolerates
             # stop when idle and it prevents stale zero-byte sessions from carrying forward.
@@ -155,7 +216,8 @@ class LabRecorder:
             stream_count = len(streams) if streams is not None else None
             target_message = (
                 f"LabRecorder target: root={xdf_root}, template={filename}, "
-                f"path={xdf_path}, condition_alias={alias}, stream_count={stream_count}"
+                f"recording_path={xdf_path}, final_path={final_xdf_path}, "
+                f"condition_alias={alias}, stream_count={stream_count}"
             )
             logging.info(target_message)
             print(target_message)
@@ -167,7 +229,10 @@ class LabRecorder:
                 logging.warning(file_check["warning"])
                 print(f"WARNING: {file_check['warning']}")
 
-            self.last_xdf_path = str(xdf_path)
+            self.recording_xdf_path = str(xdf_path)
+            self.final_xdf_path = str(final_xdf_path)
+            self.recording_xdf_root = str(xdf_root)
+            self.last_xdf_path = str(final_xdf_path)
             self.is_recording = True
             if stream_count is None:
                 print(f"LabRecorder started recording: {xdf_path}")
@@ -175,10 +240,11 @@ class LabRecorder:
                 print(f"LabRecorder started recording: {xdf_path} ({stream_count} LSL streams visible)")
             return {
                 "ok": True,
-                "path": str(xdf_path),
+                "path": str(final_xdf_path),
                 "error": None,
                 "stream_count": stream_count,
                 "condition_alias": alias,
+                "recording_path": str(xdf_path),
                 "file_check": file_check,
             }
         except Exception as e:
@@ -196,8 +262,15 @@ class LabRecorder:
         try:
             self._send_command("stop")
             self.is_recording = False
+            move_result = self._move_finished_xdf_to_test_folder()
             print("LabRecorder stopped recording.")
-            return {"ok": True, "path": self.last_xdf_path, "error": None}
+            return {
+                "ok": True,
+                "path": move_result.get("path", self.last_xdf_path),
+                "error": None,
+                "warning": move_result.get("warning"),
+                "moved": move_result.get("moved", False),
+            }
         except Exception as e:
             error = f"Failed to stop LabRecorder recording: {e}"
             print(error)

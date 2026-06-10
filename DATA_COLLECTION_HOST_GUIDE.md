@@ -91,22 +91,21 @@ eeg_stimulus_project/saved_data/
   subject_<subject_id>/
     test_<test_number>/
       <Test Name>/
-        data.csv
-      xdf/
-        <condition_alias>/
-          subj_<subject_id>_<condition_alias>_<timestamp>.xdf
+        data.csv  (Stroop response tasks only)
+        subj_<subject_id>_<condition_alias>_<timestamp>.xdf
 ```
 
 Important details:
 
 - Test folder names use the display names shown in the GUI.
-- LabRecorder writes XDFs under short ASCII condition aliases to keep remote filename control stable.
+- XDF filenames use short ASCII condition aliases to keep LabRecorder remote filename control stable.
+- During recording, LabRecorder may briefly write through an internal `_labrecorder_tmp/` folder; completed XDFs are moved back into the test folder on stop.
 - XDF files contain EEG streams and precise LSL event markers, including the `labels` marker stream.
-- `data.csv` is behavioral response output, not an event-marker timing file.
-- Passive conditions may not produce meaningful CSV rows unless behavioral data is added later.
+- `data.csv` is written by the Stroop stop/save path and contains response labels plus elapsed-time values.
+- Passive conditions do not currently write `data.csv`; their event timing is in the XDF marker stream.
 - `label_timestamps.txt` is no longer generated; marker timing should be read from the XDF.
-- Existing `data.csv` files for the selected tests are cleared when the host creates the directory tree.
-- Running the same test again in the same session can overwrite behavioral CSV output for that test.
+- Existing `data.csv` files are cleared when the host creates the directory tree.
+- Running the same Stroop test again in the same session can overwrite behavioral CSV output for that test.
 
 ## Host Responsibilities During A Session
 

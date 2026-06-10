@@ -92,17 +92,17 @@ def run_control_window_host(connection, shared_status, log_queue, base_dir, test
     sys.exit(app.exec_())
 
 # Launches the main GUI process (client or local)
-def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, local_mode=False):
+def run_main_gui_client(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder=None, non_alcohol_folder=None, local_mode=False, subject_id=None):
     from eeg_stimulus_project.utils.logging_utils import setup_child_process_logging
     from eeg_stimulus_project.gui.main_gui import GUI
-    
+
     # Setup logging for this child process
     # If this is a client, pass the connection for network logging
     network_connection = connection if client else None
     setup_child_process_logging(log_queue, network_connection)
-    
+
     app = QApplication(sys.argv)
-    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, local_mode)
+    window = GUI(connection, shared_status, log_queue, base_dir, test_number, client, alcohol_folder, non_alcohol_folder, local_mode, subject_id=subject_id)
     window.show()
     sys.exit(app.exec_())
 
@@ -302,7 +302,7 @@ class MainWindow(QMainWindow):
             # Directory and shared resources for client (base_dir is None for client)
             base_dir = None
             self.manager, self.shared_status, log_queue = init_shared_resources()
-            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True, alcohol_folder, non_alcohol_folder)) # client=True
+            self.gui_process = Process(target=run_main_gui_client, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, True, alcohol_folder, non_alcohol_folder, False, None)) # client=True, subject_id=None for client
             self.gui_process.start()
         else:
             # Both: local experiment (host and client on same machine)
@@ -317,8 +317,8 @@ class MainWindow(QMainWindow):
             self.control_process = Process(target=run_control_window_host, args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, subject_id)) # host=False
             self.gui_process = Process(
                 target=run_main_gui_client,
-                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, self.local_mode) 
-            ) # client=False
+                args=(self.connection, self.shared_status, log_queue, base_dir, test_number, False, alcohol_folder, non_alcohol_folder, self.local_mode, subject_id)
+            ) # client=False, subject_id passed for local/developer mode
             self.control_process.start()
             self.gui_process.start()
 

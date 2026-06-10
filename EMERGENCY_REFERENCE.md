@@ -76,7 +76,7 @@ Note: `tactile_receive.py` also binds `9999` if run directly, which can block ho
 
 - Confirm whether the run was local, host, or client-only.
 - Client-only mode does not create the main subject/test output tree.
-- Re-running a test can overwrite that test's `data.csv`.
+- Re-running a Stroop test can overwrite that test's `data.csv`.
 
 ## Incident Notes To Capture
 

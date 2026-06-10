@@ -159,9 +159,9 @@ Local runs save under:
 eeg_stimulus_project/saved_data/subject_<subject_id>/test_<test_number>/
 ```
 
-Behavioral CSV output is stored inside each test folder when a condition records behavioral responses. Precise event marker timing is stored in the XDF `labels` marker stream, not in `data.csv`.
+Stroop response CSV output is stored inside each test folder as `data.csv`. Passive conditions do not currently write `data.csv`; precise event marker timing is stored in the XDF `labels` marker stream.
 
-Important: re-running the same test can overwrite that test's `data.csv`.
+Important: re-running the same Stroop test can overwrite that test's `data.csv`.
 
 ## Host And Client Workflow
 

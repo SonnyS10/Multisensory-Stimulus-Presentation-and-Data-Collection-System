@@ -193,9 +193,9 @@ This is a common source of confusion. Client mode is presentation-only from a pe
 Current behavior:
 
 - when the host creates the test folders, old `data.csv` files for that subject/test can be cleared
-- re-running a test in the same session can overwrite that test's CSV output
-- `data.csv` is behavioral response output, not event-marker timing
-- passive conditions may not produce meaningful CSV rows unless behavioral data is added later
+- re-running a Stroop test in the same session can overwrite that test's CSV output
+- `data.csv` is Stroop behavioral response output, not event-marker timing
+- passive conditions do not currently write `data.csv`; their event timing is in the XDF marker stream
 
 If you need preservation across retries, copy the subject folder before re-running.
 
@@ -221,7 +221,7 @@ The active package does not currently ship a dedicated EEG Stream Window. If som
 
 ### Old Code Dependency
 
-`eeg_stimulus_project/data/data_saving.py` still imports from `Old_Code.stream_manager`. If you are debugging data collection internals, keep that dependency in mind.
+The active data saving path no longer imports from `Old_Code.stream_manager`.
 
 ## Useful Diagnostics
 

@@ -412,7 +412,7 @@ class TurntableWindow(QWidget):
             "<b>Energize / De-energize:</b> powers the turntable motor on or off. Moves auto-energize when needed.<br>"
             "<b>Start Test:</b> runs the current bay sequence. <b>Pause</b> holds the sequence; <b>Resume</b> continues; <b>Stop</b> resets it.<br>"
             "<b>Auto-Bay 1-8:</b> assigns objects to bays 1 through 8 in order.<br>"
-            "<b>Auto-Bay 1-8 (Half-Bays Empty):</b> assigns objects to filled bays 2, 4, 6, and 8, then moves through 1-8 in order.<br><br>"
+            "<b>Auto-Bay 1-8 (Half-Bays Empty):</b> assigns objects to filled bays 2, 4, 6, and 8, then runs one empty/control bay before each filled stimulus bay.<br><br>"
             "<b>Doors and replacement</b><br>"
             "<b>Auto Doors:</b> when checked, filled/stimulus bays open, dwell, close, and continue. Manual Open/Close always works even when Auto Doors is off.<br>"
             "<b>Manual replacement pause:</b> waits for Replacement complete / Continue during replacement steps. When unchecked, the Dwell timer advances automatically.<br>"
@@ -744,8 +744,11 @@ class TurntableWindow(QWidget):
         return steps
 
     def build_half_empty_sequence(self):
-        filled_bays = [2, 4, 6, 8]
-        objects_by_bay = {bay: [] for bay in filled_bays}
+        bay_pairs = [(1, 2), (3, 4), (5, 6), (7, 8)]
+        valid_filled_bays = {filled for _, filled in bay_pairs}
+        pair_by_filled_bay = {filled: (empty, filled) for empty, filled in bay_pairs}
+
+        objects_by_bay = {filled: [] for _, filled in bay_pairs}
         for obj in self.test_order:
             bay = self.object_to_bay.get(obj)
             if bay in objects_by_bay:
@@ -753,18 +756,14 @@ class TurntableWindow(QWidget):
             elif bay is not None:
                 print(f"Ignoring {stimulus_label(obj)}: half-empty mode only uses filled bays 2, 4, 6, 8.")
 
-        max_cycles = max(1, max((len(items) for items in objects_by_bay.values()), default=0))
         steps = []
-        for cycle in range(max_cycles):
-            for bay in range(1, 9):
-                if bay % 2 == 1:
-                    steps.append({"type": "empty_control", "bay": bay})
-                else:
-                    bay_objects = objects_by_bay.get(bay, [])
-                    if cycle < len(bay_objects):
-                        steps.append({"type": "stimulus", "bay": bay, "object": bay_objects[cycle]})
-                    else:
-                        steps.append({"type": "empty_unfilled", "bay": bay})
+        for obj in self.test_order:
+            bay = self.object_to_bay.get(obj)
+            if bay not in valid_filled_bays:
+                continue
+            empty_bay, filled_bay = pair_by_filled_bay[bay]
+            steps.append({"type": "empty_control", "bay": empty_bay})
+            steps.append({"type": "stimulus", "bay": filled_bay, "object": obj})
         return steps
 
     def start_new_sequence(self):

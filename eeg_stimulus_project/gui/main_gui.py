@@ -22,7 +22,7 @@ from logging.handlers import QueueHandler
 
 class GUI(QMainWindow):
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
-                 alcohol_folder=None, non_alcohol_folder=None, local_mode=False):
+                 alcohol_folder=None, non_alcohol_folder=None, local_mode=False, subject_id=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -46,6 +46,7 @@ class GUI(QMainWindow):
 
         self.base_dir = base_dir
         self.test_number = test_number
+        self.subject_id = subject_id
         self.setWindowTitle("Experiment Control Window")
         self.setGeometry(0, 100, screen_geometry.width() // 2, screen_geometry.height() - 150)
         self.setMinimumSize(800, 600)
@@ -473,8 +474,12 @@ class GUI(QMainWindow):
     
     def show_craving_rating_dialog(self):
         """Show a manual craving rating dialog."""
-        dialog = CravingRatingDialog(self, self.base_dir, self.test_number)
+        dialog = CravingRatingDialog(self, self.base_dir, self.subject_id)
         dialog.exec_()
+        # Client mode: base_dir is None so the dialog can't save locally;
+        # forward the rating to the host which has the save path.
+        if not self.base_dir and dialog.craving_response is not None:
+            self.send_message(action="crave_manual", crave=dialog.craving_response)
 
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):
