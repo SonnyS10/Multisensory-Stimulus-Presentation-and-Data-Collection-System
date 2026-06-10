@@ -1023,10 +1023,9 @@ class TurntableWindow(QWidget):
                 self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
+            # Trigger scent first, wait 2 seconds for dispense, then open doors
             self.trigger_scent_for_step(step)
-            if self.auto_doors_enabled():
-                self._auto_doors_opened_for_current_item = self.open_doors_automatically()
-            self._start_timer(2000, self.close_doors_and_continue)
+            self._start_timer(2000, self._open_doors_after_scent)
 
     @pyqtSlot()
     def on_object_touched(self):
@@ -1041,11 +1040,9 @@ class TurntableWindow(QWidget):
                     f" | object={stimulus_label(step.get('object'))}"
                 )
                 self.emit_turntable_label(label)
+            # Trigger scent first, wait 2 seconds for dispense, then open doors
             self.trigger_scent_for_step(step)
-            if self.auto_doors_enabled():
-                print("Opening doors.")
-                self._auto_doors_opened_for_current_item = self.open_doors_automatically()
-            self._start_timer(2000, self.close_doors_and_continue)
+            self._start_timer(2000, self._open_doors_after_scent)
 
     def close_doors_and_continue(self):
         if self._stopped or self._paused:
@@ -1054,6 +1051,12 @@ class TurntableWindow(QWidget):
             self.close_doors_automatically()
             self._auto_doors_opened_for_current_item = False
         self.complete_current_step()
+
+    def _open_doors_after_scent(self):
+        """Open doors after scent has had 2 seconds to dispense."""
+        if self.auto_doors_enabled():
+            self._auto_doors_opened_for_current_item = self.open_doors_automatically()
+        self._start_timer(2000, self.close_doors_and_continue)
 
     def _start_timer(self, ms, callback):
         self._timer_callback_func = callback

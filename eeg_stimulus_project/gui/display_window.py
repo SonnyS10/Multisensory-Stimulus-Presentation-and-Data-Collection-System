@@ -475,27 +475,18 @@ class DisplayWindow(QMainWindow):
             if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
                 self.scent_function(img)
                 self._dispense_scent_before_next_image = False
-            pixmap = QPixmap(img.filename)
-            self.current_pixmap = pixmap
-            self.update_image_label()
-            # Push the filename (without extension) as label
-            if hasattr(img, 'filename'):
-                label = self.build_image_label(img)
-                self.emit_marker(label)
-                if self.eyetracker is not None:
-                    self.eyetracker.send_marker(label)  # Send label to Pupil Labs
-                self.current_label = label
-                if "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch():
-                    self.scent_function(img)
-            if "Tactile" in self.current_test:
-                # For tactile, show image for 2 seconds, then show crosshair and wait for touch
-                QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
+            
+            # For olfactory tests, send scent first and wait 2 seconds before showing image
+            should_delay_for_scent = "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch()
+            
+            if should_delay_for_scent:
+                # Send scent first
+                self.scent_function(img)
+                # Wait 2 seconds for scent to dispense, then display image
+                QTimer.singleShot(2000, lambda: self._display_image_after_scent_delay(img))
             else:
-            # Only show crosshair if next asset is NOT a craving rating
-                if self.next_asset_is_craving():
-                    QTimer.singleShot(2000, lambda: self.show_crosshair_before_craving())
-                else:
-                    QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
+                # No scent delay needed, display image immediately
+                self._display_image_after_scent_delay(img)
         elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
             # Handle the craving rating asset (e.g., show a rating dialog or skip)
             # Example: show a custom widget or message
@@ -503,6 +494,31 @@ class DisplayWindow(QMainWindow):
         else:
             # Handle other asset types or skip
             pass
+
+    def _display_image_after_scent_delay(self, img):
+        """Display image after scent has had time to dispense."""
+        if self.stopped or self.Paused:
+            return
+        pixmap = QPixmap(img.filename)
+        self.current_pixmap = pixmap
+        self.update_image_label()
+        # Push the filename (without extension) as label
+        if hasattr(img, 'filename'):
+            label = self.build_image_label(img)
+            self.emit_marker(label)
+            if self.eyetracker is not None:
+                self.eyetracker.send_marker(label)  # Send label to Pupil Labs
+            self.current_label = label
+        
+        if "Tactile" in self.current_test:
+            # For tactile, show image for 2 seconds, then show crosshair and wait for touch
+            QTimer.singleShot(2000, lambda: self.show_crosshair_and_wait_tactile())
+        else:
+            # Only show crosshair if next asset is NOT a craving rating
+            if self.next_asset_is_craving():
+                QTimer.singleShot(2000, lambda: self.show_crosshair_before_craving())
+            else:
+                QTimer.singleShot(2000, lambda: self.show_crosshair_between_images('passive'))
 
     #This is the main logic for displaying the images in the stroop test, it handles the image transition and the timer for the images
     #It also handles the user input and the elapsed time when the test is done
@@ -513,6 +529,23 @@ class DisplayWindow(QMainWindow):
         if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
             self.scent_function(img)
             self._dispense_scent_before_next_image = False
+        
+        # For olfactory tests, send scent first and wait 2 seconds before showing image
+        should_delay_for_scent = "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch()
+        
+        if should_delay_for_scent:
+            # Send scent first
+            self.scent_function(img)
+            # Wait 2 seconds for scent to dispense, then display image
+            QTimer.singleShot(2000, lambda: self._display_stroop_image_after_scent_delay(img))
+        else:
+            # No scent delay needed, display image immediately
+            self._display_stroop_image_after_scent_delay(img)
+
+    def _display_stroop_image_after_scent_delay(self, img):
+        """Display stroop image after scent has had time to dispense."""
+        if self.stopped or self.Paused:
+            return
         pixmap = QPixmap(img.filename)
         self.current_pixmap = pixmap
         self.update_image_label()
@@ -520,8 +553,7 @@ class DisplayWindow(QMainWindow):
             label = self.build_image_label(img)
             self.emit_marker(label)
             self.current_label = label
-            if "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch():
-                self.scent_function(img)
+        
         if "Tactile" in self.current_test:
             # For tactile Stroop, show image for 2s, then instruction, then crosshair, then next button, then touch
             QTimer.singleShot(2000, self.hide_image)
