@@ -144,12 +144,12 @@ class CravingRatingDialog(QDialog):
             with open(ratings_file, 'a', newline='') as f:
                 writer = csv.writer(f)
                 if not file_exists:
-                    writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating', 'Test_Number'])
+                    writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating', 'Source'])
                 writer.writerow([
-                    datetime.now().isoformat(), 
-                    self.subject_id, 
+                    datetime.now().isoformat(),
+                    self.subject_id,
                     self.craving_response,
-                    os.path.basename(self.base_dir)  # Save test number for reference
+                    'Manual Button'
                 ])
             
             logging.info(f"Craving rating {self.craving_response} saved for subject {self.subject_id}")

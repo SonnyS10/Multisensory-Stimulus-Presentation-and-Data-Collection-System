@@ -696,8 +696,9 @@ class ControlWindow(QMainWindow):
                                 self.craving_response = message.get("crave", None)
                                 logging.info(f"Host: Received craving response: {self.craving_response}")
                                 self.label_push(f"craving_rating_{self.craving_response}")
+                                self._save_craving_to_csv(self.craving_response, self.current_test or "Unknown Test")
                             elif action == "crave_manual":
-                                self._save_manual_craving_rating(message.get("crave"))
+                                self._save_craving_to_csv(message.get("crave"), "Manual Button")
                             elif action == "client_log":
                                 # Handle log messages from client
                                 log_message = message.get("message", "")
@@ -832,10 +833,10 @@ class ControlWindow(QMainWindow):
         if self.eyetracker and self.eyetracker.device is not None:
             self.eyetracker.stop_recording()
 
-    def _save_manual_craving_rating(self, value):
-        """Save a manually-triggered craving rating (forwarded from the client) to CSV."""
+    def _save_craving_to_csv(self, value, source):
+        """Append a craving rating row to the subject-level craving_rating.csv."""
         if not self.base_dir or value is None:
-            logging.error(f"Cannot save manual craving rating: base_dir={self.base_dir}, value={value}")
+            logging.error(f"Cannot save craving rating: base_dir={self.base_dir}, value={value}")
             return
         subject_dir = os.path.dirname(self.base_dir)
         os.makedirs(subject_dir, exist_ok=True)
@@ -845,11 +846,11 @@ class ControlWindow(QMainWindow):
             with open(ratings_file, 'a', newline='') as f:
                 writer = csv.writer(f)
                 if not file_exists:
-                    writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating', 'Test_Number'])
-                writer.writerow([datetime.now().isoformat(), self.subject_id, value, os.path.basename(self.base_dir)])
-            logging.info(f"Manual craving rating {value} saved for subject {self.subject_id}")
+                    writer.writerow(['Timestamp', 'Subject_ID', 'Craving_Rating', 'Source'])
+                writer.writerow([datetime.now().isoformat(), self.subject_id, value, source])
+            logging.info(f"Craving rating {value} saved for subject {self.subject_id} (source: {source})")
         except Exception as e:
-            logging.error(f"Failed to save manual craving rating: {e}", exc_info=True)
+            logging.error(f"Failed to save craving rating: {e}", exc_info=True)
 
     def label_push(self, label):
         """
