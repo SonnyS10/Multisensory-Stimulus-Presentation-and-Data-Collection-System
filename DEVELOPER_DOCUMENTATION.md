@@ -181,6 +181,10 @@ Important implementation details:
 
 - test folders use GUI display names, including spaces and punctuation
 - LabRecorder sanitizes filenames by replacing spaces with underscores
+- XDF files contain EEG streams and precise LSL event markers, including the `labels` marker stream
+- `data.csv` is behavioral response output, not an event-marker timing file
+- passive conditions may not produce meaningful CSV rows unless behavioral data is added later
+- `label_timestamps.txt` is no longer generated; marker timing should be read from the XDF
 - host setup clears existing `data.csv` files for the selected tests when creating the directory tree
 
 ## Hardware Integrations

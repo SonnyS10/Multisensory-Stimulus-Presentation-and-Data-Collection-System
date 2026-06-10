@@ -159,7 +159,7 @@ Local runs save under:
 eeg_stimulus_project/saved_data/subject_<subject_id>/test_<test_number>/
 ```
 
-Behavioral CSV output is stored inside each test folder.
+Behavioral CSV output is stored inside each test folder when a condition records behavioral responses. Precise event marker timing is stored in the XDF `labels` marker stream, not in `data.csv`.
 
 Important: re-running the same test can overwrite that test's `data.csv`.
 

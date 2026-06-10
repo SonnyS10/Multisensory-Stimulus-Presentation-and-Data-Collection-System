@@ -988,7 +988,7 @@ class Frame(QFrame):
                 if not filename:
                     continue
                 display_name = os.path.splitext(os.path.basename(filename))[0]
-                scent_number = order_frame.scent_numbers.get(filename)
+                scent_number = order_frame.scent_numbers.get(filename) if is_olfactory else None
                 turntable_items.append(
                     TurntableStimulusItem(
                         display_name,
@@ -1024,6 +1024,7 @@ class Frame(QFrame):
                     tactile_mode=True,
                     send_message=send_message_from_turntable,
                     require_scent_assignments=is_olfactory,
+                    olfactory_mode=is_olfactory,
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording
                 )
@@ -1034,6 +1035,7 @@ class Frame(QFrame):
                     tactile_mode=False,
                     send_message=send_message_from_turntable,
                     require_scent_assignments=is_olfactory,
+                    olfactory_mode=is_olfactory,
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording
                 )

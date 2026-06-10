@@ -226,12 +226,14 @@ class AssignmentTableWidget(QTableWidget):
 
 class TurntableWindow(QWidget):
     def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None,
-                 require_scent_assignments=False, on_sequence_started=None, on_sequence_stopped=None):
+                 require_scent_assignments=False, olfactory_mode=False,
+                 on_sequence_started=None, on_sequence_stopped=None):
         super().__init__()
         print(test_order)
         self.tactile_mode = tactile_mode
         self.send_message = send_message
         self.require_scent_assignments = require_scent_assignments
+        self.olfactory_mode = olfactory_mode
         self.on_sequence_started = on_sequence_started
         self.on_sequence_stopped = on_sequence_stopped
         self._session_started = False
@@ -832,7 +834,7 @@ class TurntableWindow(QWidget):
         ]
         if sequence_number is not None:
             label_parts.append(f"stimulus_order={sequence_number}")
-        if scent_number is not None:
+        if self.olfactory_mode and scent_number is not None:
             label_parts.append(f"scent={scent_number}")
         label = " | ".join(label_parts)
         self.emit_turntable_label(label)
@@ -862,6 +864,8 @@ class TurntableWindow(QWidget):
         self.olfactory_connected = False
 
     def trigger_scent_for_step(self, step):
+        if not self.olfactory_mode:
+            return
         obj = step.get("object")
         scent_number = stimulus_scent_number(obj)
         if scent_number is None:

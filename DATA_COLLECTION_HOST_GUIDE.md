@@ -99,6 +99,10 @@ Important details:
 
 - Test folder names use the display names shown in the GUI.
 - XDF filenames sanitize the test name by replacing spaces with underscores.
+- XDF files contain EEG streams and precise LSL event markers, including the `labels` marker stream.
+- `data.csv` is behavioral response output, not an event-marker timing file.
+- Passive conditions may not produce meaningful CSV rows unless behavioral data is added later.
+- `label_timestamps.txt` is no longer generated; marker timing should be read from the XDF.
 - Existing `data.csv` files for the selected tests are cleared when the host creates the directory tree.
 - Running the same test again in the same session can overwrite behavioral CSV output for that test.
 
@@ -122,7 +126,7 @@ During the session:
 After the session:
 
 1. Verify the subject/test directory exists.
-2. Verify expected CSV and XDF outputs are present.
+2. Verify expected XDF output and any applicable behavioral CSV output are present.
 3. Archive or back up the subject directory before reusing the same identifiers.
 
 ## Network Notes

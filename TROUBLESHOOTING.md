@@ -194,8 +194,14 @@ Current behavior:
 
 - when the host creates the test folders, old `data.csv` files for that subject/test can be cleared
 - re-running a test in the same session can overwrite that test's CSV output
+- `data.csv` is behavioral response output, not event-marker timing
+- passive conditions may not produce meaningful CSV rows unless behavioral data is added later
 
 If you need preservation across retries, copy the subject folder before re-running.
+
+### Event Marker Timing
+
+Precise event marker timing is stored in the XDF `labels` marker stream alongside EEG. The debug `label_timestamps.txt` wall-clock log is no longer generated.
 
 ### XDF File Is Missing
 

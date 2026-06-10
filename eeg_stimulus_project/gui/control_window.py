@@ -327,8 +327,6 @@ class ControlWindow(QMainWindow):
         self.toggle_instructions_button.clicked.connect(self.toggle_instructions)
         self.control_layout.addWidget(self.toggle_instructions_button, alignment=Qt.AlignCenter)
 
-        self.label_log = []
-
     def toggle_instructions(self):
         if self.instructions_frame.isVisible():
             self.instructions_frame.setVisible(False)
@@ -677,7 +675,6 @@ class ControlWindow(QMainWindow):
                             elif action == "stop_button":
                                 self.stop_test()
                                 logging.info("Host: Stopping test...")
-                                self.save_label_log()
                                 pass
                             elif action == "label":
                                 label = message.get("label", None)
@@ -701,8 +698,6 @@ class ControlWindow(QMainWindow):
                                 # Handle log messages from client
                                 log_message = message.get("message", "")
                                 logging.info(f"[CLIENT] {log_message}")
-                                #timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                                #self.label_log.append((label, timestamp))
                             elif action == "olfactory_connected":
                                 self.update_app_status_icon(self.olfactory_connected_icon, message.get("success", False))
                                 self.shared_status['olfactory_connected'] = message.get("success", False)
@@ -766,7 +761,6 @@ class ControlWindow(QMainWindow):
 
         test_name = self.current_test if self.current_test else "default_test"
         self.current_test = test_name
-        self.label_log = []
 
         if self.labrecorder and self.labrecorder.s is not None:
             result = self.labrecorder.Start_Recorder(test_name)
@@ -841,18 +835,7 @@ class ControlWindow(QMainWindow):
         if self.label_stream is None:
             self.label_stream = LSLLabelStream()
         self.label_stream.push_label(label)
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        self.label_log.append((label, timestamp))
         #print(f"Label pushed: {label}")
-        
-    def save_label_log(self):
-        # Determine the test directory
-        test_dir = os.path.join(self.base_dir, self.current_test)
-        os.makedirs(test_dir, exist_ok=True)
-        log_path = os.path.join(test_dir, "label_timestamps.txt")
-        with open(log_path, "w", encoding="utf-8") as f:
-            for label, timestamp in self.label_log:
-                f.write(f"{timestamp}\t{label}\n")
 
 class ControlInstructionsFrame(QWidget):
     def __init__(self, parent=None):
