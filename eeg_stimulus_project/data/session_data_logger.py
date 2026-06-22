@@ -46,6 +46,12 @@ SCENT_MAP: Dict[int, Dict[str, str]] = {
 VALID_TASK_NAMES = frozenset({"Passive_Viewing", "Cross_Modal_Stroop"})
 VALID_REALISM_CONDITIONS = frozenset({"Images", "VR", "Real_Objects"})
 
+APPARATUS_REALISM_MAP: Dict[str, str] = {
+    "Display": "Images",
+    "VR": "VR",
+    "Turntable": "Real_Objects",
+}
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DATA_ROOT = _PROJECT_ROOT / "eeg_stimulus_project" / "saved_data"
 
@@ -102,6 +108,16 @@ def _microsecond_timestamp() -> str:
 def _event_timestamp() -> str:
     """ISO-8601 event timestamp with millisecond precision for CSV rows."""
     return datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+
+
+def resolve_realism_condition(apparatus: str) -> str:
+    """Map apparatus selection to the canonical realism_condition CSV value."""
+    realism = APPARATUS_REALISM_MAP.get(apparatus)
+    if realism is None:
+        raise ValueError(
+            f"apparatus must be one of {sorted(APPARATUS_REALISM_MAP)}, got {apparatus!r}"
+        )
+    return realism
 
 
 def build_session_directory(

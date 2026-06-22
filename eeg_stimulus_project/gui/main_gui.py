@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
@@ -22,7 +23,7 @@ from logging.handlers import QueueHandler
 
 class GUI(QMainWindow):
     def __init__(self, connection, shared_status, log_queue, base_dir, test_number, client=False,
-                 alcohol_folder=None, non_alcohol_folder=None, local_mode=False):
+                 alcohol_folder=None, non_alcohol_folder=None, local_mode=False, subject_id=None):
         super().__init__()
         self.shared_status = shared_status
         self.connection = connection
@@ -34,6 +35,7 @@ class GUI(QMainWindow):
         self.labrecorder_connected = False
         self.local_mode = local_mode
         self.olfactory_controller = None
+        self.subject_id = subject_id
 
         if connection is not None:
             self.start_listener()
@@ -255,7 +257,8 @@ class GUI(QMainWindow):
                 repetitions = self.stimulus_order_frame.get_repetitions_settings()
 
                 scent_numbers = self.stimulus_order_frame.scent_numbers
-                
+                apparatus = current_frame.get_selected_apparatus() if hasattr(current_frame, "get_selected_apparatus") else "Display"
+
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
                     self.connection, log_queue, label_stream, current_frame, current_test,
@@ -265,7 +268,9 @@ class GUI(QMainWindow):
                     randomize_cues=randomize_cues,
                     seed=seed,
                     repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers,
-                    baseline_mode=baseline_mode
+                    baseline_mode=baseline_mode,
+                    subject_id=self.get_subject_id(),
+                    apparatus=apparatus,
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test, baseline_mode=baseline_mode)
@@ -315,6 +320,16 @@ class GUI(QMainWindow):
             return 'Stroop Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
+
+    def get_subject_id(self):
+        """Resolve participant ID from explicit config or the session base_dir path."""
+        if self.subject_id:
+            return str(self.subject_id)
+        if self.base_dir:
+            for part in Path(self.base_dir).parts:
+                if part.startswith("subject_"):
+                    return part.replace("subject_", "", 1)
+        return "unknown"
 
     def start_latency_test(self):
         if self._latency_test_active:
@@ -692,6 +707,14 @@ class Frame(QFrame):
                         btn.blockSignals(True)
                         btn.setChecked(False)
                         btn.blockSignals(False)
+
+    def get_selected_apparatus(self):
+        """Return the active presentation apparatus for SessionDataLogger."""
+        if getattr(self, "turntable_button", None) and self.turntable_button.isChecked():
+            return "Turntable"
+        if getattr(self, "vr_button", None) and self.vr_button.isChecked():
+            return "VR"
+        return "Display"
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

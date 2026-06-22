@@ -12,7 +12,11 @@ from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, Q
 from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
 from eeg_stimulus_project.assets.asset_handler import Display
-from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.data.session_data_logger import (
+    SessionDataLogger,
+    determine_congruence_condition,
+    resolve_realism_condition,
+)
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
@@ -222,7 +226,8 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None, baseline_mode=False): 
+                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
+                 baseline_mode=False, subject_id=None, apparatus="Display"):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -238,6 +243,13 @@ class DisplayWindow(QMainWindow):
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
         self.baseline_mode = baseline_mode
+        self.subject_id = subject_id or "unknown"
+        self.apparatus = apparatus
+        self.session_logger = None
+        self._craving_block_index = 0
+        self._stroop_trial_number = 0
+        self._tactile_fired_this_trial = False
+        self._stroop_stimulus_onset_ms = 0
 
         if self.local_mode:
             if self.shared_status.get('eyetracker_connected', False):
@@ -421,6 +433,9 @@ class DisplayWindow(QMainWindow):
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
+                    self._craving_block_index = 0
+                    self._stroop_trial_number = 0
+                    self._init_session_data_logger()
                     self.timer.start(1)  # Start the timer with 100 ms interval
                 if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
@@ -509,6 +524,7 @@ class DisplayWindow(QMainWindow):
     def display_images_stroop(self):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
+        self._tactile_fired_this_trial = False
         img = self.images[self.current_image_index]
         if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
             self.scent_function(img)
@@ -536,6 +552,7 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         self.image_label.clear()
+        self._stroop_stimulus_onset_ms = self.elapsed_time
         self.set_instruction_text()
         self.wait_for_input()
 
@@ -639,6 +656,7 @@ class DisplayWindow(QMainWindow):
     def end_touch_instruction_and_advance(self):
         phase = "initial" if self.waiting_for_initial_touch else "advance"
         self.emit_marker(f"Touch Detected | phase={phase}")
+        self._tactile_fired_this_trial = True
         if self.should_dispense_scent_after_touch():
             self._dispense_scent_before_next_image = True
         if self.waiting_for_initial_touch:
@@ -760,6 +778,7 @@ class DisplayWindow(QMainWindow):
             if event.type() == QEvent.KeyPress:
                 if event.key() == Qt.Key_Right or event.key() == Qt.Key_Left:
                     img = self.images[self.current_image_index]
+                    key_pressed = "yes" if event.key() == Qt.Key_Right else "no"
                     if event.key() == Qt.Key_Right:
                         self.user_data['user_inputs'].append('Yes') # Store the user input
                         if hasattr(img, 'filename'):
@@ -773,6 +792,7 @@ class DisplayWindow(QMainWindow):
                             self.emit_marker(label)
                             self.current_label = label  # Push label to LSL stream
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
+                    self._log_stroop_response(key_pressed)
                     self.waiting_for_stroop_response = False
                     self.removeEventFilter(self)
                     if "Tactile" in self.current_test:
@@ -1016,6 +1036,117 @@ class DisplayWindow(QMainWindow):
             label = f"{label} | scent={scent_number}"
         return label
 
+    def _is_stroop_test(self):
+        return "stroop" in str(self.current_test or "").lower()
+
+    def _logger_task_name(self):
+        return "Cross_Modal_Stroop" if self._is_stroop_test() else "Passive_Viewing"
+
+    def _current_sensory_condition(self):
+        test = self.current_test or ""
+        has_olfactory = "Olfactory" in test
+        has_tactile = "Tactile" in test
+        if has_tactile and has_olfactory:
+            return "Multisensory_Visuo_Tactile_Olfactory"
+        if has_olfactory:
+            return "Multisensory_Visuo_Olfactory"
+        if has_tactile:
+            return "Multisensory_Visuo_Tactile"
+        return "Unisensory_Visual"
+
+    def _image_cue_type(self, img):
+        filename = getattr(img, "filename", "") or ""
+        if self.alcohol_folder and self.alcohol_folder in filename:
+            return "Alcohol"
+        if self.non_alcohol_folder and self.non_alcohol_folder in filename:
+            return "Neutral"
+        test = self.current_test or ""
+        if "Alcohol" in test and "Neutral" not in test.split("Alcohol")[0]:
+            return "Alcohol"
+        if "Neutral" in test:
+            return "Neutral"
+        if "Alcohol" in test:
+            return "Alcohol"
+        return "Neutral"
+
+    def _init_session_data_logger(self):
+        if self.baseline_mode or not self.current_test or self.current_test == "Baseline":
+            return
+
+        realism_condition = resolve_realism_condition(self.apparatus)
+        self.session_logger = SessionDataLogger(
+            subject_id=self.subject_id,
+            test_number=self.test_number or "unknown",
+            task_name=self._logger_task_name(),
+            apparatus=self.apparatus,
+            realism_condition=realism_condition,
+        )
+
+        if self._is_stroop_test():
+            csv_path = self.session_logger.init_stroop_csv()
+        else:
+            csv_path = self.session_logger.init_craving_csv()
+
+        logging.info(
+            f"SessionDataLogger initialized: apparatus={self.apparatus}, "
+            f"realism={realism_condition}, csv={csv_path}"
+        )
+
+    def _log_craving_rating(self, craving_score):
+        if self.session_logger is None:
+            return
+        try:
+            self.session_logger.append_craving_rating(
+                block_index=self._craving_block_index,
+                sensory_condition=self._current_sensory_condition(),
+                cue_type=self._current_block_cue_type(),
+                craving_score=craving_score,
+            )
+            self._craving_block_index += 1
+        except Exception as exc:
+            logging.error(f"Failed to log craving rating: {exc}", exc_info=True)
+
+    def _current_block_cue_type(self):
+        test = self.current_test or ""
+        if "Alcohol" in test and "Neutral" not in test.split("Alcohol")[0]:
+            return "Alcohol"
+        if "Neutral" in test:
+            return "Neutral"
+        if "Alcohol" in test:
+            return "Alcohol"
+        return "Neutral"
+
+    def _log_stroop_response(self, key_pressed):
+        if self.session_logger is None:
+            return
+        if not hasattr(self, "images") or not (0 <= self.current_image_index < len(self.images)):
+            return
+
+        img = self.images[self.current_image_index]
+        if not hasattr(img, "filename"):
+            return
+
+        image_type = self._image_cue_type(img)
+        scent_number = self.scent_number_for_image(img)
+        congruence = determine_congruence_condition(image_type, scent_number)
+        expected_key = "yes" if congruence == "Congruent" else "no"
+        reaction_time_ms = max(0, self.elapsed_time - self._stroop_stimulus_onset_ms)
+
+        self._stroop_trial_number += 1
+        try:
+            self.session_logger.append_stroop_trial(
+                trial_number=self._stroop_trial_number,
+                image_shown=os.path.basename(img.filename),
+                image_type=image_type,
+                scent_number=scent_number,
+                has_tactile_trigger=self._tactile_fired_this_trial,
+                key_pressed=key_pressed,
+                expected_key=expected_key,
+                reaction_time_ms=reaction_time_ms,
+            )
+        except Exception as exc:
+            logging.error(f"Failed to log Stroop trial: {exc}", exc_info=True)
+
     def build_response_label(self, img, response):
         image_name = os.path.splitext(os.path.basename(img.filename))[0]
         label = f"Response | image={image_name} | response={response}"
@@ -1181,6 +1312,7 @@ class DisplayWindow(QMainWindow):
         """)
         self.craving_response = value
         craving_label = f"craving_rating_{self.craving_response}"
+        self._log_craving_rating(value)
         if self.client:
             self.send_message({"action": "crave", "crave": self.craving_response})
         else:
