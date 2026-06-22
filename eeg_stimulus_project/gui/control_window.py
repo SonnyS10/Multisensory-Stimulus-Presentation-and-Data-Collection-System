@@ -21,6 +21,8 @@ sys.path.insert(0, str(project_root))
 
 from eeg_stimulus_project.config import config
 
+TACTILE_LOCAL_PORT = config.get('network.tactile_local_port', 9998)
+
 # Platform-specific imports
 if platform.system() == 'Windows':
     try:
@@ -689,7 +691,10 @@ class ControlWindow(QMainWindow):
                             elif action == "touchbox_lsl_true":
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
                                 self.shared_status['lsl_enabled'] = True
-                                #self.send_lsl_control("touchbox_lsl_true")
+                                self.shared_status['touch_detection_armed'] = True
+                                logging.info(
+                                    "[TACTILE] touch_detection_armed=True (from client touch instruction)"
+                                )
                             elif action == "crave":
                                 self.craving_response = message.get("crave", None)
                                 logging.info(f"Host: Received craving response: {self.craving_response}")
@@ -714,13 +719,41 @@ class ControlWindow(QMainWindow):
             logging.info(f"Host: Listener crashed: {e}")
             traceback.print_exc()
 
+    def _notify_object_touched(self):
+        """Forward touch events to the client GUI or local shared_status fallback."""
+        self.shared_status['touch_detection_armed'] = False
+        self.shared_status['lsl_enabled'] = False
+
+        if self.connection:
+            try:
+                self.connection.sendall(
+                    (json.dumps({"action": "object_touched"}) + "\n").encode('utf-8')
+                )
+                logging.info("[TACTILE] object_touched sent to client over host connection.")
+            except Exception as exc:
+                logging.error("[TACTILE] Failed to send object_touched to client: %s", exc)
+                self.shared_status['pending_touch_advance'] = True
+        else:
+            self.shared_status['pending_touch_advance'] = True
+            logging.info(
+                "[TACTILE] object_touched queued via shared_status "
+                "(local/developer mode — no host TCP connection)."
+            )
+
     def start_tactile_listener(self):
         def tactile_listener():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('localhost', 9999))
+            try:
+                sock.bind(('localhost', TACTILE_LOCAL_PORT))
+            except OSError as exc:
+                logging.error(
+                    "[TACTILE] Could not bind tactile listener on port %s: %s",
+                    TACTILE_LOCAL_PORT, exc,
+                )
+                return
             sock.listen(5)
-            #print("Label listener started on port 9999")
+            logging.info("[TACTILE] Listening for tactile events on localhost:%s", TACTILE_LOCAL_PORT)
             while True:
                 conn, addr = sock.accept()
                 with conn:
@@ -732,23 +765,25 @@ class ControlWindow(QMainWindow):
                         data += chunk
                     try:
                         msg = json.loads(data.decode('utf-8').strip())
-                        if msg.get("action") == "tactile_connected":
+                        action = msg.get("action")
+                        if action == "tactile_connected":
                             label = "tactile_connected"
-                            logging.info(f"Received label: {label}")
+                            logging.info("[TACTILE] Received: %s", label)
                             self.label_push(label)
-                            logging.info(f"Host: Pushing label: {label}")
                             self.update_app_status_icon(self.touchbox_connected_icon, True)
                             self.shared_status['tactile_connected'] = True
-                            self.connection.sendall((json.dumps({"action": "tactile_connected"}) + "\n").encode('utf-8'))
-                        if msg.get("action") == "tactile_touch":
+                            if self.connection:
+                                self.connection.sendall(
+                                    (json.dumps({"action": "tactile_connected"}) + "\n").encode('utf-8')
+                                )
+                        elif action == "tactile_touch":
                             label = "tactile_touch"
-                            logging.info(f"Received label: {label}")
+                            logging.info("[TACTILE] Received threshold crossing: %s", label)
                             self.label_push(label)
-                            logging.info(f"Host: Pushing label: {label}")
-                            self.connection.sendall((json.dumps({"action": "object_touched"}) + "\n").encode('utf-8'))
+                            self._notify_object_touched()
                             self.update_app_status_icon(self.lsl_touch_icon, False)
-                    except Exception as e:
-                        print(f"Error handling label message: {e}")
+                    except Exception as exc:
+                        logging.error("[TACTILE] Error handling tactile message: %s", exc)
         threading.Thread(target=tactile_listener, daemon=True).start()
 
     def send_olfactory_command(scent_number):

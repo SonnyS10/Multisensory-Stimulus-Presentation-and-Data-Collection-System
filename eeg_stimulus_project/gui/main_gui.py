@@ -397,8 +397,17 @@ class GUI(QMainWindow):
                             self.latency_checker.update_status(status)
                         elif msg.get("action") == "object_touched":
                             current_frame = self.stacked_widget.currentWidget()
+                            logging.info("[TACTILE] Client received object_touched")
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
-                                QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
+                                QMetaObject.invokeMethod(
+                                    current_frame.display_widget,
+                                    "end_touch_instruction_and_advance",
+                                    Qt.QueuedConnection,
+                                )
+                            else:
+                                logging.warning(
+                                    "[TACTILE] object_touched received but no display_widget on current frame"
+                                )
                             # Notify turntable window if present and in tactile mode
                             if hasattr(current_frame, 'turntable_window') and current_frame.turntable_window is not None:
                                 QMetaObject.invokeMethod(current_frame.turntable_window, "on_object_touched", Qt.QueuedConnection)

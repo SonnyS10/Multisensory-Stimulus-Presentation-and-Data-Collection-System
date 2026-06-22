@@ -73,6 +73,8 @@ def init_shared_resources():
     shared_status['lab_recorder_connected'] = False
     shared_status['eyetracker_connected'] = False
     shared_status['lsl_enabled'] = False
+    shared_status['touch_detection_armed'] = False
+    shared_status['pending_touch_advance'] = False
     shared_status['tactile_connected'] = False
     shared_status['olfactory_connected'] = False
     shared_status['turntable_connected'] = False

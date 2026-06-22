@@ -10,7 +10,7 @@ sys.path.insert(0, str(project_root))
 
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout, QApplication
 from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
-from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QMetaObject
 from eeg_stimulus_project.assets.asset_handler import Display
 from eeg_stimulus_project.data.session_data_logger import (
     SessionDataLogger,
@@ -651,11 +651,35 @@ class DisplayWindow(QMainWindow):
             self.waiting_for_initial_touch = True
 
         self.send_message({"action": "touchbox_lsl_true"})
+        self._arm_touch_detection()
+
+    def _arm_touch_detection(self):
+        """Arm tactile threshold forwarding (works in local and distributed modes)."""
+        try:
+            self.shared_status['touch_detection_armed'] = True
+            self.shared_status['lsl_enabled'] = True
+            self.shared_status['pending_touch_advance'] = False
+            logging.info(
+                "[TACTILE] touch_detection_armed=True from display "
+                "(apparatus waiting for participant touch)"
+            )
+        except Exception as exc:
+            logging.error("[TACTILE] Failed to arm touch detection: %s", exc)
+
+    def _disarm_touch_detection(self):
+        try:
+            self.shared_status['touch_detection_armed'] = False
+            self.shared_status['lsl_enabled'] = False
+            self.shared_status['pending_touch_advance'] = False
+        except Exception as exc:
+            logging.error("[TACTILE] Failed to disarm touch detection: %s", exc)
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
         phase = "initial" if self.waiting_for_initial_touch else "advance"
         self.emit_marker(f"Touch Detected | phase={phase}")
+        logging.info("[TACTILE] GUI advancing after touch (phase=%s)", phase)
+        self._disarm_touch_detection()
         self._tactile_fired_this_trial = True
         if self.should_dispense_scent_after_touch():
             self._dispense_scent_before_next_image = True
@@ -821,6 +845,13 @@ class DisplayWindow(QMainWindow):
     #This method is called to update the timer label, it updates the elapsed time and formats the timer text
     def update_timer(self):
         self.elapsed_time += 1  # Increment by 1 millisecond
+        if (self.showing_touch_instruction or self.waiting_for_initial_touch):
+            if self.shared_status.get('pending_touch_advance'):
+                self.shared_status['pending_touch_advance'] = False
+                logging.info("[TACTILE] GUI consumed pending_touch_advance from shared_status")
+                QMetaObject.invokeMethod(
+                    self, "end_touch_instruction_and_advance", Qt.QueuedConnection
+                )
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         timer_text = f"{minutes:02}:{seconds:02}:{milliseconds:03}"
