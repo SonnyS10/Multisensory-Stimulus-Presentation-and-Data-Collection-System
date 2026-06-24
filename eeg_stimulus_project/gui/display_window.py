@@ -26,11 +26,6 @@ from logging.handlers import QueueHandler
 
 def get_test_instruction_text(test_name):
     name = str(test_name or "").strip()
-    if "Craving" in name or "Visual Analog" in name:
-        return (
-            "How strong is your urge to drink alcohol right now?\n\n"
-            "This is a 7-point rating scale ranging from Not at all strong (0) to Very strong (6)."
-        )
     if name == "Unisensory Neutral Visual":
         return (
             "During this task you will be shown a cross in the middle of the screen. "
@@ -41,9 +36,10 @@ def get_test_instruction_text(test_name):
         )
     if name == "Unisensory Alcohol Visual":
         return (
-            "During this task, you will see objects presented one at a time in the viewing booth. "
-            "Please view each object as it is presented. In between each object, you will see an empty slot. "
-            "While viewing the objects, please try to minimize movements including blinks. "
+            "During this task you will be shown a cross in the middle of the screen. "
+            "As you focus on the cross, a series of images will be shown one at a time. "
+            "All you need to do is make sure you view each image and remain fixated on the cross in between images. "
+            "While viewing the images, please try to minimize movements including blinks. "
             "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
         )
     if name in ["Multisensory Neutral Visual & Olfactory", "Multisensory Alcohol Visual & Olfactory"]:
@@ -54,17 +50,10 @@ def get_test_instruction_text(test_name):
             "Please try to minimize any movements including eye blinks while the images are being shown during the task. "
             "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
         )
-    if name == "Multisensory Neutral Visual, Tactile & Olfactory":
+    if name in ["Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"]:
         return (
             "Once prompted on the screen, lightly place your left hand on the object in the touchbox. "
             "This will trigger the screen image to appear and a scent to be released. "
-            "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
-            "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
-        )
-    if name == "Multisensory Alcohol Visual, Tactile & Olfactory":
-        return (
-            "Once prompted, lightly place your left hand on the object in the touchbox. "
-            "This will trigger an object to be presented in the viewing booth and a scent to be released. "
             "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
             "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
         )
@@ -169,7 +158,7 @@ class MirroredDisplayWindow(QWidget):
     #Method to update the mirror text        
     def set_instruction_text(self, text=None, font=None):
         if text is None:
-            text = "Press the Right Arrow key if congruent.\nPress the Left Arrow key if incongruent."
+            text = "Press the Right Arrow key if stimuli match.\nPress the Left Arrow key if stimuli don't match."
         self.image_label.clear()
         self.instructions_label.setText(text)
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -835,7 +824,7 @@ class DisplayWindow(QMainWindow):
         image_name = os.path.splitext(os.path.basename(img.filename))[0]
         label = f"Response Instructions Shown | image={image_name}"
         self.emit_marker(label)
-        text = "Press the Right Arrow key if congruent.\nPress the Left Arrow key if incongruent."
+        text = "Press the Right Arrow key if stimuli match.\nPress the Left Arrow key if stimuli don't match."
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
         label_height = self.image_label.height()
@@ -1160,8 +1149,8 @@ class DisplayWindow(QMainWindow):
 
         # Use the persistent instructions_label for craving instructions
         self.instructions_label.setText(
-            "How much are you craving alcohol right now?\n"
-            "Select a number from 1 to 7 below:"
+            "How strong is your urge to drink alcohol right now?\n\n"
+            "Select a number from 0 to 6 below:"
         )
         self.instructions_label.setFont(QFont("Arial", 24, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
@@ -1172,13 +1161,13 @@ class DisplayWindow(QMainWindow):
 
         # Craving meanings for each number
         meanings = [
-            "Not craving at all",
-            "Almost craving",
-            "Barely craving",
-            "Somewhat craving",
-            "Craving",
-            "Really craving",
-            "Extremely craving"
+            "Not at all strong",
+            "Very slightly strong",
+            "Slightly strong",
+            "Moderately strong",
+            "Quite strong",
+            "Strong",
+            "Very strong"
         ]
 
         # Create a grid layout for labels and buttons
@@ -1367,8 +1356,8 @@ class DisplayWindow(QMainWindow):
             if hasattr(key, 'char') and key.char is not None:
                 key_name = key.char.upper()
                 
-                # Handle 1-7 for craving rating responses
-                if key_name in ['1', '2', '3', '4', '5', '6', '7'] and hasattr(self, 'craving_response') and self.craving_response is None:
+                # Handle 0-6 for craving rating responses
+                if key_name in ['0', '1', '2', '3', '4', '5', '6'] and hasattr(self, 'craving_response') and self.craving_response is None:
                     print(f"[DEBUG] Global craving key pressed: {key_name}")
                     # Only post event if window is not focused
                     if not self.isActiveWindow():
@@ -1382,13 +1371,13 @@ class DisplayWindow(QMainWindow):
         key_map = {
             'RIGHT': Qt.Key_Right,
             'LEFT': Qt.Key_Left,
+            '0': Qt.Key_0,
             '1': Qt.Key_1,
             '2': Qt.Key_2,
             '3': Qt.Key_3,
             '4': Qt.Key_4,
             '5': Qt.Key_5,
-            '6': Qt.Key_6,
-            '7': Qt.Key_7
+            '6': Qt.Key_6
         }
         qt_key = key_map.get(key_name)
         if qt_key is not None:
