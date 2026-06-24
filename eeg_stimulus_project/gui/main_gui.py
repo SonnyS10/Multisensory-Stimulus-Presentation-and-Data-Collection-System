@@ -222,7 +222,8 @@ class GUI(QMainWindow):
     
     # Function to open the secondary GUI and its mirror widget in the middle frame.
     # This function is called when the checkbox is checked/unchecked
-    def open_secondary_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None, baseline_mode=False):
+    def open_secondary_gui(self, state, log_queue, label_stream, eyetracker=None, shared_status=None,
+                           baseline_mode=False, instruction_only=False):
         def any_display_widget_open():
             # Check all frames (including baseline) for an open display_widget
             frames = [
@@ -266,10 +267,16 @@ class GUI(QMainWindow):
                     randomize_cues=randomize_cues,
                     seed=seed,
                     repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers,
-                    baseline_mode=baseline_mode
+                    baseline_mode=baseline_mode,
+                    instruction_only=instruction_only
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
-                current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test, baseline_mode=baseline_mode)
+                current_frame.mirror_display_widget = MirroredDisplayWindow(
+                    current_frame,
+                    current_test=current_test,
+                    baseline_mode=baseline_mode,
+                    instruction_only=instruction_only,
+                )
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
                 # Add both to the middle_frame layout
                 middle_layout = current_frame.middle_frame.layout()  # Or however you access the layout
@@ -965,10 +972,17 @@ class Frame(QFrame):
         if self.local_mode and self.label_stream is None:
             self.label_stream = LSLLabelStream()
 
-        if display_selected:
+        if display_selected or turntable_selected:
             if self.local_mode and self.label_stream is None:
                 self.label_stream = LSLLabelStream()
-            self.parent.open_secondary_gui(Qt.Checked, self.log_queue, label_stream=self.label_stream, eyetracker=self.eyetracker, shared_status=self.shared_status)
+            self.parent.open_secondary_gui(
+                Qt.Checked,
+                self.log_queue,
+                label_stream=self.label_stream,
+                eyetracker=self.eyetracker,
+                shared_status=self.shared_status,
+                instruction_only=turntable_selected and not display_selected,
+            )
         else:
             self.parent.open_secondary_gui(Qt.Unchecked, self.log_queue, label_stream=None)
 
@@ -1034,7 +1048,9 @@ class Frame(QFrame):
                     require_scent_assignments=is_olfactory,
                     olfactory_mode=is_olfactory,
                     on_sequence_started=start_turntable_recording,
-                    on_sequence_stopped=stop_turntable_recording
+                    on_sequence_stopped=stop_turntable_recording,
+                    current_test=test_name,
+                    show_instruction_overlay=False
                 )
             else:
                 self.turntable_window = TurntableWindow(
@@ -1045,7 +1061,9 @@ class Frame(QFrame):
                     require_scent_assignments=is_olfactory,
                     olfactory_mode=is_olfactory,
                     on_sequence_started=start_turntable_recording,
-                    on_sequence_stopped=stop_turntable_recording
+                    on_sequence_stopped=stop_turntable_recording,
+                    current_test=test_name,
+                    show_instruction_overlay=False
                 )
             self.turntable_window.show()
 
@@ -1065,21 +1083,26 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_stroop(
-                    self.parent.get_current_test(),
-                    self.display_widget.user_data['user_inputs'],
-                    self.display_widget.user_data['elapsed_time']
-                )
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if self.base_dir is None:
+            # Client mode: data is saved on the host (XDF via LabRecorder) and there is
+            # no local base_dir to write into, so skip the local save instead of failing.
+            logging.info("Client mode: local data save skipped (handled on host).")
+        else:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_stroop(
+                        self.parent.get_current_test(),
+                        self.display_widget.user_data['user_inputs'],
+                        self.display_widget.user_data['elapsed_time']
+                    )
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
@@ -1107,17 +1130,22 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_passive(self.parent.get_current_test())
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if self.base_dir is None:
+            # Client mode: data is saved on the host (XDF via LabRecorder) and there is
+            # no local base_dir to write into, so skip the local save instead of failing.
+            logging.info("Client mode: local data save skipped (handled on host).")
+        else:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_passive(self.parent.get_current_test())
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:

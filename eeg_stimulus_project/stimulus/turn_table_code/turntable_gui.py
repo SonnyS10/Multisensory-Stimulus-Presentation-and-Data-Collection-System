@@ -12,6 +12,37 @@ from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import T
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
 
 
+def get_turntable_instruction_text(test_name):
+    """Participant-facing instructions shown at the very start of a turntable test.
+
+    Text is provided verbatim by the study lead; do not edit the wording. Neutral and
+    Alcohol variants of a modality share the same instructions. Returns None for tests
+    that have no turntable instructions (e.g. Stroop tasks, which are display-only).
+    """
+    name = str(test_name or "").strip()
+    if name in ("Unisensory Neutral Visual", "Unisensory Alcohol Visual"):
+        return (
+            "During this task, you will see objects presented one at a time in the viewing booth. "
+            "Please view each object as it is presented. In between each object, you will see an empty slot. "
+            "While viewing the objects, please try to minimize movements including blinks. "
+            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
+        )
+    if name in ("Multisensory Neutral Visual & Olfactory", "Multisensory Alcohol Visual & Olfactory"):
+        return (
+            "During this task, you will see objects presented one at a time in the viewing booth. "
+            "Please view each object as it is presented. In between each object, you will see an empty slot. "
+            "while breathing through your nose to pick up the scent that will be released at the same time."
+        )
+    if name in ("Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"):
+        return (
+            "Once prompted, lightly place your left hand on the object in the touchbox. "
+            "This will trigger an object to be presented in the viewing booth and a scent to be released. "
+            "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
+            "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
+        )
+    return None
+
+
 def bay_label_to_index(bay_label):
     """Map displayed bay labels to physical 0-based positions around the 16-step ring."""
     if 1 <= bay_label <= 8:
@@ -227,9 +258,11 @@ class AssignmentTableWidget(QTableWidget):
 class TurntableWindow(QWidget):
     def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None,
                  require_scent_assignments=False, olfactory_mode=False,
-                 on_sequence_started=None, on_sequence_stopped=None):
+                 on_sequence_started=None, on_sequence_stopped=None, current_test=None,
+                 show_instruction_overlay=True):
         super().__init__()
         print(test_order)
+        self.current_test = current_test
         self.tactile_mode = tactile_mode
         self.send_message = send_message
         self.require_scent_assignments = require_scent_assignments
@@ -245,6 +278,7 @@ class TurntableWindow(QWidget):
         self.setWindowTitle("Turntable GUI")
         self.setMinimumSize(1100, 780)
         self.resize(1200, 850)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.setStyleSheet("""
             QWidget {
                 background-color: #f5f5fa;
@@ -416,7 +450,7 @@ class TurntableWindow(QWidget):
             "<b>Doors and replacement</b><br>"
             "<b>Auto Doors:</b> when checked, filled/stimulus bays open, dwell, close, and continue. Manual Open/Close always works even when Auto Doors is off.<br>"
             "<b>Manual replacement pause:</b> waits for Replacement complete / Continue during replacement steps. When unchecked, the Dwell timer advances automatically.<br>"
-            "Replacement starts after 6 total half-empty moves. Odd bays are empty/control; even bays hold bottles.<br><br>"
+            "Replacement starts after 4 total half-empty moves. Odd bays are empty/control; even bays hold bottles.<br><br>"
             "<b>Bay labels</b><br>"
             "GUI bay labels are the experiment-facing bay numbers used in the table, status text, and command-line logs.<br><br>"
             "<b>Safety notes</b><br>"
@@ -499,7 +533,7 @@ class TurntableWindow(QWidget):
         self._gap_replacement_objects = set()
         self._show_empty_slot_bays = False
         self._half_empty_mode = False
-        self.replacement_start_after_moves = 6
+        self.replacement_start_after_moves = 4
         self.starting_bay_label = 1
         self._starting_bay_label_emitted = False
 
@@ -508,6 +542,89 @@ class TurntableWindow(QWidget):
 
         self.update_assignment_list()
         self.update_position_indicators()
+
+        # Participant instructions are usually shown in the display window when
+        # launched from the main GUI, leaving this window for experimenter control.
+        if show_instruction_overlay:
+            self._build_instruction_overlay()
+            self.show_instruction_overlay()
+
+    def _build_instruction_overlay(self):
+        self.instruction_overlay = QFrame(self)
+        self.instruction_overlay.setObjectName("InstructionOverlay")
+        self.instruction_overlay.setStyleSheet("""
+            QFrame#InstructionOverlay {
+                background-color: white;
+            }
+            QFrame#InstructionOverlay QLabel {
+                background: transparent;
+                color: black;
+            }
+        """)
+        overlay_layout = QVBoxLayout(self.instruction_overlay)
+        overlay_layout.setContentsMargins(80, 60, 80, 60)
+        overlay_layout.setSpacing(40)
+        overlay_layout.addStretch()
+
+        self.instruction_overlay_label = QLabel("", self.instruction_overlay)
+        self.instruction_overlay_label.setWordWrap(True)
+        self.instruction_overlay_label.setAlignment(Qt.AlignCenter)
+        self.instruction_overlay_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
+        self._update_instruction_overlay_font()
+        overlay_layout.addWidget(self.instruction_overlay_label, alignment=Qt.AlignHCenter)
+
+        overlay_layout.addStretch()
+
+        self.instruction_overlay.hide()
+
+    def _update_instruction_overlay_font(self):
+        self.instruction_overlay_label.setFont(QFont("Arial", 18))
+        available_width = max(0, self.width() - 160)
+        paragraph_width = max(520, min(700, available_width))
+        self.instruction_overlay_label.setFixedWidth(paragraph_width)
+        self.instruction_overlay_label.adjustSize()
+
+    def show_instruction_overlay(self):
+        text = get_turntable_instruction_text(self.current_test)
+        if not text:
+            # No turntable instructions for this test; leave controls visible.
+            return
+        self.instruction_overlay_label.setText(
+            f"{text}\n\nPress the SPACE BAR when you have finished reading the instructions, "
+            "then wait for the test to begin."
+        )
+        self._update_instruction_overlay_font()
+        self.instruction_overlay.setGeometry(self.rect())
+        self.instruction_overlay.raise_()
+        self.instruction_overlay.show()
+        self.setFocus(Qt.ActiveWindowFocusReason)
+
+    def hide_instruction_overlay(self):
+        self.instruction_overlay.hide()
+
+    def keyPressEvent(self, event):
+        if (
+            getattr(self, "instruction_overlay", None) is not None
+            and self.instruction_overlay.isVisible()
+            and event.key() in (Qt.Key_Space, Qt.Key_Return, Qt.Key_Enter)
+        ):
+            self.hide_instruction_overlay()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if getattr(self, "instruction_overlay", None) is not None and self.instruction_overlay.isVisible():
+            self.instruction_overlay.setGeometry(self.rect())
+            self.instruction_overlay.raise_()
+            self._update_instruction_overlay_font()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if getattr(self, "instruction_overlay", None) is not None and self.instruction_overlay.isVisible():
+            self.instruction_overlay.setGeometry(self.rect())
+            self._update_instruction_overlay_font()
 
     def front_bay_label(self):
         return bay_index_to_label(getattr(self.controller, "current_bay", 0))

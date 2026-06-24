@@ -78,16 +78,23 @@ def get_test_instruction_text(test_name):
     )
 
 
+def get_instruction_prompt(instruction_only=False):
+    if instruction_only:
+        return "Press the SPACE BAR when you have finished reading the instructions, then wait for the test to begin."
+    return "Press the SPACE BAR to begin the experiment."
+
+
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
 #It is used to show the experimenter what the subject is seeing
 class MirroredDisplayWindow(QWidget):
-    def __init__(self, parent=None, current_test=None, baseline_mode=False):
+    def __init__(self, parent=None, current_test=None, baseline_mode=False, instruction_only=False):
         super().__init__(parent)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  
 
         self.current_test = current_test
+        self.instruction_only = instruction_only
 
         self.stacked_layout = QStackedLayout(self)
 
@@ -264,7 +271,7 @@ class MirroredDisplayWindow(QWidget):
     def show_main_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
         instruction_text = get_test_instruction_text(self.current_test)
-        self.instructions_label.setText(f"{instruction_text}\n\nPress the SPACE BAR to begin the experiment.")
+        self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
@@ -278,7 +285,8 @@ class DisplayWindow(QMainWindow):
 
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
-                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None, baseline_mode=False): 
+                 randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
+                 baseline_mode=False, instruction_only=False): 
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -294,6 +302,7 @@ class DisplayWindow(QMainWindow):
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
         self.baseline_mode = baseline_mode
+        self.instruction_only = instruction_only
 
         if self.local_mode:
             if self.shared_status.get('eyetracker_connected', False):
@@ -900,7 +909,10 @@ class DisplayWindow(QMainWindow):
     def keyPressEvent(self, event):
         if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space and self.ready_for_space:
             self.ready_for_space = False
-            self.start_countdown()
+            if self.instruction_only:
+                self.begin_instruction_only_session()
+            else:
+                self.start_countdown()
         else:
             super().keyPressEvent(event)
 
@@ -932,7 +944,9 @@ class DisplayWindow(QMainWindow):
             QTimer.singleShot(1000, self.after_countdown)
 
     def after_countdown(self):
-        if "Tactile" in self.current_test:
+        if self.instruction_only:
+            self.begin_instruction_only_session()
+        elif "Tactile" in self.current_test:
             self.show_touch_instruction(initial=True)
         #elif "Olfactory" in self.current_test and "Tactile" not in self.current_test:
         #    # For olfactory only, probably need to wait for smell
@@ -948,6 +962,15 @@ class DisplayWindow(QMainWindow):
         self.experiment_started.emit()
         self.run_trial()
         self.start_global_key_listener()
+
+    def begin_instruction_only_session(self):
+        self.emit_marker("Instructions reading complete")
+        self.instructions_label.setVisible(False)
+        self.countdown_label.setVisible(False)
+        self.stacked_layout.setCurrentIndex(1)
+        if hasattr(self, 'mirror_widget'):
+            self.mirror_widget.begin_experiment()
+        self.experiment_started.emit()
 
     #This method is called to set the mirror widget, it sets the mirror widget to the passed widget
     def set_mirror(self, mirror_widget):
@@ -1058,7 +1081,7 @@ class DisplayWindow(QMainWindow):
         self.emit_marker(label)
         self.instructions_label.setFont(QFont("Arial", 18))
         instruction_text = get_test_instruction_text(self.current_test)
-        self.instructions_label.setText(f"{instruction_text}\n\nPress the SPACE BAR to begin the experiment.")
+        self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
