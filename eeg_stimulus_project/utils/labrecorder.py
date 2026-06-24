@@ -68,22 +68,24 @@ class LabRecorder:
 
     def _build_recording_paths(self, current_test):
         """
-        Keep the human-readable condition folder for app data, but give LabRecorder
-        a short ASCII-only root/template so its remote filename parser stays stable.
+        Write the XDF straight into the human-readable condition folder. The filename
+        keeps a short ASCII-only alias so LabRecorder's remote filename parser stays
+        stable; the root path uses the full condition name (no '{'/'}' chars, which are
+        the only ones that would break the {root:...} command syntax), so no post-stop
+        move is required.
         """
         base_dir = Path(self.base_dir).resolve()
         condition_dir = base_dir / current_test
         condition_dir.mkdir(parents=True, exist_ok=True)
 
         alias = self._condition_alias(current_test)
-        xdf_root = base_dir / "_labrecorder_tmp" / alias
-        xdf_root.mkdir(parents=True, exist_ok=True)
+        xdf_root = condition_dir
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         subject_str = f"subj_{self._sanitize_filename_part(self.subject_id)}_" if self.subject_id else ""
         filename = f"{subject_str}{alias}_{timestamp}.xdf"
         xdf_path = xdf_root / filename
-        final_xdf_path = condition_dir / filename
+        final_xdf_path = xdf_path
 
         # Defensive path containment check before sending anything to LabRecorder.
         xdf_path.resolve().relative_to(base_dir)
@@ -148,6 +150,23 @@ class LabRecorder:
             if source.exists():
                 break
             time.sleep(0.25)
+
+        # The file is now written straight into the condition folder, so source and
+        # destination are the same path: just confirm it landed and skip the move.
+        if source.resolve() == destination.resolve():
+            if source.exists():
+                self.last_xdf_path = str(destination)
+                message = f"LabRecorder XDF saved to test folder: {destination}"
+                logging.info(message)
+                print(message)
+                return {"path": str(destination), "moved": False, "warning": None}
+            warning = (
+                f"LabRecorder XDF not found in test folder after stop "
+                f"(LabRecorder may have rejected the path): {destination}"
+            )
+            logging.warning(warning)
+            print(f"WARNING: {warning}")
+            return {"path": str(destination), "moved": False, "warning": warning}
 
         if not source.exists():
             warning = f"Could not move XDF into test folder because the source file was not found: {source}"
