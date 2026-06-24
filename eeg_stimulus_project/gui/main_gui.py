@@ -1065,21 +1065,26 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_stroop(
-                    self.parent.get_current_test(),
-                    self.display_widget.user_data['user_inputs'],
-                    self.display_widget.user_data['elapsed_time']
-                )
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if self.base_dir is None:
+            # Client mode: data is saved on the host (XDF via LabRecorder) and there is
+            # no local base_dir to write into, so skip the local save instead of failing.
+            logging.info("Client mode: local data save skipped (handled on host).")
+        else:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_stroop(
+                        self.parent.get_current_test(),
+                        self.display_widget.user_data['user_inputs'],
+                        self.display_widget.user_data['elapsed_time']
+                    )
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
@@ -1107,17 +1112,22 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_passive(self.parent.get_current_test())
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if self.base_dir is None:
+            # Client mode: data is saved on the host (XDF via LabRecorder) and there is
+            # no local base_dir to write into, so skip the local save instead of failing.
+            logging.info("Client mode: local data save skipped (handled on host).")
+        else:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_passive(self.parent.get_current_test())
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:

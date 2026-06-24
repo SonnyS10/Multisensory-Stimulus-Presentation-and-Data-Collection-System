@@ -175,7 +175,7 @@ class MainWindow(QMainWindow):
         self.host_ip_label.setFont(QFont("Segoe UI", 11))
         self.host_ip_input = QLineEdit()
         self.host_ip_input.setFont(QFont("Segoe UI", 11))
-        self.host_ip_input.setText("169.254.37.25")
+        self.host_ip_input.setText("192.168.2.1")
         self.host_ip_input.setPlaceholderText("Enter host IP...")
 
         self.start_as_client_button = QPushButton("Start Experimenter Computer (Client)")
