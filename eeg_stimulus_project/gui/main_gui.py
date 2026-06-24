@@ -1016,11 +1016,14 @@ class Frame(QFrame):
                     logging.warning(f"Turntable label could not be routed: {msg.get('label', '')}")
 
             def start_turntable_recording():
-                self._start_recording_session(test_name)
+                tt_test_name = f"turntable_{test_name}"
+                self._start_recording_session(tt_test_name)
+                # keep the logical test name in the set, but record files with the turntable tag
                 self.tests_run.add(test_name)
 
             def stop_turntable_recording():
-                self._stop_recording_session(test_name)
+                tt_test_name = f"turntable_{test_name}"
+                self._stop_recording_session(tt_test_name)
 
             if "Tactile" in test_name:
                 self.turntable_window = TurntableWindow(

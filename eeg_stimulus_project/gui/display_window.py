@@ -23,6 +23,72 @@ import logging
 import random
 from logging.handlers import QueueHandler
 
+
+def get_test_instruction_text(test_name):
+    name = str(test_name or "").strip()
+    if "Craving" in name or "Visual Analog" in name:
+        return (
+            "How strong is your urge to drink alcohol right now?\n\n"
+            "This is a 7-point rating scale ranging from Not at all strong (0) to Very strong (6)."
+        )
+    if name == "Unisensory Neutral Visual":
+        return (
+            "During this task you will be shown a cross in the middle of the screen. "
+            "As you focus on the cross, a series of images will be shown one at a time. "
+            "All you need to do is make sure you view each image and remain fixated on the cross in between images. "
+            "While viewing the images, please try to minimize movements including blinks. "
+            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
+        )
+    if name == "Unisensory Alcohol Visual":
+        return (
+            "During this task, you will see objects presented one at a time in the viewing booth. "
+            "Please view each object as it is presented. In between each object, you will see an empty slot. "
+            "While viewing the objects, please try to minimize movements including blinks. "
+            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
+        )
+    if name in ["Multisensory Neutral Visual & Olfactory", "Multisensory Alcohol Visual & Olfactory"]:
+        return (
+            "During this task you will be shown a cross in the middle of the screen. "
+            "As you focus on the cross, a series of images paired with scents will be presented. "
+            "For this task, your job is to view the images presented on the screen while breathing through your nose to pick up the scent that will be released at the same time. "
+            "Please try to minimize any movements including eye blinks while the images are being shown during the task. "
+            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
+        )
+    if name == "Multisensory Neutral Visual, Tactile & Olfactory":
+        return (
+            "Once prompted on the screen, lightly place your left hand on the object in the touchbox. "
+            "This will trigger the screen image to appear and a scent to be released. "
+            "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
+            "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
+        )
+    if name == "Multisensory Alcohol Visual, Tactile & Olfactory":
+        return (
+            "Once prompted, lightly place your left hand on the object in the touchbox. "
+            "This will trigger an object to be presented in the viewing booth and a scent to be released. "
+            "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
+            "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
+        )
+    if name in ["Stroop Multisensory Alcohol (Visual & Tactile)", "Stroop Multisensory Neutral (Visual & Tactile)"]:
+        return (
+            "For this task, you will be using both hands. Your left hand will be placed on objects in the touchbox and your right hand should press the right or left arrow keys on the keyboard. "
+            "During the task, you will see a series of images on the screen while touching an object in the touchbox. "
+            "Your job is to determine if the image shown on the screen matches the physical object. Once prompted, lightly place your left hand on the object in the touchbox, which should trigger the image to be presented. "
+            "Press the right arrow if the two match, and the left arrow if they do not match. "
+            "Please respond as quickly and as accurately as possible, and try to minimize additional movements, including eye blinks."
+        )
+    if name in ["Stroop Multisensory Alcohol (Visual & Olfactory)", "Stroop Multisensory Neutral (Visual & Olfactory)"]:
+        return (
+            "For this task, you will be shown a series of images on the screen, and presented with a scent at the same time. "
+            "Your job is to determine if the image shown on the screen matches the scent. "
+            "When prompted by the screen, you will use your right hand to press the right arrow if the two match, and the left arrow if they do not match. "
+            "Please breathe through your nose the entire time. Please respond as quickly and as accurately as possible, and try to minimize additional movements, including eye blinks while the task is ongoing."
+        )
+    return (
+        "Directions: Please read the instructions carefully. "
+        "When you are ready, press the SPACE BAR to begin the experiment."
+    )
+
+
 #This is the class that creates the mirror display window that resides in the main display window to be used by the experimenter to make sure the experiment is running correctly
 #It contains the same layout and functionality as the main display window, but it is not interactive
 #It is used to show the experimenter what the subject is seeing
@@ -208,7 +274,8 @@ class MirroredDisplayWindow(QWidget):
     
     def show_main_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
-        self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
+        instruction_text = get_test_instruction_text(self.current_test)
+        self.instructions_label.setText(f"{instruction_text}\n\nPress the SPACE BAR to begin the experiment.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
@@ -1000,8 +1067,9 @@ class DisplayWindow(QMainWindow):
         # Restore your original instructions and allow the experiment to proceed
         label = "Main Instructions Shown"
         self.emit_marker(label)
-        #self.instructions_label.setFont(QFont("Arial", 18))
-        self.instructions_label.setText("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.")
+        self.instructions_label.setFont(QFont("Arial", 18))
+        instruction_text = get_test_instruction_text(self.current_test)
+        self.instructions_label.setText(f"{instruction_text}\n\nPress the SPACE BAR to begin the experiment.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
