@@ -24,6 +24,12 @@ import random
 from logging.handlers import QueueHandler
 
 
+# Time to wait after releasing a scent before presenting the paired image, so the
+# scent reaches the participant at the same point relative to the image in every
+# olfactory realism block (2D and viewing booth, with or without tactile).
+SCENT_DISPENSE_DELAY_MS = 4000
+
+
 def get_test_instruction_text(test_name):
     name = str(test_name or "").strip()
     if name == "Unisensory Neutral Visual":
@@ -430,6 +436,10 @@ class DisplayWindow(QMainWindow):
         self.waiting_for_initial_touch = False
         self._dispense_scent_before_next_image = False
         self.next_is_craving = False  # Flag to indicate if the next image is a craving rating image
+        # Olfactory defaults; the controller is only opened below when this window
+        # actually presents stimuli (see instruction_only guard).
+        self.olfactory_controller = None
+        self.olfactory_connected = False
         # Step 4: Load assets using user folders if provided
         Display.test_assets = Display.get_assets(
             alcohol_folder, non_alcohol_folder, randomize_cues=randomize_cues, seed=seed, repetitions=repetitions
@@ -452,7 +462,12 @@ class DisplayWindow(QMainWindow):
             # Fallback: just move to default position and size
             self.move(100, 100)
             self.resize(700, 700)
-        if "Olfactory" in self.current_test:
+        # Only open the olfactory serial ports when this DisplayWindow is actually
+        # presenting stimuli. In instruction_only mode the turntable (viewing booth)
+        # is the presentation device and owns the scent controller; if we connected
+        # here we would hold COM8/COM9 and the turntable's olfactory connect would
+        # silently fail (a serial port can only be opened by one handle at a time).
+        if "Olfactory" in self.current_test and not self.instruction_only:
             self.olfactory_controller = OlfactoryController()
             self.olfactory_connected = self.olfactory_controller.connect()
 
@@ -537,20 +552,24 @@ class DisplayWindow(QMainWindow):
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
-            if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
+            # Every olfactory block presents the scent first, then waits SCENT_DISPENSE_DELAY_MS
+            # before showing the image. This keeps the scent->image order and timing identical
+            # across realism blocks: Olfactory-only dispenses here; Tactile+Olfactory dispenses
+            # when the touch arms _dispense_scent_before_next_image. Both then delay equally.
+            is_olfactory = "Olfactory" in self.current_test
+            dispense_after_touch = self.should_dispense_scent_after_touch()
+
+            if is_olfactory and dispense_after_touch and self._dispense_scent_before_next_image:
+                # Tactile+Olfactory: touch armed the scent. Dispense, wait, then show image.
                 self.scent_function(img)
                 self._dispense_scent_before_next_image = False
-            
-            # For olfactory tests, send scent first and wait 2 seconds before showing image
-            should_delay_for_scent = "Olfactory" in self.current_test and not self.should_dispense_scent_after_touch()
-            
-            if should_delay_for_scent:
-                # Send scent first
+                QTimer.singleShot(SCENT_DISPENSE_DELAY_MS, lambda: self._display_image_after_scent_delay(img))
+            elif is_olfactory and not dispense_after_touch:
+                # Olfactory-only: dispense scent, wait for it to reach the participant, then show image.
                 self.scent_function(img)
-                # Wait 4 seconds for scent to dispense, then display image
-                QTimer.singleShot(4000, lambda: self._display_image_after_scent_delay(img))
+                QTimer.singleShot(SCENT_DISPENSE_DELAY_MS, lambda: self._display_image_after_scent_delay(img))
             else:
-                # No scent delay needed, display image immediately
+                # No scent involved (or scent already handled): display image immediately.
                 self._display_image_after_scent_delay(img)
         elif hasattr(img, 'asset_type') and img.asset_type == "craving_rating":
             # Handle the craving rating asset (e.g., show a rating dialog or skip)

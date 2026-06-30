@@ -12,6 +12,13 @@ from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import T
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
 
 
+# Time to wait after releasing a scent before opening the booth doors (revealing the
+# object). Kept equal to the 2D display's SCENT_DISPENSE_DELAY_MS so the scent->object
+# order and timing is identical across every olfactory realism block, with or without
+# tactile.
+SCENT_DISPENSE_DELAY_MS = 4000
+
+
 def get_turntable_instruction_text(test_name):
     """Participant-facing instructions shown at the very start of a turntable test.
 
@@ -1140,9 +1147,9 @@ class TurntableWindow(QWidget):
                 self.send_message({"action": "touchbox_lsl_true"})
             # Do not open doors yet; wait for touch signal
         else:
-            # Trigger scent first, wait 4 seconds for dispense, then open doors
+            # Trigger scent first, wait for dispense, then open doors
             self.trigger_scent_for_step(step)
-            self._start_timer(4000, self._open_doors_after_scent)
+            self._start_timer(SCENT_DISPENSE_DELAY_MS, self._open_doors_after_scent)
 
     @pyqtSlot()
     def on_object_touched(self):
@@ -1157,9 +1164,9 @@ class TurntableWindow(QWidget):
                     f" | object={stimulus_label(step.get('object'))}"
                 )
                 self.emit_turntable_label(label)
-            # Trigger scent first, wait 2 seconds for dispense, then open doors
+            # Trigger scent first, wait for dispense, then open doors
             self.trigger_scent_for_step(step)
-            self._start_timer(2000, self._open_doors_after_scent)
+            self._start_timer(SCENT_DISPENSE_DELAY_MS, self._open_doors_after_scent)
 
     def close_doors_and_continue(self):
         if self._stopped or self._paused:
@@ -1170,7 +1177,7 @@ class TurntableWindow(QWidget):
         self.complete_current_step()
 
     def _open_doors_after_scent(self):
-        """Open doors after scent has had 2 seconds to dispense."""
+        """Open doors after scent has had SCENT_DISPENSE_DELAY_MS to dispense."""
         if self.auto_doors_enabled():
             self._auto_doors_opened_for_current_item = self.open_doors_automatically()
         self._start_timer(2000, self.close_doors_and_continue)
