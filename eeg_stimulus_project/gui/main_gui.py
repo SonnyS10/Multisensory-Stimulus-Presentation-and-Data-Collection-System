@@ -1050,7 +1050,7 @@ class Frame(QFrame):
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording,
                     current_test=test_name,
-                    show_instruction_overlay=False
+                    show_instruction_overlay=True
                 )
             else:
                 self.turntable_window = TurntableWindow(
@@ -1063,7 +1063,7 @@ class Frame(QFrame):
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording,
                     current_test=test_name,
-                    show_instruction_overlay=False
+                    show_instruction_overlay=True
                 )
             self.turntable_window.show()
 

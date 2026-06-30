@@ -32,15 +32,7 @@ SCENT_DISPENSE_DELAY_MS = 4000
 
 def get_test_instruction_text(test_name):
     name = str(test_name or "").strip()
-    if name == "Unisensory Neutral Visual":
-        return (
-            "During this task you will be shown a cross in the middle of the screen. "
-            "As you focus on the cross, a series of images will be shown one at a time. "
-            "All you need to do is make sure you view each image and remain fixated on the cross in between images. "
-            "While viewing the images, please try to minimize movements including blinks. "
-            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
-        )
-    if name == "Unisensory Alcohol Visual":
+    if name in ["Unisensory Neutral Visual", "Unisensory Alcohol Visual"]:
         return (
             "During this task you will be shown a cross in the middle of the screen. "
             "As you focus on the cross, a series of images will be shown one at a time. "
@@ -1230,7 +1222,7 @@ class DisplayWindow(QMainWindow):
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
 
             # Add button
-            btn = QPushButton(str(i+1), self.overlay_widget)
+            btn = QPushButton(str(i), self.overlay_widget)
             btn.setFont(QFont("Arial", 22, QFont.Bold))
             btn.setFixedSize(70, 70)
             btn.setStyleSheet("""
@@ -1245,7 +1237,7 @@ class DisplayWindow(QMainWindow):
                     color: white;
                 }
             """)
-            btn.clicked.connect(lambda checked, val=i+1: self.handle_craving_button(val))
+            btn.clicked.connect(lambda checked, val=i: self.handle_craving_button(val))
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
 
@@ -1302,7 +1294,7 @@ class DisplayWindow(QMainWindow):
                     color: white;
                 }
             """)
-        self.craving_buttons[value-1].setStyleSheet("""
+        self.craving_buttons[value].setStyleSheet("""
             QPushButton {
                 background-color: #bc85fa;
                 border-radius: 35px;

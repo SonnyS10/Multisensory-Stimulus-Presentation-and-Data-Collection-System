@@ -25,8 +25,8 @@ class CravingRatingDialog(QDialog):
         
         # Instructions
         instructions = QLabel(
-            "How much are you craving alcohol right now?\n"
-            "Select a number from 1 to 7 below:"
+            "How strong is your urge to drink alcohol right now?\n\n"
+            "Select a number from 0 to 6 below:"
         )
         instructions.setFont(QFont("Arial", 20, QFont.Bold))
         instructions.setAlignment(Qt.AlignCenter)
@@ -35,13 +35,13 @@ class CravingRatingDialog(QDialog):
         
         # Craving meanings and buttons
         meanings = [
-            "Not craving\nat all",
-            "Almost\ncraving",
-            "Barely\ncraving",
-            "Somewhat\ncraving",
-            "Craving",
-            "Really\ncraving",
-            "Extremely\ncraving"
+            "Not at all strong",
+            "Very slightly strong",
+            "Slightly strong",
+            "Moderately strong",
+            "Quite strong",
+            "Strong",
+            "Very strong"
         ]
         
         grid = QGridLayout()
@@ -59,7 +59,7 @@ class CravingRatingDialog(QDialog):
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
             
             # Button
-            btn = QPushButton(str(i+1))
+            btn = QPushButton(str(i))
             btn.setFont(QFont("Arial", 20, QFont.Bold))
             btn.setMinimumSize(70, 70)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Changed from Fixed to Expanding
@@ -76,7 +76,7 @@ class CravingRatingDialog(QDialog):
                     color: white;
                 }
             """)
-            btn.clicked.connect(lambda checked, val=i+1: self.handle_craving_button(val))
+            btn.clicked.connect(lambda checked, val=i: self.handle_craving_button(val))
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
         
@@ -106,7 +106,7 @@ class CravingRatingDialog(QDialog):
                 }
             """)
         
-        self.craving_buttons[value-1].setStyleSheet("""
+        self.craving_buttons[value].setStyleSheet("""
             QPushButton {
                 background-color: #bc85fa;
                 border-radius: 35px;

@@ -1106,36 +1106,6 @@ class TurntableWindow(QWidget):
         step = self.sequence_steps[self.current_index]
         bay = step.get("bay")
         self._auto_doors_opened_for_current_item = False
-        if step.get("type") == "stimulus":
-            object_name = step.get("object")
-            print(f"Moving to bay {bay} for object {stimulus_label(object_name)}")
-            self.sequence_status_label.setText(f"Moving to filled bay {bay}: {stimulus_label(object_name)}")
-        else:
-            print(f"Moving to control bay {bay}")
-            self.sequence_status_label.setText(f"Moving to control bay {bay}")
-
-        try:
-            move_success = self.controller.move_to_bay(bay_label_to_index(bay))
-        except Exception as e:
-            message = f"Could not move to bay {bay}: {e}"
-            print(message)
-            self.sequence_status_label.setText(message)
-            QMessageBox.warning(self, "Turntable Movement Error", message)
-            self._sequence_running = False
-            self._notify_sequence_stopped()
-            return
-        self.update_position_indicators()
-        if not move_success:
-            message = f"Turntable move to bay {bay} timed out. Sequence stopped."
-            print(message)
-            self.sequence_status_label.setText(message)
-            QMessageBox.warning(self, "Turntable Movement Timeout", message)
-            self._sequence_running = False
-            self._notify_sequence_stopped()
-            return
-
-        self.emit_bay_label(step)
-
         if step.get("type") != "stimulus":
             self.handle_control_step(step)
             return
@@ -1145,11 +1115,20 @@ class TurntableWindow(QWidget):
             self.waiting_for_touch = True
             if self.send_message:
                 self.send_message({"action": "touchbox_lsl_true"})
-            # Do not open doors yet; wait for touch signal
-        else:
-            # Trigger scent first, wait for dispense, then open doors
+            self.sequence_status_label.setText(
+                f"Waiting for touch to reveal bay {bay}: {stimulus_label(step.get('object'))}"
+            )
+            return
+
+        if self.olfactory_mode:
             self.trigger_scent_for_step(step)
-            self._start_timer(SCENT_DISPENSE_DELAY_MS, self._open_doors_after_scent)
+            self._start_timer(
+                SCENT_DISPENSE_DELAY_MS,
+                lambda: self._move_to_bay_and_open_doors(step),
+            )
+            return
+
+        self._move_to_bay_and_open_doors(step)
 
     @pyqtSlot()
     def on_object_touched(self):
@@ -1164,9 +1143,53 @@ class TurntableWindow(QWidget):
                     f" | object={stimulus_label(step.get('object'))}"
                 )
                 self.emit_turntable_label(label)
-            # Trigger scent first, wait for dispense, then open doors
-            self.trigger_scent_for_step(step)
-            self._start_timer(SCENT_DISPENSE_DELAY_MS, self._open_doors_after_scent)
+            if self.olfactory_mode:
+                self.trigger_scent_for_step(step)
+                self._start_timer(
+                    SCENT_DISPENSE_DELAY_MS,
+                    lambda: self._move_to_bay_and_open_doors(step),
+                )
+            else:
+                self._move_to_bay_and_open_doors(step)
+
+    def _move_to_bay_and_open_doors(self, step):
+        if self._stopped or self._paused:
+            return
+
+        bay = step.get("bay")
+        obj = step.get("object")
+        if step.get("type") == "stimulus":
+            print(f"Moving to bay {bay} for object {stimulus_label(obj)}")
+            self.sequence_status_label.setText(f"Moving to filled bay {bay}: {stimulus_label(obj)}")
+        else:
+            print(f"Moving to control bay {bay}")
+            self.sequence_status_label.setText(f"Moving to control bay {bay}")
+
+        try:
+            move_success = self.controller.move_to_bay(bay_label_to_index(bay))
+        except Exception as e:
+            message = f"Could not move to bay {bay}: {e}"
+            print(message)
+            self.sequence_status_label.setText(message)
+            QMessageBox.warning(self, "Turntable Movement Error", message)
+            self._sequence_running = False
+            self._notify_sequence_stopped()
+            return
+
+        self.update_position_indicators()
+        if not move_success:
+            message = f"Turntable move to bay {bay} timed out. Sequence stopped."
+            print(message)
+            self.sequence_status_label.setText(message)
+            QMessageBox.warning(self, "Turntable Movement Timeout", message)
+            self._sequence_running = False
+            self._notify_sequence_stopped()
+            return
+
+        self.emit_bay_label(step)
+        if self.auto_doors_enabled():
+            self._auto_doors_opened_for_current_item = self.open_doors_automatically()
+        self._start_timer(2000, self.close_doors_and_continue)
 
     def close_doors_and_continue(self):
         if self._stopped or self._paused:
