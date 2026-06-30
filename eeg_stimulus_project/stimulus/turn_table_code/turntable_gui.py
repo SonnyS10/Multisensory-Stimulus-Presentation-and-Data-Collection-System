@@ -1107,6 +1107,7 @@ class TurntableWindow(QWidget):
         bay = step.get("bay")
         self._auto_doors_opened_for_current_item = False
         if step.get("type") != "stimulus":
+            self._move_to_bay(step)
             self.handle_control_step(step)
             return
 
@@ -1152,7 +1153,7 @@ class TurntableWindow(QWidget):
             else:
                 self._move_to_bay_and_open_doors(step)
 
-    def _move_to_bay_and_open_doors(self, step):
+    def _move_to_bay(self, step):
         if self._stopped or self._paused:
             return
 
@@ -1187,6 +1188,11 @@ class TurntableWindow(QWidget):
             return
 
         self.emit_bay_label(step)
+
+    def _move_to_bay_and_open_doors(self, step):
+        self._move_to_bay(step)
+        if self._stopped or self._paused:
+            return
         if self.auto_doors_enabled():
             self._auto_doors_opened_for_current_item = self.open_doors_automatically()
         self._start_timer(2000, self.close_doors_and_continue)

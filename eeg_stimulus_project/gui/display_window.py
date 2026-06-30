@@ -30,7 +30,37 @@ from logging.handlers import QueueHandler
 SCENT_DISPENSE_DELAY_MS = 4000
 
 
-def get_test_instruction_text(test_name):
+def get_turntable_instruction_text(test_name):
+    name = str(test_name or "").strip()
+    if name in ("Unisensory Neutral Visual", "Unisensory Alcohol Visual"):
+        return (
+            "During this task, you will see objects presented one at a time in the viewing booth. "
+            "Please view each object as it is presented. In between each object, you will see an empty slot. "
+            "While viewing the objects, please try to minimize movements including blinks. "
+            "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
+        )
+    if name in ("Multisensory Neutral Visual & Olfactory", "Multisensory Alcohol Visual & Olfactory"):
+        return (
+            "During this task, you will see objects presented one at a time in the viewing booth. "
+            "Please view each object as it is presented. In between each object, you will see an empty slot. "
+            "Please breathe through your nose to pick up the scent that will be released at the same time."
+        )
+    if name in ("Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"):
+        return (
+            "Once prompted, lightly place your left hand on the object in the touchbox. "
+            "This will trigger an object to be presented in the viewing booth and a scent to be released. "
+            "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
+            "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
+        )
+    return None
+
+
+def get_test_instruction_text(test_name, instruction_only=False):
+    if instruction_only:
+        turntable_text = get_turntable_instruction_text(test_name)
+        if turntable_text:
+            return turntable_text
+
     name = str(test_name or "").strip()
     if name in ["Unisensory Neutral Visual", "Unisensory Alcohol Visual"]:
         return (
@@ -268,7 +298,7 @@ class MirroredDisplayWindow(QWidget):
     
     def show_main_instructions(self):
         self.instructions_label.setFont(QFont("Arial", 18))
-        instruction_text = get_test_instruction_text(self.current_test)
+        instruction_text = get_test_instruction_text(self.current_test, self.instruction_only)
         self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -1091,7 +1121,7 @@ class DisplayWindow(QMainWindow):
         label = "Main Instructions Shown"
         self.emit_marker(label)
         self.instructions_label.setFont(QFont("Arial", 18))
-        instruction_text = get_test_instruction_text(self.current_test)
+        instruction_text = get_test_instruction_text(self.current_test, self.instruction_only)
         self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
