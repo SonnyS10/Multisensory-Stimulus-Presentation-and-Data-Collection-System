@@ -28,7 +28,7 @@ class CravingRatingDialog(QDialog):
             "How strong is your urge to drink alcohol right now?\n\n"
             "Select a number from 0 to 6 below:"
         )
-        instructions.setFont(QFont("Arial", 20, QFont.Bold))
+        instructions.setFont(QFont("Arial", 24, QFont.Bold))
         instructions.setAlignment(Qt.AlignCenter)
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
@@ -51,19 +51,19 @@ class CravingRatingDialog(QDialog):
         for i in range(7):
             # Label
             label = QLabel(meanings[i])
-            label.setFont(QFont("Arial", 12))
+            label.setFont(QFont("Arial", 16))
             label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
             label.setMinimumHeight(50)
-            label.setMaximumWidth(140)
+            label.setMaximumWidth(170)
             label.setWordWrap(True)
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
             
             # Button
             btn = QPushButton(str(i))
-            btn.setFont(QFont("Arial", 20, QFont.Bold))
-            btn.setMinimumSize(70, 70)
+            btn.setFont(QFont("Arial", 24, QFont.Bold))
+            btn.setMinimumSize(90, 90)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Changed from Fixed to Expanding
-            btn.setMaximumSize(100, 100)
+            btn.setMaximumSize(110, 110)
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e0e0e0;

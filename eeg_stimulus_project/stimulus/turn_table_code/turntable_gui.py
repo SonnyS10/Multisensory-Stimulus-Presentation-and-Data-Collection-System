@@ -472,7 +472,7 @@ class TurntableWindow(QWidget):
                 border-radius: 8px;
                 padding: 10px;
                 color: #22223b;
-                font-size: 13px;
+                font-size: 15px;
             }
         """)
 
@@ -585,7 +585,7 @@ class TurntableWindow(QWidget):
         self.instruction_overlay.hide()
 
     def _update_instruction_overlay_font(self):
-        self.instruction_overlay_label.setFont(QFont("Arial", 18))
+        self.instruction_overlay_label.setFont(QFont("Arial", 22))
         available_width = max(0, self.width() - 160)
         paragraph_width = max(520, min(700, available_width))
         self.instruction_overlay_label.setFixedWidth(paragraph_width)
@@ -881,6 +881,7 @@ class TurntableWindow(QWidget):
                 print(f"Ignoring {stimulus_label(obj)}: half-empty mode only uses filled bays 2, 4, 6, 8.")
 
         steps = []
+        last_filled_bay = None
         for obj in self.test_order:
             bay = self.object_to_bay.get(obj)
             if bay not in valid_filled_bays:
@@ -888,6 +889,11 @@ class TurntableWindow(QWidget):
             empty_bay, filled_bay = pair_by_filled_bay[bay]
             steps.append({"type": "empty_control", "bay": empty_bay})
             steps.append({"type": "stimulus", "bay": filled_bay, "object": obj})
+            last_filled_bay = filled_bay
+
+        if last_filled_bay is not None:
+            empty_bay, _ = pair_by_filled_bay[last_filled_bay]
+            steps.append({"type": "empty_control", "bay": empty_bay})
         return steps
 
     def start_new_sequence(self):
