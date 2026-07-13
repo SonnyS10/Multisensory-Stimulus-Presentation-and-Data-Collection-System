@@ -382,7 +382,9 @@ class SessionDataLogger:
         Append one craving rating (thread-safe).
 
         Args:
-            block_index: 0 for baseline, 1-18 after each experimental sub-block.
+            block_index: 0-based ordinal for this craving response within the
+                session (0 for the first/baseline rating, then 1, 2, ... with
+                no upper cap so extra experimenter-inserted ratings are logged).
             sensory_condition: e.g. 'Unisensory_Visual'.
             cue_type: 'Alcohol' or 'Neutral'.
             craving_score: Participant response on the 1-7 scale.
@@ -393,8 +395,6 @@ class SessionDataLogger:
         """
         if self._craving_filepath is None:
             raise RuntimeError("Call init_craving_csv() before append_craving_rating().")
-        if not 0 <= int(block_index) <= 18:
-            raise ValueError(f"block_index must be 0-18, got {block_index}")
 
         row_apparatus = apparatus if apparatus is not None else self.apparatus
         row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition

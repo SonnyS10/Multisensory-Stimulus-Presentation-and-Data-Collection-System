@@ -387,7 +387,7 @@ class GUI(QMainWindow):
         return self.session_logger
 
     def peek_craving_block_index(self):
-        """Current block_index (0-18) that the NEXT craving rating should use."""
+        """Current block_index that the NEXT craving rating should use (uncapped)."""
         return self._craving_block_index
 
     def advance_craving_block_index(self):
