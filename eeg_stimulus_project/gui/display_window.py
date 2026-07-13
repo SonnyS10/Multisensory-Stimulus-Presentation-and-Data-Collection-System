@@ -933,7 +933,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'craving_response') and self.craving_response is None:
             if event.type() == QEvent.KeyPress:
                 key = event.key()
-                if Qt.Key_1 <= key <= Qt.Key_7:
+                if Qt.Key_0 <= key <= Qt.Key_6:
                     self.handle_craving_button(key - Qt.Key_0)
                     return True
         return super().eventFilter(source, event)
@@ -1312,6 +1312,8 @@ class DisplayWindow(QMainWindow):
     def handle_craving_button(self, value):
         if self.craving_response is not None:
             return  # Already handled
+        if value < 0 or value >= len(self.craving_buttons):
+            return
         # Highlight selected button
         for btn in self.craving_buttons:
             btn.setStyleSheet("""

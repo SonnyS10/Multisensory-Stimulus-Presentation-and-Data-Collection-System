@@ -90,6 +90,8 @@ class CravingRatingDialog(QDialog):
     def handle_craving_button(self, value):
         if self.craving_response is not None:
             return  # Already selected
+        if value < 0 or value >= len(self.craving_buttons):
+            return
         
         # Highlight selected button
         for btn in self.craving_buttons:
@@ -124,6 +126,14 @@ class CravingRatingDialog(QDialog):
         
         # Close after a brief delay
         QTimer.singleShot(500, self.accept)
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if self.craving_response is None and Qt.Key_0 <= key <= Qt.Key_6:
+            self.handle_craving_button(key - Qt.Key_0)
+            event.accept()
+            return
+        super().keyPressEvent(event)
     
     def save_craving_rating(self):
         """Save the craving rating to a CSV file with error handling and logging."""
