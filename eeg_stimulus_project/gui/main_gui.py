@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
@@ -11,6 +12,7 @@ from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, resolve_realism_condition
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
@@ -34,6 +36,16 @@ class GUI(QMainWindow):
         self.labrecorder_connected = False
         self.local_mode = local_mode
         self.olfactory_controller = None
+        self.subject_id = subject_id
+
+        # --- Session-scoped SessionDataLogger (hoisted out of DisplayWindow) ---
+        # Exactly ONE logger/CSV is created per day/test_number, the first time
+        # any condition frame's Start button is clicked. Every subsequent
+        # DisplayWindow created for a different condition in this same GUI
+        # process shares this same instance/file via ensure_session_logger().
+        self.session_logger = None
+        self._craving_block_index = 0
+        self._stroop_trial_number = 0
 
         if connection is not None:
             self.start_listener()
@@ -257,7 +269,12 @@ class GUI(QMainWindow):
                 repetitions = self.stimulus_order_frame.get_repetitions_settings()
 
                 scent_numbers = self.stimulus_order_frame.scent_numbers
-                
+                apparatus = current_frame.get_selected_apparatus() if hasattr(current_frame, "get_selected_apparatus") else "Display"
+
+                # Lazily create (or reuse) the ONE session-scoped logger for
+                # this day/test_number. Baseline runs are never logged.
+                session_logger = None if baseline_mode or self.client else self.ensure_session_logger(apparatus)
+
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
                     self.connection, log_queue, label_stream, current_frame, current_test,
@@ -268,7 +285,10 @@ class GUI(QMainWindow):
                     seed=seed,
                     repetitions=repetitions, local_mode=self.local_mode, scent_numbers=scent_numbers,
                     baseline_mode=baseline_mode,
-                    instruction_only=instruction_only
+                    subject_id=self.get_subject_id(),
+                    apparatus=apparatus,
+                    session_logger=session_logger,
+                    session_owner=self,
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(
@@ -323,6 +343,81 @@ class GUI(QMainWindow):
             return 'Stroop Multisensory Neutral (Visual & Olfactory)'
         else:
             return None
+
+    def get_subject_id(self):
+        """Resolve participant ID from explicit config or the session base_dir path."""
+        if self.subject_id:
+            return str(self.subject_id)
+        if self.base_dir:
+            for part in Path(self.base_dir).parts:
+                if part.startswith("subject_"):
+                    return part.replace("subject_", "", 1)
+        return "unknown"
+
+    def get_active_task_name(self):
+        """Test 1 == Passive_Viewing day; Test 2 == Cross_Modal_Stroop day."""
+        return "Cross_Modal_Stroop" if str(self.test_number) == "2" else "Passive_Viewing"
+
+    def ensure_session_logger(self, apparatus):
+        """
+        Lazily create the ONE SessionDataLogger for this entire day/session.
+
+        Called on the first Start click of ANY condition frame within this
+        GUI process. Every later Start click (a different condition, or a
+        re-run of the same one) reuses the exact same instance/open file
+        target instead of creating a new CSV, so a full Test 1 session ends
+        up as a single craving_ratings CSV (and Test 2 as a single
+        stroop_behavioral CSV) rather than one file per condition.
+        """
+        if self.session_logger is not None:
+            return self.session_logger
+
+        task_name = self.get_active_task_name()
+        realism_condition = resolve_realism_condition(apparatus)
+        self.session_logger = SessionDataLogger(
+            subject_id=self.get_subject_id(),
+            test_number=self.test_number or "unknown",
+            task_name=task_name,
+            apparatus=apparatus,
+            realism_condition=realism_condition,
+            data_root=self.get_session_data_root(),
+        )
+
+        if task_name == "Cross_Modal_Stroop":
+            csv_path = self.session_logger.init_stroop_csv()
+        else:
+            csv_path = self.session_logger.init_craving_csv()
+
+        logging.info(
+            f"[SessionDataLogger] Session logger created ONCE for test_number={self.test_number}: "
+            f"task={task_name}, apparatus={apparatus}, realism={realism_condition}, csv={csv_path}"
+        )
+        return self.session_logger
+
+    def get_session_data_root(self):
+        """Return the configured saved_data root from the active session base_dir."""
+        if not self.base_dir:
+            return None
+        base_path = Path(self.base_dir)
+        if base_path.name.startswith("test_") and base_path.parent.name.startswith("subject_"):
+            return base_path.parent.parent
+        return base_path
+
+    def peek_craving_block_index(self):
+        """Current block_index that the NEXT craving rating should use (uncapped)."""
+        return self._craving_block_index
+
+    def advance_craving_block_index(self):
+        """Call only after a craving rating row has been successfully written."""
+        self._craving_block_index += 1
+
+    def peek_next_stroop_trial_number(self):
+        """1-based trial_number that the NEXT Stroop trial should use."""
+        return self._stroop_trial_number + 1
+
+    def advance_stroop_trial_number(self):
+        """Call only after a Stroop trial row has been successfully written."""
+        self._stroop_trial_number += 1
 
     def start_latency_test(self):
         if self._latency_test_active:
@@ -390,8 +485,17 @@ class GUI(QMainWindow):
                             self.latency_checker.update_status(status)
                         elif msg.get("action") == "object_touched":
                             current_frame = self.stacked_widget.currentWidget()
+                            logging.info("[TACTILE] Client received object_touched")
                             if hasattr(current_frame, 'display_widget') and current_frame.display_widget is not None:
-                                QMetaObject.invokeMethod(current_frame.display_widget, "end_touch_instruction_and_advance", Qt.QueuedConnection)
+                                QMetaObject.invokeMethod(
+                                    current_frame.display_widget,
+                                    "end_touch_instruction_and_advance",
+                                    Qt.QueuedConnection,
+                                )
+                            else:
+                                logging.warning(
+                                    "[TACTILE] object_touched received but no display_widget on current frame"
+                                )
                             # Notify turntable window if present and in tactile mode
                             if hasattr(current_frame, 'turntable_window') and current_frame.turntable_window is not None:
                                 QMetaObject.invokeMethod(current_frame.turntable_window, "on_object_touched", Qt.QueuedConnection)
@@ -481,12 +585,16 @@ class GUI(QMainWindow):
     
     def show_craving_rating_dialog(self):
         """Show a manual craving rating dialog."""
-        dialog = CravingRatingDialog(self, self.base_dir, self.subject_id)
+        dialog = CravingRatingDialog(self, self.base_dir, self.get_subject_id())
         dialog.exec_()
-        # Client mode: base_dir is None so the dialog can't save locally;
-        # forward the rating to the host which has the save path.
-        if not self.base_dir and dialog.craving_response is not None:
-            self.send_message({"action": "crave_manual", "crave": dialog.craving_response})
+        if self.client and dialog.craving_response is not None:
+            self.send_message({
+                "action": "crave_manual",
+                "crave": dialog.craving_response,
+                "sensory_condition": "Manual",
+                "cue_type": "Unknown",
+                "apparatus": "Display",
+            })
 
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):
@@ -705,6 +813,14 @@ class Frame(QFrame):
                         btn.setChecked(False)
                         btn.blockSignals(False)
 
+    def get_selected_apparatus(self):
+        """Return the active presentation apparatus for SessionDataLogger."""
+        if getattr(self, "turntable_button", None) and self.turntable_button.isChecked():
+            return "Turntable"
+        if getattr(self, "vr_button", None) and self.vr_button.isChecked():
+            return "VR"
+        return "Display"
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         w = self.width()
@@ -750,7 +866,11 @@ class Frame(QFrame):
             return
 
         if self.client:
-            self.send_message({"action": "start_button", "test": current_test})
+            self.send_message({
+                "action": "start_button",
+                "test": current_test,
+                "apparatus": self.get_selected_apparatus(),
+            })
             self.recording_session_active = True
             return
 
