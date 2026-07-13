@@ -84,6 +84,11 @@ STROOP_COLUMNS: List[str] = [
     "key_pressed",
     "reaction_time_ms",
     "is_correct",
+    "event_type",
+    "block_index",
+    "sensory_condition",
+    "cue_type",
+    "craving_score",
 ]
 
 TaskName = Literal["Passive_Viewing", "Cross_Modal_Stroop"]
@@ -474,6 +479,11 @@ class SessionDataLogger:
             "key_pressed": key_pressed,
             "reaction_time_ms": reaction_time_ms,
             "is_correct": resolved_correct,
+            "event_type": "stroop_trial",
+            "block_index": "",
+            "sensory_condition": "",
+            "cue_type": "",
+            "craving_score": "",
         }
 
         with self._lock:
@@ -485,6 +495,60 @@ class SessionDataLogger:
             marker = (
                 f"stroop_trial{trial_number}_{congruence_condition}"
                 f"_img{image_shown}_key{key_pressed}"
+            )
+            push_lsl_marker(marker, perf_counter_time=event_perf)
+
+        return row
+
+    def append_stroop_craving_rating(
+        self,
+        block_index: int,
+        sensory_condition: str,
+        cue_type: str,
+        craving_score: Union[int, float],
+        *,
+        apparatus: Optional[str] = None,
+        push_marker: bool = True,
+    ) -> Dict[str, Any]:
+        """Append a craving-rating event row to the Stroop behavioral CSV."""
+        if self._stroop_filepath is None:
+            raise RuntimeError("Call init_stroop_csv() before append_stroop_craving_rating().")
+
+        row_apparatus = apparatus if apparatus is not None else self.apparatus
+        row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition
+
+        event_perf = time.perf_counter()
+        row = {
+            "timestamp": _event_timestamp(),
+            "subject_id": self.subject_id,
+            "test_number": self.test_number,
+            "apparatus": row_apparatus,
+            "realism_condition": row_realism,
+            "trial_number": "",
+            "image_shown": "",
+            "scent_number": "",
+            "scent_name": "",
+            "has_tactile_trigger": "",
+            "congruence_condition": "",
+            "key_pressed": "",
+            "reaction_time_ms": "",
+            "is_correct": "",
+            "event_type": "craving_rating",
+            "block_index": int(block_index),
+            "sensory_condition": sensory_condition,
+            "cue_type": cue_type,
+            "craving_score": craving_score,
+        }
+
+        with self._lock:
+            with open(self._stroop_filepath, "a", newline="", encoding="utf-8") as handle:
+                _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writerow(row))
+            self._craving_rows += 1
+
+        if push_marker:
+            marker = (
+                f"stroop_craving_rating_subj{self.subject_id}_block{block_index}"
+                f"_score{craving_score}"
             )
             push_lsl_marker(marker, perf_counter_time=event_perf)
 
