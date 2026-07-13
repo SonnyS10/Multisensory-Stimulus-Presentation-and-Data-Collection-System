@@ -387,7 +387,7 @@ class SessionDataLogger:
                 no upper cap so extra experimenter-inserted ratings are logged).
             sensory_condition: e.g. 'Unisensory_Visual'.
             cue_type: 'Alcohol' or 'Neutral'.
-            craving_score: Participant response on the 1-7 scale.
+            craving_score: Participant response on the 0-6 scale.
             apparatus: Optional per-row override (e.g. when a session-scoped
                 logger is shared across condition switches that could, in
                 principle, change presentation hardware mid-session). Defaults

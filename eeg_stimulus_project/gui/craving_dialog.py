@@ -59,7 +59,7 @@ class CravingRatingDialog(QDialog):
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
             
             # Button
-            btn = QPushButton(str(i+1))
+            btn = QPushButton(str(i))
             btn.setFont(QFont("Arial", 20, QFont.Bold))
             btn.setMinimumSize(70, 70)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Changed from Fixed to Expanding
@@ -76,7 +76,7 @@ class CravingRatingDialog(QDialog):
                     color: white;
                 }
             """)
-            btn.clicked.connect(lambda checked, val=i+1: self.handle_craving_button(val))
+            btn.clicked.connect(lambda checked, val=i: self.handle_craving_button(val))
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
         
@@ -90,6 +90,8 @@ class CravingRatingDialog(QDialog):
     def handle_craving_button(self, value):
         if self.craving_response is not None:
             return  # Already selected
+        if value < 0 or value >= len(self.craving_buttons):
+            return
         
         # Highlight selected button
         for btn in self.craving_buttons:
@@ -106,7 +108,7 @@ class CravingRatingDialog(QDialog):
                 }
             """)
         
-        self.craving_buttons[value-1].setStyleSheet("""
+        self.craving_buttons[value].setStyleSheet("""
             QPushButton {
                 background-color: #bc85fa;
                 border-radius: 35px;
@@ -124,6 +126,14 @@ class CravingRatingDialog(QDialog):
         
         # Close after a brief delay
         QTimer.singleShot(500, self.accept)
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if self.craving_response is None and Qt.Key_0 <= key <= Qt.Key_6:
+            self.handle_craving_button(key - Qt.Key_0)
+            event.accept()
+            return
+        super().keyPressEvent(event)
     
     def save_craving_rating(self):
         """Save the craving rating to a CSV file with error handling and logging."""

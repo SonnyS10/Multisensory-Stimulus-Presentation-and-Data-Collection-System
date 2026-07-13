@@ -844,7 +844,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'craving_response') and self.craving_response is None:
             if event.type() == QEvent.KeyPress:
                 key = event.key()
-                if Qt.Key_1 <= key <= Qt.Key_7:
+                if Qt.Key_0 <= key <= Qt.Key_6:
                     self.handle_craving_button(key - Qt.Key_0)
                     return True
         return super().eventFilter(source, event)
@@ -1102,6 +1102,16 @@ class DisplayWindow(QMainWindow):
         return "Neutral"
 
     def _log_craving_rating(self, craving_score):
+        payload = {
+            "action": "crave",
+            "crave": craving_score,
+            "sensory_condition": self._current_sensory_condition(),
+            "cue_type": self._current_block_cue_type(),
+            "apparatus": self.apparatus,
+        }
+        if self.client:
+            self.send_message(payload)
+            return
         if self.session_logger is None:
             return
         if self.session_owner is None:
@@ -1114,8 +1124,8 @@ class DisplayWindow(QMainWindow):
         try:
             self.session_logger.append_craving_rating(
                 block_index=block_index,
-                sensory_condition=self._current_sensory_condition(),
-                cue_type=self._current_block_cue_type(),
+                sensory_condition=payload["sensory_condition"],
+                cue_type=payload["cue_type"],
                 craving_score=craving_score,
                 apparatus=self.apparatus,
             )
@@ -1136,14 +1146,6 @@ class DisplayWindow(QMainWindow):
         return "Neutral"
 
     def _log_stroop_response(self, key_pressed):
-        if self.session_logger is None:
-            return
-        if self.session_owner is None:
-            logging.error(
-                "session_logger is set but session_owner is missing; cannot "
-                "obtain a session-scoped trial_number. Stroop trial not logged."
-            )
-            return
         if not hasattr(self, "images") or not (0 <= self.current_image_index < len(self.images)):
             return
 
@@ -1157,17 +1159,40 @@ class DisplayWindow(QMainWindow):
         expected_key = "yes" if congruence == "Congruent" else "no"
         reaction_time_ms = max(0, self.elapsed_time - self._stroop_stimulus_onset_ms)
 
+        payload = {
+            "action": "stroop_trial",
+            "image_shown": os.path.basename(img.filename),
+            "image_type": image_type,
+            "scent_number": scent_number,
+            "has_tactile_trigger": self._tactile_fired_this_trial,
+            "key_pressed": key_pressed,
+            "expected_key": expected_key,
+            "reaction_time_ms": reaction_time_ms,
+            "apparatus": self.apparatus,
+        }
+        if self.client:
+            self.send_message(payload)
+            return
+        if self.session_logger is None:
+            return
+        if self.session_owner is None:
+            logging.error(
+                "session_logger is set but session_owner is missing; cannot "
+                "obtain a session-scoped trial_number. Stroop trial not logged."
+            )
+            return
+
         trial_number = self.session_owner.peek_next_stroop_trial_number()
         try:
             self.session_logger.append_stroop_trial(
                 trial_number=trial_number,
-                image_shown=os.path.basename(img.filename),
-                image_type=image_type,
-                scent_number=scent_number,
-                has_tactile_trigger=self._tactile_fired_this_trial,
-                key_pressed=key_pressed,
-                expected_key=expected_key,
-                reaction_time_ms=reaction_time_ms,
+                image_shown=payload["image_shown"],
+                image_type=payload["image_type"],
+                scent_number=payload["scent_number"],
+                has_tactile_trigger=payload["has_tactile_trigger"],
+                key_pressed=payload["key_pressed"],
+                expected_key=payload["expected_key"],
+                reaction_time_ms=payload["reaction_time_ms"],
                 apparatus=self.apparatus,
             )
             self.session_owner.advance_stroop_trial_number()
@@ -1257,7 +1282,7 @@ class DisplayWindow(QMainWindow):
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
 
             # Add button
-            btn = QPushButton(str(i+1), self.overlay_widget)
+            btn = QPushButton(str(i), self.overlay_widget)
             btn.setFont(QFont("Arial", 22, QFont.Bold))
             btn.setFixedSize(70, 70)
             btn.setStyleSheet("""
@@ -1272,7 +1297,7 @@ class DisplayWindow(QMainWindow):
                     color: white;
                 }
             """)
-            btn.clicked.connect(lambda checked, val=i+1: self.handle_craving_button(val))
+            btn.clicked.connect(lambda checked, val=i: self.handle_craving_button(val))
             self.craving_buttons.append(btn)
             grid.addWidget(btn, 1, i, alignment=Qt.AlignHCenter)
 
@@ -1315,6 +1340,8 @@ class DisplayWindow(QMainWindow):
     def handle_craving_button(self, value):
         if self.craving_response is not None:
             return  # Already handled
+        if value < 0 or value >= len(self.craving_buttons):
+            return
         # Highlight selected button
         for btn in self.craving_buttons:
             btn.setStyleSheet("""
@@ -1329,7 +1356,7 @@ class DisplayWindow(QMainWindow):
                     color: white;
                 }
             """)
-        self.craving_buttons[value-1].setStyleSheet("""
+        self.craving_buttons[value].setStyleSheet("""
             QPushButton {
                 background-color: #bc85fa;
                 border-radius: 35px;
@@ -1340,9 +1367,7 @@ class DisplayWindow(QMainWindow):
         self.craving_response = value
         craving_label = f"craving_rating_{self.craving_response}"
         self._log_craving_rating(value)
-        if self.client:
-            self.send_message({"action": "crave", "crave": self.craving_response})
-        else:
+        if not self.client:
             self.push_local_label(craving_label)
             logging.info(f"Current label: {craving_label}")
             if self.eyetracker is not None:
@@ -1426,8 +1451,8 @@ class DisplayWindow(QMainWindow):
             if hasattr(key, 'char') and key.char is not None:
                 key_name = key.char.upper()
                 
-                # Handle 1-7 for craving rating responses
-                if key_name in ['1', '2', '3', '4', '5', '6', '7'] and hasattr(self, 'craving_response') and self.craving_response is None:
+                # Handle 0-6 for craving rating responses
+                if key_name in ['0', '1', '2', '3', '4', '5', '6'] and hasattr(self, 'craving_response') and self.craving_response is None:
                     print(f"[DEBUG] Global craving key pressed: {key_name}")
                     # Only post event if window is not focused
                     if not self.isActiveWindow():
@@ -1441,13 +1466,13 @@ class DisplayWindow(QMainWindow):
         key_map = {
             'RIGHT': Qt.Key_Right,
             'LEFT': Qt.Key_Left,
+            '0': Qt.Key_0,
             '1': Qt.Key_1,
             '2': Qt.Key_2,
             '3': Qt.Key_3,
             '4': Qt.Key_4,
             '5': Qt.Key_5,
-            '6': Qt.Key_6,
-            '7': Qt.Key_7
+            '6': Qt.Key_6
         }
         qt_key = key_map.get(key_name)
         if qt_key is not None:

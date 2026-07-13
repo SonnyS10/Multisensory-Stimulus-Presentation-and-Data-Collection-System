@@ -271,7 +271,7 @@ class GUI(QMainWindow):
 
                 # Lazily create (or reuse) the ONE session-scoped logger for
                 # this day/test_number. Baseline runs are never logged.
-                session_logger = None if baseline_mode else self.ensure_session_logger(apparatus)
+                session_logger = None if baseline_mode or self.client else self.ensure_session_logger(apparatus)
 
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
@@ -373,6 +373,7 @@ class GUI(QMainWindow):
             task_name=task_name,
             apparatus=apparatus,
             realism_condition=realism_condition,
+            data_root=self.get_session_data_root(),
         )
 
         if task_name == "Cross_Modal_Stroop":
@@ -385,6 +386,15 @@ class GUI(QMainWindow):
             f"task={task_name}, apparatus={apparatus}, realism={realism_condition}, csv={csv_path}"
         )
         return self.session_logger
+
+    def get_session_data_root(self):
+        """Return the configured saved_data root from the active session base_dir."""
+        if not self.base_dir:
+            return None
+        base_path = Path(self.base_dir)
+        if base_path.name.startswith("test_") and base_path.parent.name.startswith("subject_"):
+            return base_path.parent.parent
+        return base_path
 
     def peek_craving_block_index(self):
         """Current block_index that the NEXT craving rating should use (uncapped)."""
@@ -568,8 +578,16 @@ class GUI(QMainWindow):
     
     def show_craving_rating_dialog(self):
         """Show a manual craving rating dialog."""
-        dialog = CravingRatingDialog(self, self.base_dir, self.test_number)
+        dialog = CravingRatingDialog(self, self.base_dir, self.get_subject_id())
         dialog.exec_()
+        if self.client and dialog.craving_response is not None:
+            self.send_message({
+                "action": "crave_manual",
+                "crave": dialog.craving_response,
+                "sensory_condition": "Manual",
+                "cue_type": "Unknown",
+                "apparatus": "Display",
+            })
 
 class Frame(QFrame):
     def __init__(self, parent, title, connection, is_stroop_test=False, shared_status=None, base_dir=None, test_number=None, client=False, log_queue=None, eyetracker_connected=None, labrecorder_connected=None, local_mode=False):
@@ -841,7 +859,11 @@ class Frame(QFrame):
             return
 
         if self.client:
-            self.send_message({"action": "start_button", "test": current_test})
+            self.send_message({
+                "action": "start_button",
+                "test": current_test,
+                "apparatus": self.get_selected_apparatus(),
+            })
             self.recording_session_active = True
             return
 
@@ -1160,21 +1182,22 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_stroop(
-                    self.parent.get_current_test(),
-                    self.display_widget.user_data['user_inputs'],
-                    self.display_widget.user_data['elapsed_time']
-                )
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if not self.client and self.base_dir:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_stroop(
+                        self.parent.get_current_test(),
+                        self.display_widget.user_data['user_inputs'],
+                        self.display_widget.user_data['elapsed_time']
+                    )
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
@@ -1202,17 +1225,18 @@ class Frame(QFrame):
         
         self._stop_recording_session(self.parent.get_current_test())
 
-        save_data = Save_Data(self.base_dir, self.test_number)
         self.start_button.setEnabled(True)  # Re-enable the start button after stopping
-        try:
-            if hasattr(self, 'display_widget') and self.display_widget is not None:
-                save_data.save_data_passive(self.parent.get_current_test())
-            else:
-                logging.info("No display_widget found for saving data.")
-                self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
-        except Exception as e:
-            logging.info(f"Error saving data: {e}")
-            self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
+        if not self.client and self.base_dir:
+            save_data = Save_Data(self.base_dir, self.test_number)
+            try:
+                if hasattr(self, 'display_widget') and self.display_widget is not None:
+                    save_data.save_data_passive(self.parent.get_current_test())
+                else:
+                    logging.info("No display_widget found for saving data.")
+                    self.send_message({"action": "client_log", "message": "No display_widget found for saving data."})
+            except Exception as e:
+                logging.info(f"Error saving data: {e}")
+                self.send_message({"action": "client_log", "message": f"Error saving data: {e}"})
         # LabRecorder is stopped by _stop_recording_session above.
         # Stop the eyetracker if connected`
         #if self.eyetracker and self.eyetracker.device is not None:
@@ -1413,7 +1437,7 @@ class InstructionFrame(QWidget):
             "<h2>🧬 Craving Rating & Data Collection</h2>"
             "<p><b>Craving Rating During Experiments:</b></p>"
             "<ul>"
-            "<li><b>Craving Rating Asset:</b> Special stimulus that prompts participant to rate cravings (1-7 scale)</li>"
+            "<li><b>Craving Rating Asset:</b> Special stimulus that prompts participant to rate cravings (0-6 scale)</li>"
             "<li>Automatically included at end of passive tests</li>"
             "<li>Can be inserted anywhere in stimulus order via Stimulus Order Management</li>"
             "</ul>"
@@ -1422,7 +1446,7 @@ class InstructionFrame(QWidget):
             "<li>Located in the sidebar (orange button: 'Manual Craving Rating')</li>"
             "<li>Use this to collect craving ratings <b>outside</b> of test runs</li>"
             "<li>Useful for baseline craving measurements or between test blocks</li>"
-            "<li>Opens dialog allowing participant to enter craving rating (0-100)</li>"
+            "<li>Opens dialog allowing participant to enter craving rating (0-6)</li>"
             "<li>Data saved with timestamp for later analysis</li>"
             "</ul>"
             "<p><b>What Gets Recorded During Tests:</b></p>"
