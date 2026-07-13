@@ -725,23 +725,30 @@ class ControlWindow(QMainWindow):
 
         apparatus = message.get("apparatus") or "Display"
         logger = self.ensure_session_logger(apparatus)
-        if logger.task_name != "Passive_Viewing":
-            logging.warning(
-                "Host: received craving rating during %s; not writing to Stroop CSV.",
-                logger.task_name,
-            )
-            return
 
         try:
-            logger.append_craving_rating(
-                block_index=self._craving_block_index,
-                sensory_condition=message.get("sensory_condition") or self._sensory_condition_from_test(),
-                cue_type=message.get("cue_type") or self._cue_type_from_test(),
-                craving_score=craving_score,
-                apparatus=apparatus,
-            )
+            sensory_condition = message.get("sensory_condition") or self._sensory_condition_from_test()
+            cue_type = message.get("cue_type") or self._cue_type_from_test()
+            if logger.task_name == "Cross_Modal_Stroop":
+                logger.append_stroop_craving_rating(
+                    block_index=self._craving_block_index,
+                    sensory_condition=sensory_condition,
+                    cue_type=cue_type,
+                    craving_score=craving_score,
+                    apparatus=apparatus,
+                )
+                target_path = logger.stroop_filepath
+            else:
+                logger.append_craving_rating(
+                    block_index=self._craving_block_index,
+                    sensory_condition=sensory_condition,
+                    cue_type=cue_type,
+                    craving_score=craving_score,
+                    apparatus=apparatus,
+                )
+                target_path = logger.craving_filepath
             self._craving_block_index += 1
-            logging.info("Host: saved craving rating %s to %s", craving_score, logger.craving_filepath)
+            logging.info("Host: saved craving rating %s to %s", craving_score, target_path)
         except Exception as exc:
             logging.error("Host: failed to save craving rating: %s", exc, exc_info=True)
 

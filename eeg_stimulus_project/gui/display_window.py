@@ -1122,13 +1122,22 @@ class DisplayWindow(QMainWindow):
             return
         block_index = self.session_owner.peek_craving_block_index()
         try:
-            self.session_logger.append_craving_rating(
-                block_index=block_index,
-                sensory_condition=payload["sensory_condition"],
-                cue_type=payload["cue_type"],
-                craving_score=craving_score,
-                apparatus=self.apparatus,
-            )
+            if self.session_logger.task_name == "Cross_Modal_Stroop":
+                self.session_logger.append_stroop_craving_rating(
+                    block_index=block_index,
+                    sensory_condition=payload["sensory_condition"],
+                    cue_type=payload["cue_type"],
+                    craving_score=craving_score,
+                    apparatus=self.apparatus,
+                )
+            else:
+                self.session_logger.append_craving_rating(
+                    block_index=block_index,
+                    sensory_condition=payload["sensory_condition"],
+                    cue_type=payload["cue_type"],
+                    craving_score=craving_score,
+                    apparatus=self.apparatus,
+                )
             # Only advance the shared session counter once the row is
             # durably on disk, so a failed write never burns a block_index.
             self.session_owner.advance_craving_block_index()
