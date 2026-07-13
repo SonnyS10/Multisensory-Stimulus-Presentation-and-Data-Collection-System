@@ -12,6 +12,7 @@ from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, resolve_realism_condition
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
@@ -36,6 +37,15 @@ class GUI(QMainWindow):
         self.local_mode = local_mode
         self.olfactory_controller = None
         self.subject_id = subject_id
+
+        # --- Session-scoped SessionDataLogger (hoisted out of DisplayWindow) ---
+        # Exactly ONE logger/CSV is created per day/test_number, the first time
+        # any condition frame's Start button is clicked. Every subsequent
+        # DisplayWindow created for a different condition in this same GUI
+        # process shares this same instance/file via ensure_session_logger().
+        self.session_logger = None
+        self._craving_block_index = 0
+        self._stroop_trial_number = 0
 
         if connection is not None:
             self.start_listener()
@@ -259,6 +269,10 @@ class GUI(QMainWindow):
                 scent_numbers = self.stimulus_order_frame.scent_numbers
                 apparatus = current_frame.get_selected_apparatus() if hasattr(current_frame, "get_selected_apparatus") else "Display"
 
+                # Lazily create (or reuse) the ONE session-scoped logger for
+                # this day/test_number. Baseline runs are never logged.
+                session_logger = None if baseline_mode else self.ensure_session_logger(apparatus)
+
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
                     self.connection, log_queue, label_stream, current_frame, current_test,
@@ -271,6 +285,8 @@ class GUI(QMainWindow):
                     baseline_mode=baseline_mode,
                     subject_id=self.get_subject_id(),
                     apparatus=apparatus,
+                    session_logger=session_logger,
+                    session_owner=self,
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(current_frame, current_test=current_test, baseline_mode=baseline_mode)
@@ -330,6 +346,61 @@ class GUI(QMainWindow):
                 if part.startswith("subject_"):
                     return part.replace("subject_", "", 1)
         return "unknown"
+
+    def get_active_task_name(self):
+        """Test 1 == Passive_Viewing day; Test 2 == Cross_Modal_Stroop day."""
+        return "Cross_Modal_Stroop" if str(self.test_number) == "2" else "Passive_Viewing"
+
+    def ensure_session_logger(self, apparatus):
+        """
+        Lazily create the ONE SessionDataLogger for this entire day/session.
+
+        Called on the first Start click of ANY condition frame within this
+        GUI process. Every later Start click (a different condition, or a
+        re-run of the same one) reuses the exact same instance/open file
+        target instead of creating a new CSV, so a full Test 1 session ends
+        up as a single craving_ratings CSV (and Test 2 as a single
+        stroop_behavioral CSV) rather than one file per condition.
+        """
+        if self.session_logger is not None:
+            return self.session_logger
+
+        task_name = self.get_active_task_name()
+        realism_condition = resolve_realism_condition(apparatus)
+        self.session_logger = SessionDataLogger(
+            subject_id=self.get_subject_id(),
+            test_number=self.test_number or "unknown",
+            task_name=task_name,
+            apparatus=apparatus,
+            realism_condition=realism_condition,
+        )
+
+        if task_name == "Cross_Modal_Stroop":
+            csv_path = self.session_logger.init_stroop_csv()
+        else:
+            csv_path = self.session_logger.init_craving_csv()
+
+        logging.info(
+            f"[SessionDataLogger] Session logger created ONCE for test_number={self.test_number}: "
+            f"task={task_name}, apparatus={apparatus}, realism={realism_condition}, csv={csv_path}"
+        )
+        return self.session_logger
+
+    def peek_craving_block_index(self):
+        """Current block_index (0-18) that the NEXT craving rating should use."""
+        return self._craving_block_index
+
+    def advance_craving_block_index(self):
+        """Call only after a craving rating row has been successfully written."""
+        self._craving_block_index += 1
+
+    def peek_next_stroop_trial_number(self):
+        """1-based trial_number that the NEXT Stroop trial should use."""
+        return self._stroop_trial_number + 1
+
+    def advance_stroop_trial_number(self):
+        """Call only after a Stroop trial row has been successfully written."""
+        self._stroop_trial_number += 1
 
     def start_latency_test(self):
         if self._latency_test_active:

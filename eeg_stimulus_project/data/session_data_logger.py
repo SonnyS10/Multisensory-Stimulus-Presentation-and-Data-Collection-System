@@ -24,6 +24,7 @@ stream's row counter so subsequent hardware runs never append to a prior file.
 from __future__ import annotations
 
 import csv
+import os
 import threading
 import time
 from datetime import datetime
@@ -212,6 +213,22 @@ def _evaluate_stroop_correctness(key_pressed: str, expected_key: str) -> bool:
     return key_pressed.strip().lower() == expected_key.strip().lower()
 
 
+def _durable_write(handle, write_fn) -> None:
+    """
+    Run write_fn(handle), then force the bytes past the OS file cache onto
+    physical disk before returning.
+
+    handle.close() (via the caller's `with open(...)` block) is sufficient to
+    survive an application crash/force-quit, since close() hands the data to
+    the OS immediately. flush() + fsync() additionally survives a hard power
+    loss / plug-pull, since fsync() blocks until the OS confirms the write
+    reached the physical storage device rather than sitting in OS buffers.
+    """
+    write_fn(handle)
+    handle.flush()
+    os.fsync(handle.fileno())
+
+
 def push_lsl_marker(label: str, perf_counter_time: Optional[float] = None) -> None:
     """
     Placeholder for LabRecorder / LSL marker outlet integration.
@@ -310,7 +327,7 @@ class SessionDataLogger:
         )
         with self._lock:
             with open(filepath, "w", newline="", encoding="utf-8") as handle:
-                csv.DictWriter(handle, fieldnames=CRAVING_COLUMNS).writeheader()
+                _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=CRAVING_COLUMNS).writeheader())
             self._craving_filepath = filepath
             self._craving_rows = 0
 
@@ -341,7 +358,7 @@ class SessionDataLogger:
         )
         with self._lock:
             with open(filepath, "w", newline="", encoding="utf-8") as handle:
-                csv.DictWriter(handle, fieldnames=STROOP_COLUMNS).writeheader()
+                _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writeheader())
             self._stroop_filepath = filepath
             self._stroop_trials = 0
 
@@ -358,6 +375,7 @@ class SessionDataLogger:
         cue_type: str,
         craving_score: Union[int, float],
         *,
+        apparatus: Optional[str] = None,
         push_marker: bool = True,
     ) -> Dict[str, Any]:
         """
@@ -368,19 +386,26 @@ class SessionDataLogger:
             sensory_condition: e.g. 'Unisensory_Visual'.
             cue_type: 'Alcohol' or 'Neutral'.
             craving_score: Participant response on the 1-7 scale.
+            apparatus: Optional per-row override (e.g. when a session-scoped
+                logger is shared across condition switches that could, in
+                principle, change presentation hardware mid-session). Defaults
+                to the apparatus/realism_condition captured at construction.
         """
         if self._craving_filepath is None:
             raise RuntimeError("Call init_craving_csv() before append_craving_rating().")
         if not 0 <= int(block_index) <= 18:
             raise ValueError(f"block_index must be 0-18, got {block_index}")
 
+        row_apparatus = apparatus if apparatus is not None else self.apparatus
+        row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition
+
         event_perf = time.perf_counter()
         row = {
             "timestamp": _event_timestamp(),
             "subject_id": self.subject_id,
             "test_number": self.test_number,
-            "apparatus": self.apparatus,
-            "realism_condition": self.realism_condition,
+            "apparatus": row_apparatus,
+            "realism_condition": row_realism,
             "block_index": int(block_index),
             "sensory_condition": sensory_condition,
             "cue_type": cue_type,
@@ -389,7 +414,7 @@ class SessionDataLogger:
 
         with self._lock:
             with open(self._craving_filepath, "a", newline="", encoding="utf-8") as handle:
-                csv.DictWriter(handle, fieldnames=CRAVING_COLUMNS).writerow(row)
+                _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=CRAVING_COLUMNS).writerow(row))
             self._craving_rows += 1
 
         if push_marker:
@@ -412,6 +437,7 @@ class SessionDataLogger:
         expected_key: str,
         reaction_time_ms: Union[int, float],
         *,
+        apparatus: Optional[str] = None,
         push_marker: bool = True,
     ) -> Dict[str, Any]:
         """
@@ -420,9 +446,14 @@ class SessionDataLogger:
         Congruence is derived automatically from image_type and scent_number.
         Accuracy is determined by comparing key_pressed to expected_key, which
         the display layer supplies based on the active task instructions.
+
+        apparatus: Optional per-row override, mirroring append_craving_rating.
         """
         if self._stroop_filepath is None:
             raise RuntimeError("Call init_stroop_csv() before append_stroop_trial().")
+
+        row_apparatus = apparatus if apparatus is not None else self.apparatus
+        row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition
 
         event_perf = time.perf_counter()
         congruence_condition = determine_congruence_condition(image_type, scent_number)
@@ -432,8 +463,8 @@ class SessionDataLogger:
             "timestamp": _event_timestamp(),
             "subject_id": self.subject_id,
             "test_number": self.test_number,
-            "apparatus": self.apparatus,
-            "realism_condition": self.realism_condition,
+            "apparatus": row_apparatus,
+            "realism_condition": row_realism,
             "trial_number": int(trial_number),
             "image_shown": image_shown,
             "scent_number": scent_number if scent_number is not None else "",
@@ -447,7 +478,7 @@ class SessionDataLogger:
 
         with self._lock:
             with open(self._stroop_filepath, "a", newline="", encoding="utf-8") as handle:
-                csv.DictWriter(handle, fieldnames=STROOP_COLUMNS).writerow(row)
+                _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writerow(row))
             self._stroop_trials += 1
 
         if push_marker:

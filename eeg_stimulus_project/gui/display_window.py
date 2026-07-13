@@ -12,11 +12,7 @@ from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, Q
 from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QMetaObject
 from eeg_stimulus_project.assets.asset_handler import Display
-from eeg_stimulus_project.data.session_data_logger import (
-    SessionDataLogger,
-    determine_congruence_condition,
-    resolve_realism_condition,
-)
+from eeg_stimulus_project.data.session_data_logger import determine_congruence_condition
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
@@ -227,7 +223,8 @@ class DisplayWindow(QMainWindow):
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
                  randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
-                 baseline_mode=False, subject_id=None, apparatus="Display"):
+                 baseline_mode=False, subject_id=None, apparatus="Display",
+                 session_logger=None, session_owner=None):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -245,9 +242,16 @@ class DisplayWindow(QMainWindow):
         self.baseline_mode = baseline_mode
         self.subject_id = subject_id or "unknown"
         self.apparatus = apparatus
-        self.session_logger = None
-        self._craving_block_index = 0
-        self._stroop_trial_number = 0
+        # session_logger/session_owner are injected by GUI.open_secondary_gui().
+        # The logger is created exactly once per day/test_number at the GUI
+        # (session) level -- see GUI.ensure_session_logger() in main_gui.py --
+        # and the SAME instance/open file is shared across every condition's
+        # DisplayWindow so a full session lands in one CSV. session_owner is
+        # the GUI instance itself, which owns the block_index/trial_number
+        # counters so they keep incrementing across condition switches
+        # instead of resetting every time a new DisplayWindow is created.
+        self.session_logger = session_logger
+        self.session_owner = session_owner
         self._tactile_fired_this_trial = False
         self._stroop_stimulus_onset_ms = 0
 
@@ -433,9 +437,12 @@ class DisplayWindow(QMainWindow):
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
-                    self._craving_block_index = 0
-                    self._stroop_trial_number = 0
-                    self._init_session_data_logger()
+                    # NOTE: block_index/trial_number are intentionally NOT reset
+                    # here. They live on session_owner (the GUI instance) and
+                    # must keep incrementing across condition switches within
+                    # this same day/session -- see GUI.peek_craving_block_index()
+                    # / GUI.advance_craving_block_index() (and the Stroop
+                    # equivalents) in main_gui.py.
                     self.timer.start(1)  # Start the timer with 100 ms interval
                 if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
@@ -1067,12 +1074,6 @@ class DisplayWindow(QMainWindow):
             label = f"{label} | scent={scent_number}"
         return label
 
-    def _is_stroop_test(self):
-        return "stroop" in str(self.current_test or "").lower()
-
-    def _logger_task_name(self):
-        return "Cross_Modal_Stroop" if self._is_stroop_test() else "Passive_Viewing"
-
     def _current_sensory_condition(self):
         test = self.current_test or ""
         has_olfactory = "Olfactory" in test
@@ -1100,40 +1101,27 @@ class DisplayWindow(QMainWindow):
             return "Alcohol"
         return "Neutral"
 
-    def _init_session_data_logger(self):
-        if self.baseline_mode or not self.current_test or self.current_test == "Baseline":
-            return
-
-        realism_condition = resolve_realism_condition(self.apparatus)
-        self.session_logger = SessionDataLogger(
-            subject_id=self.subject_id,
-            test_number=self.test_number or "unknown",
-            task_name=self._logger_task_name(),
-            apparatus=self.apparatus,
-            realism_condition=realism_condition,
-        )
-
-        if self._is_stroop_test():
-            csv_path = self.session_logger.init_stroop_csv()
-        else:
-            csv_path = self.session_logger.init_craving_csv()
-
-        logging.info(
-            f"SessionDataLogger initialized: apparatus={self.apparatus}, "
-            f"realism={realism_condition}, csv={csv_path}"
-        )
-
     def _log_craving_rating(self, craving_score):
         if self.session_logger is None:
             return
+        if self.session_owner is None:
+            logging.error(
+                "session_logger is set but session_owner is missing; cannot "
+                "obtain a session-scoped block_index. Craving rating not logged."
+            )
+            return
+        block_index = self.session_owner.peek_craving_block_index()
         try:
             self.session_logger.append_craving_rating(
-                block_index=self._craving_block_index,
+                block_index=block_index,
                 sensory_condition=self._current_sensory_condition(),
                 cue_type=self._current_block_cue_type(),
                 craving_score=craving_score,
+                apparatus=self.apparatus,
             )
-            self._craving_block_index += 1
+            # Only advance the shared session counter once the row is
+            # durably on disk, so a failed write never burns a block_index.
+            self.session_owner.advance_craving_block_index()
         except Exception as exc:
             logging.error(f"Failed to log craving rating: {exc}", exc_info=True)
 
@@ -1150,6 +1138,12 @@ class DisplayWindow(QMainWindow):
     def _log_stroop_response(self, key_pressed):
         if self.session_logger is None:
             return
+        if self.session_owner is None:
+            logging.error(
+                "session_logger is set but session_owner is missing; cannot "
+                "obtain a session-scoped trial_number. Stroop trial not logged."
+            )
+            return
         if not hasattr(self, "images") or not (0 <= self.current_image_index < len(self.images)):
             return
 
@@ -1163,10 +1157,10 @@ class DisplayWindow(QMainWindow):
         expected_key = "yes" if congruence == "Congruent" else "no"
         reaction_time_ms = max(0, self.elapsed_time - self._stroop_stimulus_onset_ms)
 
-        self._stroop_trial_number += 1
+        trial_number = self.session_owner.peek_next_stroop_trial_number()
         try:
             self.session_logger.append_stroop_trial(
-                trial_number=self._stroop_trial_number,
+                trial_number=trial_number,
                 image_shown=os.path.basename(img.filename),
                 image_type=image_type,
                 scent_number=scent_number,
@@ -1174,7 +1168,9 @@ class DisplayWindow(QMainWindow):
                 key_pressed=key_pressed,
                 expected_key=expected_key,
                 reaction_time_ms=reaction_time_ms,
+                apparatus=self.apparatus,
             )
+            self.session_owner.advance_stroop_trial_number()
         except Exception as exc:
             logging.error(f"Failed to log Stroop trial: {exc}", exc_info=True)
 
