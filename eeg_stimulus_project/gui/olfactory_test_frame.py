@@ -282,8 +282,18 @@ class OlfactoryTestFrame(QFrame):
         self.layout.addWidget(back_btn)
 
     def set_olfactory_controller(self, controller):
-        """Set the olfactory controller instance"""
-        self.olfactory_controller = controller
+        """Set the olfactory controller instance, or initialize one if not provided"""
+        if controller:
+            self.olfactory_controller = controller
+        else:
+            # Try to create a new controller if one wasn't provided
+            try:
+                from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
+                self.olfactory_controller = OlfactoryController()
+                logging.info("Olfactory controller initialized")
+            except Exception as e:
+                logging.error(f"Failed to initialize olfactory controller: {e}")
+                self.olfactory_controller = None
 
     def on_mode_changed(self, text):
         """Toggle visibility of mode-specific controls"""
@@ -306,8 +316,7 @@ class OlfactoryTestFrame(QFrame):
 
     def trigger_combined(self):
         """Trigger combined scent command"""
-        if not self.olfactory_controller:
-            self.update_status("Error: Olfactory controller not available")
+        if not self._ensure_controller():
             return
 
         scent_num = self.scent_spinbox.value()
@@ -327,10 +336,22 @@ class OlfactoryTestFrame(QFrame):
             self.update_status(f"Error: {str(e)}")
             logging.error(f"Error triggering combined scent: {e}")
 
+    def _ensure_controller(self):
+        """Ensure the olfactory controller is available, initialize if needed"""
+        if not self.olfactory_controller:
+            try:
+                from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
+                self.olfactory_controller = OlfactoryController()
+                logging.info("Olfactory controller initialized on-demand")
+            except Exception as e:
+                self.update_status(f"Error: Could not initialize olfactory controller: {str(e)}")
+                logging.error(f"Failed to initialize olfactory controller: {e}")
+                return False
+        return True
+
     def trigger_individual(self, component):
         """Trigger individual component"""
-        if not self.olfactory_controller:
-            self.update_status("Error: Olfactory controller not available")
+        if not self._ensure_controller():
             return
 
         scent_num = self.scent_spinbox.value()
@@ -403,8 +424,7 @@ class OlfactoryTestFrame(QFrame):
 
     def start_sequential_trigger(self):
         """Start triggering components sequentially: Humidifier -> Pump -> Solenoid"""
-        if not self.olfactory_controller:
-            self.update_status("Error: Olfactory controller not available")
+        if not self._ensure_controller():
             return
 
         scent_num = self.scent_spinbox.value()

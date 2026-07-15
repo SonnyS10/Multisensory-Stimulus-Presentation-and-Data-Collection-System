@@ -244,9 +244,8 @@ class GUI(QMainWindow):
         if self.stacked_widget.currentWidget() == self.olfactory_test_frame:
             self.stacked_widget.setCurrentWidget(self.last_test_frame)
         else:
-            # Set the olfactory controller if available
-            if self.olfactory_controller:
-                self.olfactory_test_frame.set_olfactory_controller(self.olfactory_controller)
+            # Always set the olfactory controller (will create one if needed)
+            self.olfactory_test_frame.set_olfactory_controller(self.olfactory_controller)
             self.stacked_widget.setCurrentWidget(self.olfactory_test_frame)
             self.sidebar.instructions_button.setText("Show Instructions")
 
