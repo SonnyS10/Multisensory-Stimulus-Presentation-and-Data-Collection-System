@@ -224,7 +224,7 @@ class DisplayWindow(QMainWindow):
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
                  randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
                  baseline_mode=False, subject_id=None, apparatus="Display",
-                 session_logger=None, session_owner=None):
+                 session_logger=None, session_owner=None, instruction_only=False):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -240,6 +240,10 @@ class DisplayWindow(QMainWindow):
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
         self.baseline_mode = baseline_mode
+        # Must be initialized before show_main_instructions() is called at the
+        # end of this constructor. Turntable-only runs use this flag to show
+        # participant instructions without starting a Display stimulus run.
+        self.instruction_only = bool(instruction_only)
         self.subject_id = subject_id or "unknown"
         self.apparatus = apparatus
         # session_logger/session_owner are injected by GUI.open_secondary_gui().
