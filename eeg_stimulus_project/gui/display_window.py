@@ -1472,27 +1472,30 @@ class DisplayWindow(QMainWindow):
         logger.addHandler(queue_handler)
 
     def show_craving_rating_screen(self):
-         # --- Adjustable parameters ---
-        craving_bar_vertical_offset = 120  # Pixels from the top of the overlay (increase to move bar lower)
-        craving_bar_spacing = 40           # Space between instruction and bar
-
         # Now clear overlay and craving_buttons as before
         self.clear_overlay()
 
         self.craving_buttons = []
 
-        # Use the persistent instructions_label for craving instructions
-        self.instructions_label.setText(
+        # The persistent instructions_label belongs to the standard overlay flow.
+        # Build this prompt with the scale so the whole rating screen is centered.
+        self.instructions_label.setVisible(False)
+        self.countdown_label.setVisible(False)
+
+        prompt_label = QLabel(self.overlay_widget)
+        prompt_label.setText(
             "How strong is your urge to drink alcohol right now?\n\n"
             "Select a number from 0 to 6 below:"
         )
         self.current_text_delta = None
-        self.instructions_label.setFont(QFont("Arial", 28, QFont.Bold))
-        self.instructions_label.setAlignment(Qt.AlignCenter)
-        self.instructions_label.setWordWrap(True)
-        self.instructions_label.setStyleSheet("color: #222; margin-bottom: 24px;")
-        self.instructions_label.setVisible(True)
-        self.countdown_label.setVisible(False)
+        prompt_label.setFont(QFont("Arial", 28, QFont.Bold))
+        prompt_label.setAlignment(Qt.AlignCenter)
+        prompt_label.setWordWrap(True)
+        prompt_label.setContentsMargins(40, 0, 40, 0)
+        prompt_label.setMinimumHeight(130)
+        prompt_label.setMaximumWidth(1200)
+        prompt_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        prompt_label.setStyleSheet("color: #222; margin: 0px;")
 
         # Craving meanings for each number
         meanings = [
@@ -1507,20 +1510,22 @@ class DisplayWindow(QMainWindow):
 
         # Create a grid layout for labels and buttons
         grid = QGridLayout()
-        grid.setSpacing(50)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(36)
+        grid.setVerticalSpacing(18)
         grid.setAlignment(Qt.AlignCenter)
 
         self.craving_buttons = []
         for i in range(7):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
-            label.setFont(QFont("Arial", 18))
-            label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+            label.setFont(QFont("Arial", 16))
+            label.setAlignment(Qt.AlignCenter)
             label.setWordWrap(True)
-            label.setMinimumHeight(60)
-            label.setMaximumWidth(180)
-            label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
+            label.setFixedWidth(180)
+            label.setMinimumHeight(108)
+            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter)
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
@@ -1550,14 +1555,21 @@ class DisplayWindow(QMainWindow):
         grid_widget = QWidget(self.overlay_widget)
         grid_widget.setLayout(grid)
         grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        grid_widget.setMaximumWidth(1200)
+        grid_widget.setMaximumWidth(1500)
 
-        # --- Center the grid with adjustable vertical offset ---
+        content_widget = QWidget(self.overlay_widget)
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(24)
+        content_layout.addWidget(prompt_label, alignment=Qt.AlignHCenter)
+        content_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
+        content_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
+        # Center the prompt and rating controls together in the available screen area.
         vcenter_layout = QVBoxLayout()
-        vcenter_layout.addSpacing(craving_bar_vertical_offset)  # Top offset
-        vcenter_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
-        vcenter_layout.addSpacing(craving_bar_spacing)          # Space below grid (optional)
-        vcenter_layout.addStretch(1)                            # Fill remaining space
+        vcenter_layout.addStretch(1)
+        vcenter_layout.addWidget(content_widget, alignment=Qt.AlignCenter)
+        vcenter_layout.addStretch(1)
 
         self.overlay_layout.addLayout(vcenter_layout)
 

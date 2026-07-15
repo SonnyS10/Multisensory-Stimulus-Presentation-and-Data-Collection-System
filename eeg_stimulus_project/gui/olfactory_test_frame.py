@@ -14,6 +14,7 @@ class OlfactoryTestFrame(QFrame):
         self.olfactory_controller = None
         self.active_timers = {}
         self.sequential_timers = {}
+        self.sequential_running = False
         
         self.setStyleSheet("""
             QFrame {
@@ -262,7 +263,7 @@ class OlfactoryTestFrame(QFrame):
                 background-color: #da190b;
             }
         """)
-        self.sequential_stop_btn.clicked.connect(self.stop_sequential_trigger)
+        self.sequential_stop_btn.clicked.connect(lambda checked: self.stop_sequential_trigger())
         seq_button_layout.addWidget(self.sequential_stop_btn)
         seq_button_layout.addStretch()
 
@@ -270,59 +271,6 @@ class OlfactoryTestFrame(QFrame):
 
         self.individual_group.setLayout(individual_layout)
         self.layout.addWidget(self.individual_group)
-
-        # Sequential Components Mode (hidden, for backwards compatibility)
-        self.sequential_group = QGroupBox("Sequential Components (Run All in Order)")
-        self.sequential_group.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.sequential_group.setVisible(False)
-        sequential_layout = QVBoxLayout()
-
-        seq_info_label = QLabel("Components will trigger in order: Humidifier → Pump → Solenoid, with durations set above")
-        seq_info_label.setFont(QFont("Segoe UI", 11))
-        seq_info_label.setStyleSheet("color: #666; padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
-        sequential_layout.addWidget(seq_info_label)
-
-        seq_button_layout_old = QHBoxLayout()
-        self.sequential_start_btn_old = QPushButton("Start Sequence")
-        self.sequential_start_btn_old.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.sequential_start_btn_old.setMinimumHeight(50)
-        self.sequential_start_btn_old.setStyleSheet("""
-            QPushButton {
-                background-color: #FF9800;
-                color: white;
-                border-radius: 5px;
-                padding: 10px 30px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #F57C00;
-            }
-        """)
-        self.sequential_start_btn.clicked.connect(self.start_sequential_trigger)
-        seq_button_layout.addWidget(self.sequential_start_btn)
-
-        self.sequential_stop_btn = QPushButton("Stop Sequence")
-        self.sequential_stop_btn.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.sequential_stop_btn.setMinimumHeight(50)
-        self.sequential_stop_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                border-radius: 5px;
-                padding: 10px 30px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #da190b;
-            }
-        """)
-        self.sequential_stop_btn.clicked.connect(self.stop_sequential_trigger)
-        seq_button_layout.addWidget(self.sequential_stop_btn)
-        seq_button_layout.addStretch()
-
-        sequential_layout.addLayout(seq_button_layout)
-        self.sequential_group.setLayout(sequential_layout)
-        self.layout.addWidget(self.sequential_group)
 
         # Status area
         status_layout = QVBoxLayout()
@@ -485,6 +433,7 @@ class OlfactoryTestFrame(QFrame):
 
         scent_num = self.scent_spinbox.value()
         self.olfactory_controller.stop_scent(scent_num)
+        self.stop_sequential_trigger(update_status=False)
         
         # Stop all active timers
         for timer in self.active_timers.values():
@@ -507,66 +456,93 @@ class OlfactoryTestFrame(QFrame):
                     self.update_status("Error: Failed to connect to olfactory hardware")
                     return
             
-            # Disable the start button
+            self.stop_sequential_trigger(update_status=False)
+            self.sequential_running = True
             self.sequential_start_btn.setEnabled(False)
             
-            # Get durations and delays
-            humidifier_duration = int(self.component_controls['humidifier']['duration'].value() * 1000)
-            pump_duration = int(self.component_controls['pump']['duration'].value() * 1000)
-            solenoid_duration = int(self.component_controls['solenoid']['duration'].value() * 1000)
-            delay_after_humidifier = int(self.delay_after_humidifier.value() * 1000)
-            delay_after_pump = int(self.delay_after_pump.value() * 1000)
+            sequence = [
+                ("humidifier", int(self.component_controls['humidifier']['duration'].value() * 1000), int(self.delay_after_humidifier.value() * 1000)),
+                ("pump", int(self.component_controls['pump']['duration'].value() * 1000), int(self.delay_after_pump.value() * 1000)),
+                ("solenoid", int(self.component_controls['solenoid']['duration'].value() * 1000), 0),
+            ]
             
-            # Start with humidifier
-            self.olfactory_controller.trigger_humidifier(scent_num)
-            self.update_status(f"▶ Starting sequence: Humidifier triggered ({self.component_controls['humidifier']['duration'].value()}s)")
-            
-            # Schedule pump after humidifier duration + delay
-            pump_timer = QTimer()
-            pump_timer.setSingleShot(True)
-            pump_timer.timeout.connect(lambda: self._sequential_trigger_pump(scent_num, pump_duration, solenoid_duration, delay_after_pump))
-            pump_timer.start(humidifier_duration + delay_after_humidifier)
-            self.sequential_timers['pump'] = pump_timer
+            self._run_sequential_step(scent_num, sequence, 0)
             
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
+            self.sequential_running = False
             self.sequential_start_btn.setEnabled(True)
             logging.error(f"Error starting sequential trigger: {e}")
 
-    def _sequential_trigger_pump(self, scent_num, pump_duration, solenoid_duration, delay_after_pump):
-        """Trigger pump and schedule solenoid"""
-        try:
-            self.olfactory_controller.trigger_pump(scent_num)
-            self.update_status(f"▶ Pump triggered ({self.component_controls['pump']['duration'].value()}s)")
-            
-            # Schedule solenoid after pump duration + delay
-            solenoid_timer = QTimer()
-            solenoid_timer.setSingleShot(True)
-            solenoid_timer.timeout.connect(lambda: self._sequential_trigger_solenoid(scent_num, solenoid_duration))
-            solenoid_timer.start(pump_duration + delay_after_pump)
-            self.sequential_timers['solenoid'] = solenoid_timer
-        except Exception as e:
-            self.update_status(f"Error: {str(e)}")
-            logging.error(f"Error triggering pump in sequence: {e}")
+    def _run_sequential_step(self, scent_num, sequence, index):
+        """Trigger one component, then schedule its stop before the next component."""
+        if not self.sequential_running:
+            return
+        if index >= len(sequence):
+            self._finish_sequential_trigger()
+            return
 
-    def _sequential_trigger_solenoid(self, scent_num, solenoid_duration):
-        """Trigger solenoid and schedule stop"""
+        component, duration_ms, delay_after_ms = sequence[index]
         try:
-            self.olfactory_controller.trigger_solenoid(scent_num)
-            self.update_status(f"▶ Solenoid triggered ({self.component_controls['solenoid']['duration'].value()}s)")
-            
-            # Schedule stop after solenoid duration
+            if component == "humidifier":
+                success = self.olfactory_controller.trigger_humidifier(scent_num)
+            elif component == "pump":
+                success = self.olfactory_controller.trigger_pump(scent_num)
+            elif component == "solenoid":
+                success = self.olfactory_controller.trigger_solenoid(scent_num)
+            else:
+                success = False
+
+            if not success:
+                self.update_status(f"✗ Failed to trigger {component}")
+                self.stop_sequential_trigger(update_status=False)
+                return
+
+            duration_sec = self.component_controls[component]['duration'].value()
+            self.update_status(f"▶ {component.title()} triggered ({duration_sec}s)")
+
             stop_timer = QTimer()
             stop_timer.setSingleShot(True)
-            stop_timer.timeout.connect(self.stop_sequential_trigger)
-            stop_timer.start(solenoid_duration)
-            self.sequential_timers['stop'] = stop_timer
+            stop_timer.timeout.connect(lambda: self._stop_sequential_step(scent_num, sequence, index, delay_after_ms))
+            stop_timer.start(duration_ms)
+            self.sequential_timers[f"{component}_stop"] = stop_timer
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
-            self.sequential_start_btn.setEnabled(True)
-            logging.error(f"Error triggering solenoid in sequence: {e}")
+            self.stop_sequential_trigger(update_status=False)
+            logging.error(f"Error triggering {component} in sequence: {e}")
 
-    def stop_sequential_trigger(self):
+    def _stop_sequential_step(self, scent_num, sequence, index, delay_after_ms):
+        """Stop the current component, then continue after its configured delay."""
+        if not self.sequential_running:
+            return
+
+        component = sequence[index][0]
+        self.sequential_timers.pop(f"{component}_stop", None)
+        self.olfactory_controller.stop_scent(scent_num)
+
+        next_index = index + 1
+        if next_index >= len(sequence):
+            self._finish_sequential_trigger()
+            return
+
+        if delay_after_ms > 0:
+            delay_timer = QTimer()
+            delay_timer.setSingleShot(True)
+            delay_timer.timeout.connect(lambda: self._run_sequential_step(scent_num, sequence, next_index))
+            delay_timer.start(delay_after_ms)
+            self.sequential_timers[f"{component}_delay"] = delay_timer
+            self.update_status(f"✓ {component.title()} stopped; waiting {delay_after_ms / 1000:g}s")
+        else:
+            self._run_sequential_step(scent_num, sequence, next_index)
+
+    def _finish_sequential_trigger(self):
+        """Mark a naturally completed sequence as finished."""
+        self.sequential_running = False
+        self.sequential_timers.clear()
+        self.sequential_start_btn.setEnabled(True)
+        self.update_status("✓ Sequence completed")
+
+    def stop_sequential_trigger(self, update_status=True):
         """Stop all sequential timers and components"""
         if not self.olfactory_controller:
             return
@@ -582,9 +558,11 @@ class OlfactoryTestFrame(QFrame):
         self.olfactory_controller.stop_scent(scent_num)
         
         # Re-enable the start button
+        self.sequential_running = False
         self.sequential_start_btn.setEnabled(True)
         
-        self.update_status("✓ Sequence completed")
+        if update_status:
+            self.update_status("Sequence stopped")
 
     def go_back(self):
         """Go back to the previous frame"""
