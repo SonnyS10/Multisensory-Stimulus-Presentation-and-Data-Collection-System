@@ -774,7 +774,8 @@ class Frame(QFrame):
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
-            bottom_frame.setMaximumHeight(50)
+            bottom_frame.setMinimumHeight(70)
+            bottom_frame.setMaximumHeight(70)
             self.layout.addWidget(bottom_frame)
 
         # If the test is NOT a stroop test (Passive Test), add these buttons and checkboxes
@@ -827,10 +828,11 @@ class Frame(QFrame):
 
             bottom_frame = QFrame(self)
             bottom_frame.setStyleSheet("background-color: #bc85fa; border-radius: 8px;")
-            bottom_frame.setMaximumHeight(50)
+            bottom_frame.setMinimumHeight(70)
+            bottom_frame.setMaximumHeight(70)
             self.layout.addWidget(bottom_frame)
 
-        self._add_text_size_control(top_layout)
+        self._add_text_size_control(bottom_frame)
 
         for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'turntable_button']:
             btn = getattr(self, attr, None)
@@ -845,7 +847,7 @@ class Frame(QFrame):
             if btn is not None:
                 btn.stateChanged.connect(lambda state, checked_attr=attr: self.handle_exclusive_checkbox(checked_attr, state))
 
-    def _add_text_size_control(self, top_layout):
+    def _add_text_size_control(self, container):
         text_size_layout = QHBoxLayout()
         text_size_layout.setContentsMargins(24, 0, 24, 0)
         text_size_layout.setSpacing(10)
@@ -903,7 +905,7 @@ class Frame(QFrame):
         self.text_size_value_label.setMinimumWidth(44)
         text_size_layout.addWidget(self.text_size_value_label)
 
-        top_layout.addLayout(text_size_layout)
+        container.setLayout(text_size_layout)
 
     def on_text_size_changed(self, value):
         self.display_text_size = int(value)
