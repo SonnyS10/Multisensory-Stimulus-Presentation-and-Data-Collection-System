@@ -569,16 +569,10 @@ class DisplayWindow(QMainWindow):
     def set_text_size(self, size):
         self.display_text_size = clamp_text_size(size)
         current_instruction = self.instructions_label.text().strip()
-        if current_instruction and current_instruction != "+":
+        if current_instruction and current_instruction != "+" and self.current_text_delta is not None:
             self.instructions_label.setFont(self._instruction_font(delta=self.current_text_delta))
         if self.image_label.text().strip():
             self.image_label.setFont(self._instruction_font())
-        if hasattr(self, 'craving_meaning_labels'):
-            for label in self.craving_meaning_labels:
-                label.setFont(QFont("Arial", max(12, self.display_text_size - 10)))
-        if hasattr(self, 'craving_buttons'):
-            for btn in self.craving_buttons:
-                btn.setFont(QFont("Arial", max(16, self.display_text_size - 6), QFont.Bold))
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_text_size(self.display_text_size)
 
@@ -991,7 +985,7 @@ class DisplayWindow(QMainWindow):
         self.instructions_label.setContentsMargins(40, 20, 40, 20)
         if self.instructions_label.text().strip() == "+":
             self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
-        else:
+        elif self.current_text_delta is not None:
             self.instructions_label.setFont(self._instruction_font())
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
@@ -1478,23 +1472,18 @@ class DisplayWindow(QMainWindow):
         logger.addHandler(queue_handler)
 
     def show_craving_rating_screen(self):
-         # --- Adjustable parameters ---
-        craving_bar_vertical_offset = 120  # Pixels from the top of the overlay (increase to move bar lower)
-        craving_bar_spacing = 40           # Space between instruction and bar
-
         # Now clear overlay and craving_buttons as before
         self.clear_overlay()
 
         self.craving_buttons = []
-        self.craving_meaning_labels = []
 
         # Use the persistent instructions_label for craving instructions
         self.instructions_label.setText(
             "How strong is your urge to drink alcohol right now?\n\n"
             "Select a number from 0 to 6 below:"
         )
-        self.current_text_delta = 0
-        self.instructions_label.setFont(self._instruction_font())
+        self.current_text_delta = None
+        self.instructions_label.setFont(QFont("Arial", 28, QFont.Bold))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setWordWrap(True)
         self.instructions_label.setStyleSheet("color: #222; margin-bottom: 24px;")
@@ -1521,18 +1510,17 @@ class DisplayWindow(QMainWindow):
         for i in range(7):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
-            label.setFont(QFont("Arial", max(12, self.display_text_size - 10)))
+            label.setFont(QFont("Arial", 18))
             label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
             label.setWordWrap(True)
             label.setMinimumHeight(60)
             label.setMaximumWidth(180)
             label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-            self.craving_meaning_labels.append(label)
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
-            btn.setFont(QFont("Arial", max(16, self.display_text_size - 6), QFont.Bold))
+            btn.setFont(QFont("Arial", 22, QFont.Bold))
             btn.setFixedSize(70, 70)
             btn.setStyleSheet("""
                 QPushButton {
@@ -1560,12 +1548,11 @@ class DisplayWindow(QMainWindow):
         grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         grid_widget.setMaximumWidth(1200)
 
-        # --- Center the grid with adjustable vertical offset ---
+        # Center the rating controls in the available screen area.
         vcenter_layout = QVBoxLayout()
-        vcenter_layout.addSpacing(craving_bar_vertical_offset)  # Top offset
+        vcenter_layout.addStretch(1)
         vcenter_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
-        vcenter_layout.addSpacing(craving_bar_spacing)          # Space below grid (optional)
-        vcenter_layout.addStretch(1)                            # Fill remaining space
+        vcenter_layout.addStretch(1)
 
         self.overlay_layout.addLayout(vcenter_layout)
 
