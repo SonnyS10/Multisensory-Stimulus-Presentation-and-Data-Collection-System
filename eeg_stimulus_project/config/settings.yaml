@@ -22,6 +22,9 @@ paths:
 network:
   # Host/client communication port
   host_port: 9999
+
+  # Localhost port for tactile box -> control window messages (must NOT be host_port)
+  tactile_local_port: 9998
   
   # LabRecorder control port
   labrecorder_port: 22345

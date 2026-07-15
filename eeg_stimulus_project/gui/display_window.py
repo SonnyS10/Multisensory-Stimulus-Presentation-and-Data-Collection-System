@@ -10,9 +10,9 @@ sys.path.insert(0, str(project_root))
 
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, QVBoxLayout, QStackedLayout, QSizePolicy, QPushButton, QGridLayout, QApplication
 from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
-from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QMetaObject
 from eeg_stimulus_project.assets.asset_handler import Display
-from eeg_stimulus_project.data.data_saving import Save_Data
+from eeg_stimulus_project.data.session_data_logger import determine_congruence_condition
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
@@ -316,7 +316,8 @@ class DisplayWindow(QMainWindow):
     def __init__(self, connection, log_queue, label_stream, parent_frame, current_test, base_dir, test_number,
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
                  randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
-                 baseline_mode=False, instruction_only=False): 
+                 baseline_mode=False, subject_id=None, apparatus="Display",
+                 session_logger=None, session_owner=None):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -332,7 +333,20 @@ class DisplayWindow(QMainWindow):
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
         self.baseline_mode = baseline_mode
-        self.instruction_only = instruction_only
+        self.subject_id = subject_id or "unknown"
+        self.apparatus = apparatus
+        # session_logger/session_owner are injected by GUI.open_secondary_gui().
+        # The logger is created exactly once per day/test_number at the GUI
+        # (session) level -- see GUI.ensure_session_logger() in main_gui.py --
+        # and the SAME instance/open file is shared across every condition's
+        # DisplayWindow so a full session lands in one CSV. session_owner is
+        # the GUI instance itself, which owns the block_index/trial_number
+        # counters so they keep incrementing across condition switches
+        # instead of resetting every time a new DisplayWindow is created.
+        self.session_logger = session_logger
+        self.session_owner = session_owner
+        self._tactile_fired_this_trial = False
+        self._stroop_stimulus_onset_ms = 0
 
         if self.local_mode:
             if self.shared_status.get('eyetracker_connected', False):
@@ -525,6 +539,12 @@ class DisplayWindow(QMainWindow):
                     )[current_test]
                     self.current_image_index = 0  # Reset the image index for the new trial
                     self.elapsed_time = 0  # Reset the elapsed time
+                    # NOTE: block_index/trial_number are intentionally NOT reset
+                    # here. They live on session_owner (the GUI instance) and
+                    # must keep incrementing across condition switches within
+                    # this same day/session -- see GUI.peek_craving_block_index()
+                    # / GUI.advance_craving_block_index() (and the Stroop
+                    # equivalents) in main_gui.py.
                     self.timer.start(1)  # Start the timer with 100 ms interval
                 if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
                     self.display_images_stroop()
@@ -633,6 +653,7 @@ class DisplayWindow(QMainWindow):
     def display_images_stroop(self):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
+        self._tactile_fired_this_trial = False
         img = self.images[self.current_image_index]
         if self.should_dispense_scent_after_touch() and self._dispense_scent_before_next_image:
             self.scent_function(img)
@@ -676,6 +697,7 @@ class DisplayWindow(QMainWindow):
         if self.stopped or self.Paused:
             return  # Do not proceed if stopped or paused
         self.image_label.clear()
+        self._stroop_stimulus_onset_ms = self.elapsed_time
         self.set_instruction_text()
         self.wait_for_input()
 
@@ -774,11 +796,36 @@ class DisplayWindow(QMainWindow):
             self.waiting_for_initial_touch = True
 
         self.send_message({"action": "touchbox_lsl_true"})
+        self._arm_touch_detection()
+
+    def _arm_touch_detection(self):
+        """Arm tactile threshold forwarding (works in local and distributed modes)."""
+        try:
+            self.shared_status['touch_detection_armed'] = True
+            self.shared_status['lsl_enabled'] = True
+            self.shared_status['pending_touch_advance'] = False
+            logging.info(
+                "[TACTILE] touch_detection_armed=True from display "
+                "(apparatus waiting for participant touch)"
+            )
+        except Exception as exc:
+            logging.error("[TACTILE] Failed to arm touch detection: %s", exc)
+
+    def _disarm_touch_detection(self):
+        try:
+            self.shared_status['touch_detection_armed'] = False
+            self.shared_status['lsl_enabled'] = False
+            self.shared_status['pending_touch_advance'] = False
+        except Exception as exc:
+            logging.error("[TACTILE] Failed to disarm touch detection: %s", exc)
 
     @pyqtSlot()
     def end_touch_instruction_and_advance(self):
         phase = "initial" if self.waiting_for_initial_touch else "advance"
         self.emit_marker(f"Touch Detected | phase={phase}")
+        logging.info("[TACTILE] GUI advancing after touch (phase=%s)", phase)
+        self._disarm_touch_detection()
+        self._tactile_fired_this_trial = True
         if self.should_dispense_scent_after_touch():
             self._dispense_scent_before_next_image = True
         if self.waiting_for_initial_touch:
@@ -900,6 +947,7 @@ class DisplayWindow(QMainWindow):
             if event.type() == QEvent.KeyPress:
                 if event.key() == Qt.Key_Right or event.key() == Qt.Key_Left:
                     img = self.images[self.current_image_index]
+                    key_pressed = "yes" if event.key() == Qt.Key_Right else "no"
                     if event.key() == Qt.Key_Right:
                         self.user_data['user_inputs'].append('Yes') # Store the user input
                         if hasattr(img, 'filename'):
@@ -913,6 +961,7 @@ class DisplayWindow(QMainWindow):
                             self.emit_marker(label)
                             self.current_label = label  # Push label to LSL stream
                     self.user_data['elapsed_time'].append(self.elapsed_time)  # Store the elapsed time
+                    self._log_stroop_response(key_pressed)
                     self.waiting_for_stroop_response = False
                     self.removeEventFilter(self)
                     if "Tactile" in self.current_test:
@@ -941,6 +990,13 @@ class DisplayWindow(QMainWindow):
     #This method is called to update the timer label, it updates the elapsed time and formats the timer text
     def update_timer(self):
         self.elapsed_time += 1  # Increment by 1 millisecond
+        if (self.showing_touch_instruction or self.waiting_for_initial_touch):
+            if self.shared_status.get('pending_touch_advance'):
+                self.shared_status['pending_touch_advance'] = False
+                logging.info("[TACTILE] GUI consumed pending_touch_advance from shared_status")
+                QMetaObject.invokeMethod(
+                    self, "end_touch_instruction_and_advance", Qt.QueuedConnection
+                )
         minutes, remainder = divmod(self.elapsed_time, 60000)
         seconds, milliseconds = divmod(remainder, 1000)
         timer_text = f"{minutes:02}:{seconds:02}:{milliseconds:03}"
@@ -1171,6 +1227,140 @@ class DisplayWindow(QMainWindow):
             label = f"{label} | scent={scent_number}"
         return label
 
+    def _current_sensory_condition(self):
+        test = self.current_test or ""
+        has_olfactory = "Olfactory" in test
+        has_tactile = "Tactile" in test
+        if has_tactile and has_olfactory:
+            return "Multisensory_Visuo_Tactile_Olfactory"
+        if has_olfactory:
+            return "Multisensory_Visuo_Olfactory"
+        if has_tactile:
+            return "Multisensory_Visuo_Tactile"
+        return "Unisensory_Visual"
+
+    def _image_cue_type(self, img):
+        filename = getattr(img, "filename", "") or ""
+        if self.alcohol_folder and self.alcohol_folder in filename:
+            return "Alcohol"
+        if self.non_alcohol_folder and self.non_alcohol_folder in filename:
+            return "Neutral"
+        test = self.current_test or ""
+        if "Alcohol" in test and "Neutral" not in test.split("Alcohol")[0]:
+            return "Alcohol"
+        if "Neutral" in test:
+            return "Neutral"
+        if "Alcohol" in test:
+            return "Alcohol"
+        return "Neutral"
+
+    def _log_craving_rating(self, craving_score):
+        payload = {
+            "action": "crave",
+            "crave": craving_score,
+            "sensory_condition": self._current_sensory_condition(),
+            "cue_type": self._current_block_cue_type(),
+            "apparatus": self.apparatus,
+        }
+        if self.client:
+            self.send_message(payload)
+            return
+        if self.session_logger is None:
+            return
+        if self.session_owner is None:
+            logging.error(
+                "session_logger is set but session_owner is missing; cannot "
+                "obtain a session-scoped block_index. Craving rating not logged."
+            )
+            return
+        block_index = self.session_owner.peek_craving_block_index()
+        try:
+            if self.session_logger.task_name == "Cross_Modal_Stroop":
+                self.session_logger.append_stroop_craving_rating(
+                    block_index=block_index,
+                    sensory_condition=payload["sensory_condition"],
+                    cue_type=payload["cue_type"],
+                    craving_score=craving_score,
+                    apparatus=self.apparatus,
+                )
+            else:
+                self.session_logger.append_craving_rating(
+                    block_index=block_index,
+                    sensory_condition=payload["sensory_condition"],
+                    cue_type=payload["cue_type"],
+                    craving_score=craving_score,
+                    apparatus=self.apparatus,
+                )
+            # Only advance the shared session counter once the row is
+            # durably on disk, so a failed write never burns a block_index.
+            self.session_owner.advance_craving_block_index()
+        except Exception as exc:
+            logging.error(f"Failed to log craving rating: {exc}", exc_info=True)
+
+    def _current_block_cue_type(self):
+        test = self.current_test or ""
+        if "Alcohol" in test and "Neutral" not in test.split("Alcohol")[0]:
+            return "Alcohol"
+        if "Neutral" in test:
+            return "Neutral"
+        if "Alcohol" in test:
+            return "Alcohol"
+        return "Neutral"
+
+    def _log_stroop_response(self, key_pressed):
+        if not hasattr(self, "images") or not (0 <= self.current_image_index < len(self.images)):
+            return
+
+        img = self.images[self.current_image_index]
+        if not hasattr(img, "filename"):
+            return
+
+        image_type = self._image_cue_type(img)
+        scent_number = self.scent_number_for_image(img)
+        congruence = determine_congruence_condition(image_type, scent_number)
+        expected_key = "yes" if congruence == "Congruent" else "no"
+        reaction_time_ms = max(0, self.elapsed_time - self._stroop_stimulus_onset_ms)
+
+        payload = {
+            "action": "stroop_trial",
+            "image_shown": os.path.basename(img.filename),
+            "image_type": image_type,
+            "scent_number": scent_number,
+            "has_tactile_trigger": self._tactile_fired_this_trial,
+            "key_pressed": key_pressed,
+            "expected_key": expected_key,
+            "reaction_time_ms": reaction_time_ms,
+            "apparatus": self.apparatus,
+        }
+        if self.client:
+            self.send_message(payload)
+            return
+        if self.session_logger is None:
+            return
+        if self.session_owner is None:
+            logging.error(
+                "session_logger is set but session_owner is missing; cannot "
+                "obtain a session-scoped trial_number. Stroop trial not logged."
+            )
+            return
+
+        trial_number = self.session_owner.peek_next_stroop_trial_number()
+        try:
+            self.session_logger.append_stroop_trial(
+                trial_number=trial_number,
+                image_shown=payload["image_shown"],
+                image_type=payload["image_type"],
+                scent_number=payload["scent_number"],
+                has_tactile_trigger=payload["has_tactile_trigger"],
+                key_pressed=payload["key_pressed"],
+                expected_key=payload["expected_key"],
+                reaction_time_ms=payload["reaction_time_ms"],
+                apparatus=self.apparatus,
+            )
+            self.session_owner.advance_stroop_trial_number()
+        except Exception as exc:
+            logging.error(f"Failed to log Stroop trial: {exc}", exc_info=True)
+
     def build_response_label(self, img, response):
         image_name = os.path.splitext(os.path.basename(img.filename))[0]
         label = f"Response | image={image_name} | response={response}"
@@ -1255,8 +1445,8 @@ class DisplayWindow(QMainWindow):
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
-            btn.setFont(QFont("Arial", 24, QFont.Bold))
-            btn.setFixedSize(90, 90)
+            btn.setFont(QFont("Arial", 22, QFont.Bold))
+            btn.setFixedSize(70, 70)
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e0e0e0;
@@ -1338,9 +1528,8 @@ class DisplayWindow(QMainWindow):
         """)
         self.craving_response = value
         craving_label = f"craving_rating_{self.craving_response}"
-        if self.client:
-            self.send_message({"action": "crave", "crave": self.craving_response})
-        else:
+        self._log_craving_rating(value)
+        if not self.client:
             self.push_local_label(craving_label)
             logging.info(f"Current label: {craving_label}")
             if self.eyetracker is not None:

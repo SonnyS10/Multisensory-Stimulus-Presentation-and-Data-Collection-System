@@ -191,3 +191,6 @@ Check:
 4. Confirm LabRecorder port `22345` responds.
 5. Confirm port `9999` is free before starting the launcher.
 6. Run `test_troubleshooting.bat` on Windows when diagnosing machine-level issues.
+
+
+test
