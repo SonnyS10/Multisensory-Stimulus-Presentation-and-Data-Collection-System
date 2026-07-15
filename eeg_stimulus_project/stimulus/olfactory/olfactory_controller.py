@@ -56,11 +56,8 @@ class OlfactoryController:
                 self.ser1.write(command.encode())
                 _, response = self.safe_readline(self.ser1)
             else:
-                # Use ser2 for scents 5-8, but adjust command to o1-o4
-                if scent_number == 8:
-                    command = "o5\n" # Workaround for Arduino issue with 'o4' command
-                else:
-                    command = f"o{scent_number-4}\n"
+                # Use ser2 for scents 5-8
+                command = f"o{scent_number-4}\n"
                 self.ser2.write(command.encode())
                 _, response = self.safe_readline(self.ser2)
 
