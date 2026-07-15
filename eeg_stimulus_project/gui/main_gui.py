@@ -88,8 +88,10 @@ class GUI(QMainWindow):
         self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory", is_stroop_test=False)
         
         #Stroop Test Frames
+        self.stroop_practice_neutral_visual_tactile = self.create_frame("Stroop Practice Neutral (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_alcohol_visual_tactile = self.create_frame("Stroop Multisensory Alcohol (Visual & Tactile)", is_stroop_test=True)
         self.multisensory_neutral_visual_tactile = self.create_frame("Stroop Multisensory Neutral (Visual & Tactile)", is_stroop_test=True)
+        self.stroop_practice_neutral_visual_olfactory = self.create_frame("Stroop Practice Neutral (Visual & Olfactory)", is_stroop_test=True)
         self.multisensory_alcohol_visual_olfactory2 = self.create_frame("Stroop Multisensory Alcohol (Visual & Olfactory)", is_stroop_test=True)
         self.multisensory_neutral_visual_olfactory2 = self.create_frame("Stroop Multisensory Neutral (Visual & Olfactory)", is_stroop_test=True)
 
@@ -112,8 +114,10 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile_olfactory)
+        self.stacked_widget.addWidget(self.stroop_practice_neutral_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile)
+        self.stacked_widget.addWidget(self.stroop_practice_neutral_visual_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory2)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory2)
         self.stacked_widget.addWidget(self.instruction_frame)
@@ -138,8 +142,10 @@ class GUI(QMainWindow):
                 'Multisensory Alcohol Visual & Olfactory': self.multisensory_alcohol_visual_olfactory,
                 'Multisensory Neutral Visual, Tactile & Olfactory': self.multisensory_neutral_visual_tactile_olfactory,
                 'Multisensory Alcohol Visual, Tactile & Olfactory': self.multisensory_alcohol_visual_tactile_olfactory,
+                'Stroop Practice Neutral (Visual & Tactile)': self.stroop_practice_neutral_visual_tactile,
                 'Stroop Multisensory Alcohol (Visual & Tactile)': self.multisensory_alcohol_visual_tactile,
                 'Stroop Multisensory Neutral (Visual & Tactile)': self.multisensory_neutral_visual_tactile,
+                'Stroop Practice Neutral (Visual & Olfactory)': self.stroop_practice_neutral_visual_olfactory,
                 'Stroop Multisensory Alcohol (Visual & Olfactory)': self.multisensory_alcohol_visual_olfactory2,
                 'Stroop Multisensory Neutral (Visual & Olfactory)': self.multisensory_neutral_visual_olfactory2,
             }
@@ -178,11 +184,17 @@ class GUI(QMainWindow):
     def show_multisensory_alcohol_visual_tactile_olfactory(self):
         self.show_test_frame(self.multisensory_alcohol_visual_tactile_olfactory)
     
+    def show_stroop_practice_neutral_visual_tactile(self):
+        self.show_test_frame(self.stroop_practice_neutral_visual_tactile)
+
     def show_multisensory_alcohol_visual_tactile(self):
         self.show_test_frame(self.multisensory_alcohol_visual_tactile)
     
     def show_multisensory_neutral_visual_tactile(self):
         self.show_test_frame(self.multisensory_neutral_visual_tactile)
+
+    def show_stroop_practice_neutral_visual_olfactory(self):
+        self.show_test_frame(self.stroop_practice_neutral_visual_olfactory)
     
     def show_multisensory_alcohol_visual_olfactory2(self):
         self.show_test_frame(self.multisensory_alcohol_visual_olfactory2)
@@ -245,8 +257,10 @@ class GUI(QMainWindow):
                 self.multisensory_alcohol_visual_olfactory,
                 self.multisensory_neutral_visual_tactile_olfactory,
                 self.multisensory_alcohol_visual_tactile_olfactory,
+                self.stroop_practice_neutral_visual_tactile,
                 self.multisensory_alcohol_visual_tactile,
                 self.multisensory_neutral_visual_tactile,
+                self.stroop_practice_neutral_visual_olfactory,
                 self.multisensory_alcohol_visual_olfactory2,
                 self.multisensory_neutral_visual_olfactory2,
                 self.baseline_frame,
@@ -334,10 +348,14 @@ class GUI(QMainWindow):
             return 'Multisensory Neutral Visual, Tactile & Olfactory'
         elif current_widget == self.multisensory_alcohol_visual_tactile_olfactory:
             return 'Multisensory Alcohol Visual, Tactile & Olfactory'
+        elif current_widget == self.stroop_practice_neutral_visual_tactile:
+            return 'Stroop Practice Neutral (Visual & Tactile)'
         elif current_widget == self.multisensory_alcohol_visual_tactile:
             return 'Stroop Multisensory Alcohol (Visual & Tactile)'
         elif current_widget == self.multisensory_neutral_visual_tactile:
             return 'Stroop Multisensory Neutral (Visual & Tactile)'
+        elif current_widget == self.stroop_practice_neutral_visual_olfactory:
+            return 'Stroop Practice Neutral (Visual & Olfactory)'
         elif current_widget == self.multisensory_alcohol_visual_olfactory2:
             return 'Stroop Multisensory Alcohol (Visual & Olfactory)'
         elif current_widget == self.multisensory_neutral_visual_olfactory2:
@@ -1011,9 +1029,9 @@ class Frame(QFrame):
 
         # --- Tactile connection check (mandatory for Stroop tactile tests) ---
         current_test = self.parent.get_current_test()
-        is_stroop_tactile = current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 
-                                               'Stroop Multisensory Neutral (Visual & Tactile)']
-        is_tactile = "Tactile" in current_test
+        current_test_text = str(current_test or "")
+        is_stroop_tactile = "Stroop" in current_test_text and "Tactile" in current_test_text
+        is_tactile = "Tactile" in current_test_text
         
         if is_stroop_tactile and not self.shared_status.get('tactile_connected', False):
             # For Stroop tactile tests, tactile connection is MANDATORY
@@ -1377,10 +1395,12 @@ class InstructionFrame(QWidget):
             "<li>Multisensory Neutral/Alcohol Visual & Olfactory</li>"
             "<li>Multisensory Neutral/Alcohol Visual, Tactile & Olfactory</li>"
             "</ul>"
-            "<p><b>Stroop Tests (4 tests):</b><br>"
+            "<p><b>Stroop Tests (6 tests):</b><br>"
             "Participants respond to multisensory stimuli conflicts. Ideal for studying cognitive control.</p>"
             "<ul>"
+            "<li>Stroop Practice Neutral (Visual & Tactile)</li>"
             "<li>Stroop Multisensory Alcohol/Neutral (Visual & Tactile)</li>"
+            "<li>Stroop Practice Neutral (Visual & Olfactory)</li>"
             "<li>Stroop Multisensory Alcohol/Neutral (Visual & Olfactory)</li>"
             "</ul>"
             "<p><b>Key Difference:</b> Passive tests are run through 3 different modes (Display, VR, Turntable); Stroop tests require participant interaction via buttons (Only Display mode).</p>"
@@ -1793,8 +1813,10 @@ class BaselineFrame(QFrame):
             self.parent.multisensory_alcohol_visual_olfactory,
             self.parent.multisensory_neutral_visual_tactile_olfactory,
             self.parent.multisensory_alcohol_visual_tactile_olfactory,
+            self.parent.stroop_practice_neutral_visual_tactile,
             self.parent.multisensory_alcohol_visual_tactile,
             self.parent.multisensory_neutral_visual_tactile,
+            self.parent.stroop_practice_neutral_visual_olfactory,
             self.parent.multisensory_alcohol_visual_olfactory2,
             self.parent.multisensory_neutral_visual_olfactory2,
         ]

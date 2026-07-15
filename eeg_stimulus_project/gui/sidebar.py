@@ -74,8 +74,10 @@ class Sidebar(QFrame):
 
         # Add the stroop tests to the sidebar
         self.add_submenu("Stroop Test", [
+            ("Practice Neutral (Visual && Tactile)", parent.show_stroop_practice_neutral_visual_tactile),
             ("Multisensory Alcohol (Visual && Tactile)", parent.show_multisensory_alcohol_visual_tactile),
             ("Multisensory Neutral (Visual && Tactile)", parent.show_multisensory_neutral_visual_tactile),
+            ("Practice Neutral (Visual && Olfactory)", parent.show_stroop_practice_neutral_visual_olfactory),
             ("Multisensory Alcohol (Visual && Olfactory)", parent.show_multisensory_alcohol_visual_olfactory2),
             ("Multisensory Neutral (Visual && Olfactory)", parent.show_multisensory_neutral_visual_olfactory2)
         ])
@@ -205,15 +207,15 @@ class Sidebar(QFrame):
 
     def highlight_tests(self, test_number):
         # Collect all test buttons in order of creation
-        # Passive: first 6, Stroop: next 4
+        # Passive: first 6, Stroop: remaining buttons
         buttons = []
         for i in range(self.submenu_layout.count()):
             widget = self.submenu_layout.itemAt(i).widget()
             if isinstance(widget, QPushButton):
                 buttons.append(widget)
-        # Passive: buttons[0:6], Stroop: buttons[6:10]
+        # Passive: buttons[0:6], Stroop: buttons[6:]
         passive_buttons = buttons[0:6]
-        stroop_buttons = buttons[6:10]
+        stroop_buttons = buttons[6:]
         default_style = """
             QPushButton {
                 background-color: #ede7f6;

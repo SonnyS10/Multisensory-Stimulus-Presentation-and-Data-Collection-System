@@ -770,6 +770,8 @@ class ControlWindow(QMainWindow):
                 key_pressed=message.get("key_pressed", ""),
                 expected_key=message.get("expected_key", ""),
                 reaction_time_ms=message.get("reaction_time_ms", ""),
+                block_name=message.get("block_name", ""),
+                is_practice=bool(message.get("is_practice", False)),
                 apparatus=apparatus,
             )
             logging.info("Host: saved Stroop trial %s to %s", self._stroop_trial_number, logger.stroop_filepath)

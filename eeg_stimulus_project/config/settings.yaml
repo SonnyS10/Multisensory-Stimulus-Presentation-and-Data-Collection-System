@@ -93,8 +93,10 @@ experiment:
       - "Multisensory Neutral Visual, Tactile & Olfactory"
       - "Multisensory Alcohol Visual, Tactile & Olfactory"
     stroop:
+      - "Stroop Practice Neutral (Visual & Tactile)"
       - "Stroop Multisensory Alcohol (Visual & Tactile)"
       - "Stroop Multisensory Neutral (Visual & Tactile)"
+      - "Stroop Practice Neutral (Visual & Olfactory)"
       - "Stroop Multisensory Alcohol (Visual & Olfactory)"
       - "Stroop Multisensory Neutral (Visual & Olfactory)"
   
