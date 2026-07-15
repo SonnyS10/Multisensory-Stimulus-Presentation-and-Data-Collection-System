@@ -67,6 +67,8 @@ from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, res
 
 
 class ControlWindow(QMainWindow):
+    append_log_text = pyqtSignal(str)
+
     def __init__(self, connection, shared_status, log_queue, base_dir=None, test_number=None, host=False, subject_id=None):
         super().__init__()
         self.shared_status = shared_status
@@ -279,6 +281,7 @@ class ControlWindow(QMainWindow):
             }
         """)
         self.control_layout.addWidget(self.log_text_edit)
+        self.append_log_text.connect(self._append_log_text)
 
         logger = logging.getLogger()
         #logger.handlers = []  # Remove all existing handlers
@@ -356,14 +359,12 @@ class ControlWindow(QMainWindow):
 
     # Append message to QTextEdit in a thread-safe way
     def write(self, msg):
-        def append():
-            self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
-            self.log_text_edit.insertPlainText(msg)
-            self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
-        if self.log_text_edit.thread() == QApplication.instance().thread():
-            append()
-        else:
-            QMetaObject.invokeMethod(self.log_text_edit, append(), Qt.QueuedConnection)
+        self.append_log_text.emit(msg)
+
+    def _append_log_text(self, msg):
+        self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
+        self.log_text_edit.insertPlainText(msg)
+        self.log_text_edit.moveCursor(self.log_text_edit.textCursor().End)
 
     # Start the Actichamp application and automatically link to the EEG stream.
     def start_actichamp(self):
@@ -633,13 +634,7 @@ class ControlWindow(QMainWindow):
             # Create a log record and display it
             # We'll use the existing log handler to ensure consistent formatting
             if hasattr(self, 'log_text_edit'):
-                # Use QMetaObject to ensure thread safety when updating UI
-                QMetaObject.invokeMethod(
-                    self.log_text_edit,
-                    'append',
-                    Qt.QueuedConnection,
-                    client_msg
-                )
+                self.write(client_msg + "\n")
             
         except Exception as e:
             logging.error(f"Error handling network log message: {e}")
