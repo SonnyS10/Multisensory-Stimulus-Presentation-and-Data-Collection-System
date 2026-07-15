@@ -31,6 +31,15 @@ SCENT_DISPENSE_DELAY_MS = 4000
 INSTRUCTION_FONT_SIZE = 18
 TOUCH_INSTRUCTION_FONT_SIZE = 38
 
+STROOP_PRACTICE_TESTS = {
+    "Stroop Practice Neutral (Visual & Tactile)",
+    "Stroop Practice Neutral (Visual & Olfactory)",
+}
+
+
+def is_stroop_practice_test(test_name):
+    return str(test_name or "").strip() in STROOP_PRACTICE_TESTS
+
 
 def get_turntable_instruction_text(test_name):
     name = str(test_name or "").strip()
@@ -87,7 +96,11 @@ def get_test_instruction_text(test_name, instruction_only=False):
             "Please breathe through your nose the entire time. After 2-3 seconds, please remove your hand from the object but keep it on the handrest. "
             "Please try to minimize any additional movements, including eye blinks while the task is ongoing."
         )
-    if name in ["Stroop Multisensory Alcohol (Visual & Tactile)", "Stroop Multisensory Neutral (Visual & Tactile)"]:
+    if name in [
+        "Stroop Practice Neutral (Visual & Tactile)",
+        "Stroop Multisensory Alcohol (Visual & Tactile)",
+        "Stroop Multisensory Neutral (Visual & Tactile)",
+    ]:
         return (
             "For this task, you will be using both hands. Your left hand will be placed on objects in the touchbox and your right hand should press the right or left arrow keys on the keyboard. "
             "During the task, you will see a series of images on the screen while touching an object in the touchbox. "
@@ -95,7 +108,11 @@ def get_test_instruction_text(test_name, instruction_only=False):
             "Press the right arrow if the two match, and the left arrow if they do not match. "
             "Please respond as quickly and as accurately as possible, and try to minimize additional movements, including eye blinks."
         )
-    if name in ["Stroop Multisensory Alcohol (Visual & Olfactory)", "Stroop Multisensory Neutral (Visual & Olfactory)"]:
+    if name in [
+        "Stroop Practice Neutral (Visual & Olfactory)",
+        "Stroop Multisensory Alcohol (Visual & Olfactory)",
+        "Stroop Multisensory Neutral (Visual & Olfactory)",
+    ]:
         return (
             "For this task, you will be shown a series of images on the screen, and presented with a scent at the same time. "
             "Your job is to determine if the image shown on the screen matches the scent. "
@@ -550,7 +567,7 @@ class DisplayWindow(QMainWindow):
                     # / GUI.advance_craving_block_index() (and the Stroop
                     # equivalents) in main_gui.py.
                     self.timer.start(1)  # Start the timer with 100 ms interval
-                if current_test in ['Stroop Multisensory Alcohol (Visual & Tactile)', 'Stroop Multisensory Neutral (Visual & Tactile)', 'Stroop Multisensory Alcohol (Visual & Olfactory)', 'Stroop Multisensory Neutral (Visual & Olfactory)']:
+                if "Stroop" in str(current_test):
                     self.display_images_stroop()
                 else:
                     self.display_images_passive()
@@ -702,7 +719,11 @@ class DisplayWindow(QMainWindow):
             return  # Do not proceed if stopped or paused
         self.image_label.clear()
         self._stroop_stimulus_onset_ms = self.elapsed_time
-        self.set_instruction_text()
+        if is_stroop_practice_test(self.current_test):
+            self.set_instruction_text()
+        elif hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.set_pixmap(None)
+        self.waiting_for_stroop_response = True
         self.wait_for_input()
 
     def show_crosshair_and_wait_tactile(self, stroop=False):
@@ -1335,6 +1356,8 @@ class DisplayWindow(QMainWindow):
             "expected_key": expected_key,
             "reaction_time_ms": reaction_time_ms,
             "apparatus": self.apparatus,
+            "block_name": self.current_test,
+            "is_practice": is_stroop_practice_test(self.current_test),
         }
         if self.client:
             self.send_message(payload)
@@ -1359,6 +1382,8 @@ class DisplayWindow(QMainWindow):
                 key_pressed=payload["key_pressed"],
                 expected_key=payload["expected_key"],
                 reaction_time_ms=payload["reaction_time_ms"],
+                block_name=payload["block_name"],
+                is_practice=payload["is_practice"],
                 apparatus=self.apparatus,
             )
             self.session_owner.advance_stroop_trial_number()

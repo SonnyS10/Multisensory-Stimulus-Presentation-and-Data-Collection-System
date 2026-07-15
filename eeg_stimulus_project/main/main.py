@@ -39,8 +39,10 @@ def get_test_lists():
         'Multisensory Alcohol Visual, Tactile & Olfactory'
     ])
     stroop_tests = config.get('experiment.test_types.stroop', [
+        'Stroop Practice Neutral (Visual & Tactile)',
         'Stroop Multisensory Alcohol (Visual & Tactile)',
         'Stroop Multisensory Neutral (Visual & Tactile)',
+        'Stroop Practice Neutral (Visual & Olfactory)',
         'Stroop Multisensory Alcohol (Visual & Olfactory)',
         'Stroop Multisensory Neutral (Visual & Olfactory)'
     ])

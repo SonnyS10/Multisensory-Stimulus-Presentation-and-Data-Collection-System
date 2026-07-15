@@ -18,6 +18,12 @@ from PyQt5.QtCore import Qt, QSize
 from eeg_stimulus_project.assets.asset_handler import Display
 import openpyxl
 
+STROOP_PRACTICE_TESTS = {
+    'Stroop Practice Neutral (Visual & Tactile)',
+    'Stroop Practice Neutral (Visual & Olfactory)',
+}
+
+
 class StimulusOrderFrame(QWidget):
     """
     A frame that allows users to view and rearrange the order of stimulus presentation
@@ -83,8 +89,10 @@ class StimulusOrderFrame(QWidget):
             'Multisensory Alcohol Visual & Olfactory',
             'Multisensory Neutral Visual, Tactile & Olfactory',
             'Multisensory Alcohol Visual, Tactile & Olfactory',
+            'Stroop Practice Neutral (Visual & Tactile)',
             'Stroop Multisensory Alcohol (Visual & Tactile)',
             'Stroop Multisensory Neutral (Visual & Tactile)',
+            'Stroop Practice Neutral (Visual & Olfactory)',
             'Stroop Multisensory Alcohol (Visual & Olfactory)',
             'Stroop Multisensory Neutral (Visual & Olfactory)'
         ]
@@ -624,11 +632,13 @@ class StimulusOrderFrame(QWidget):
                     except Exception as e:
                         print(f"Error creating thumbnail for {fname}: {e}")
         
-        # Add craving rating asset
-        craving_item = QTreeWidgetItem(self.available_assets_tree)
-        craving_item.setText(0, "📊 craving_rating")
-        craving_item.setFont(0, QFont("Segoe UI", 10, QFont.Bold))
-        craving_item.setData(0, Qt.UserRole, CravingRatingAsset())
+        # Add craving rating asset for full tasks only. Practice blocks are
+        # fixed five-trial image blocks.
+        if self.current_test_name not in STROOP_PRACTICE_TESTS:
+            craving_item = QTreeWidgetItem(self.available_assets_tree)
+            craving_item.setText(0, "📊 craving_rating")
+            craving_item.setFont(0, QFont("Segoe UI", 10, QFont.Bold))
+            craving_item.setData(0, Qt.UserRole, CravingRatingAsset())
         
         # Debug output
         total_assets = len(default_assets) + len(custom_assets)
@@ -737,6 +747,9 @@ class StimulusOrderFrame(QWidget):
         self.sync_working_order_with_ui()
 
         if not self.validate_passive_unique_stimulus_limit():
+            return
+
+        if not self.validate_stroop_practice_trial_count():
             return
 
         scents_valid, missing_scents = self.validate_olfactory_scent_assignments(self.current_test_name)
@@ -968,6 +981,9 @@ class StimulusOrderFrame(QWidget):
             if not self.validate_passive_unique_stimulus_limit():
                 return
 
+            if not self.validate_stroop_practice_trial_count():
+                return
+
             self.update_image_list()
             self.update_apply_button_state()  # Update button state to show changes can be applied
 
@@ -1015,6 +1031,44 @@ class StimulusOrderFrame(QWidget):
             applied_scents = self.applied_scent_numbers.get(self.current_test_name)
             return applied_scents == self.current_scent_assignments(self.current_test_name)
         return True
+
+    def validate_stroop_practice_trial_count(self):
+        """Practice Stroop blocks are fixed five-trial blocks."""
+        if self.current_test_name not in STROOP_PRACTICE_TESTS:
+            return True
+
+        images = self.working_orders.get(self.current_test_name, [])
+        image_assets = [img for img in images if getattr(img, "filename", None)]
+        invalid_assets = [img for img in images if not getattr(img, "filename", None)]
+        non_neutral_assets = [
+            img for img in image_assets
+            if getattr(img, "asset_origin", "").lower() != "neutral"
+        ]
+
+        if len(image_assets) == 5 and not invalid_assets and not non_neutral_assets:
+            return True
+
+        details = []
+        if len(image_assets) != 5:
+            details.append(f"The current order contains {len(image_assets)} image trials.")
+        if invalid_assets:
+            details.append("Remove non-image assets such as craving_rating from this practice block.")
+        if non_neutral_assets:
+            names = [
+                os.path.splitext(os.path.basename(getattr(img, "filename", "")))[0]
+                for img in non_neutral_assets[:8]
+            ]
+            extra = "" if len(non_neutral_assets) <= 8 else f" and {len(non_neutral_assets) - 8} more"
+            details.append(f"Only neutral images are allowed; remove: {', '.join(names)}{extra}.")
+
+        QMessageBox.critical(
+            self,
+            "Practice Block Requires 5 Trials",
+            f"'{self.current_test_name}' must contain exactly 5 neutral practice trials. "
+            + " ".join(details),
+            QMessageBox.Ok
+        )
+        return False
 
     def current_scent_assignments(self, test_name):
         """Return scent assignments for the non-craving assets currently in a test."""
