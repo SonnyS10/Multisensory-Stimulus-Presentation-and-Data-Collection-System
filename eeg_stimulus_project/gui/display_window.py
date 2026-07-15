@@ -1477,17 +1477,21 @@ class DisplayWindow(QMainWindow):
 
         self.craving_buttons = []
 
-        # Use the persistent instructions_label for craving instructions
-        self.instructions_label.setText(
+        # The persistent instructions_label normally lives at the top of the
+        # overlay. Hide it here and build the craving prompt together with the
+        # rating scale so the whole screen stays visually centered.
+        self.instructions_label.setVisible(False)
+        prompt_label = QLabel(self.overlay_widget)
+        prompt_label.setText(
             "How strong is your urge to drink alcohol right now?\n\n"
             "Select a number from 0 to 6 below:"
         )
         self.current_text_delta = None
-        self.instructions_label.setFont(QFont("Arial", 28, QFont.Bold))
-        self.instructions_label.setAlignment(Qt.AlignCenter)
-        self.instructions_label.setWordWrap(True)
-        self.instructions_label.setStyleSheet("color: #222; margin-bottom: 24px;")
-        self.instructions_label.setVisible(True)
+        prompt_label.setFont(QFont("Arial", 28, QFont.Bold))
+        prompt_label.setAlignment(Qt.AlignCenter)
+        prompt_label.setWordWrap(True)
+        prompt_label.setStyleSheet("color: #222; margin-bottom: 24px;")
+        prompt_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.countdown_label.setVisible(False)
 
         # Craving meanings for each number
@@ -1503,7 +1507,8 @@ class DisplayWindow(QMainWindow):
 
         # Create a grid layout for labels and buttons
         grid = QGridLayout()
-        grid.setSpacing(50)
+        grid.setHorizontalSpacing(42)
+        grid.setVerticalSpacing(18)
         grid.setAlignment(Qt.AlignCenter)
 
         self.craving_buttons = []
@@ -1511,12 +1516,12 @@ class DisplayWindow(QMainWindow):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
             label.setFont(QFont("Arial", 18))
-            label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+            label.setAlignment(Qt.AlignCenter)
             label.setWordWrap(True)
-            label.setMinimumHeight(60)
-            label.setMaximumWidth(180)
+            label.setMinimumHeight(90)
+            label.setMaximumWidth(150)
             label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
+            grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter)
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
@@ -1548,10 +1553,18 @@ class DisplayWindow(QMainWindow):
         grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         grid_widget.setMaximumWidth(1200)
 
-        # Center the rating controls in the available screen area.
+        content_widget = QWidget(self.overlay_widget)
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(34)
+        content_layout.addWidget(prompt_label, alignment=Qt.AlignHCenter)
+        content_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
+        content_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
+        # Center the prompt and rating controls together in the available screen area.
         vcenter_layout = QVBoxLayout()
         vcenter_layout.addStretch(1)
-        vcenter_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
+        vcenter_layout.addWidget(content_widget, alignment=Qt.AlignCenter)
         vcenter_layout.addStretch(1)
 
         self.overlay_layout.addLayout(vcenter_layout)
