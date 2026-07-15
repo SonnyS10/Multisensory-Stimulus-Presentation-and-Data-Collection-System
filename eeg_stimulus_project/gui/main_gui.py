@@ -289,6 +289,7 @@ class GUI(QMainWindow):
                     apparatus=apparatus,
                     session_logger=session_logger,
                     session_owner=self,
+                    instruction_only=instruction_only,
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(
@@ -1092,6 +1093,9 @@ class Frame(QFrame):
         if self.local_mode and self.label_stream is None:
             self.label_stream = LSLLabelStream()
 
+        # A turntable-only run still needs the participant-facing instruction
+        # window. In that mode DisplayWindow is opened with instruction_only
+        # so it does not represent a normal Display apparatus stimulus run.
         if display_selected or turntable_selected:
             if self.local_mode and self.label_stream is None:
                 self.label_stream = LSLLabelStream()
