@@ -52,7 +52,7 @@ class OlfactoryTestFrame(QFrame):
         mode_label = QLabel("Test Mode:")
         mode_label.setFont(QFont("Segoe UI", 14, QFont.Bold))
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Combined (o#)", "Individual Components", "Sequential Components"])
+        self.mode_combo.addItems(["Combined (o#)", "Individual Components"])
         self.mode_combo.setFont(QFont("Segoe UI", 12))
         self.mode_combo.setMinimumHeight(40)
         self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
@@ -191,10 +191,87 @@ class OlfactoryTestFrame(QFrame):
             }
 
         individual_layout.setColumnStretch(5, 1)
+
+        # Add delay controls section
+        delay_section_label = QLabel("\nDelays Between Components (seconds):")
+        delay_section_label.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        individual_layout.addWidget(delay_section_label, 3, 0, 1, 6)
+
+        # Delay after Humidifier (before Pump)
+        delay1_label = QLabel("Delay after Humidifier:")
+        delay1_label.setFont(QFont("Segoe UI", 11))
+        individual_layout.addWidget(delay1_label, 4, 0)
+
+        self.delay_after_humidifier = QDoubleSpinBox()
+        self.delay_after_humidifier.setRange(0.0, 10.0)
+        self.delay_after_humidifier.setValue(0.0)
+        self.delay_after_humidifier.setSingleStep(0.1)
+        self.delay_after_humidifier.setFont(QFont("Segoe UI", 11))
+        self.delay_after_humidifier.setMinimumHeight(40)
+        self.delay_after_humidifier.setMinimumWidth(120)
+        individual_layout.addWidget(self.delay_after_humidifier, 4, 1)
+
+        # Delay after Pump (before Solenoid)
+        delay2_label = QLabel("Delay after Pump:")
+        delay2_label.setFont(QFont("Segoe UI", 11))
+        individual_layout.addWidget(delay2_label, 5, 0)
+
+        self.delay_after_pump = QDoubleSpinBox()
+        self.delay_after_pump.setRange(0.0, 10.0)
+        self.delay_after_pump.setValue(0.0)
+        self.delay_after_pump.setSingleStep(0.1)
+        self.delay_after_pump.setFont(QFont("Segoe UI", 11))
+        self.delay_after_pump.setMinimumHeight(40)
+        self.delay_after_pump.setMinimumWidth(120)
+        individual_layout.addWidget(self.delay_after_pump, 5, 1)
+
+        # Sequential trigger buttons
+        seq_button_layout = QHBoxLayout()
+        self.sequential_start_btn = QPushButton("Start Sequential")
+        self.sequential_start_btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.sequential_start_btn.setMinimumHeight(40)
+        self.sequential_start_btn.setMinimumWidth(100)
+        self.sequential_start_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800;
+                color: white;
+                border-radius: 5px;
+                padding: 8px 20px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+        """)
+        self.sequential_start_btn.clicked.connect(self.start_sequential_trigger)
+        seq_button_layout.addWidget(self.sequential_start_btn)
+
+        self.sequential_stop_btn = QPushButton("Stop Sequential")
+        self.sequential_stop_btn.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.sequential_stop_btn.setMinimumHeight(40)
+        self.sequential_stop_btn.setMinimumWidth(100)
+        self.sequential_stop_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border-radius: 5px;
+                padding: 8px 20px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #da190b;
+            }
+        """)
+        self.sequential_stop_btn.clicked.connect(self.stop_sequential_trigger)
+        seq_button_layout.addWidget(self.sequential_stop_btn)
+        seq_button_layout.addStretch()
+
+        individual_layout.addLayout(seq_button_layout, 6, 0, 1, 6)
+
         self.individual_group.setLayout(individual_layout)
         self.layout.addWidget(self.individual_group)
 
-        # Sequential Components Mode
+        # Sequential Components Mode (hidden, for backwards compatibility)
         self.sequential_group = QGroupBox("Sequential Components (Run All in Order)")
         self.sequential_group.setFont(QFont("Segoe UI", 12, QFont.Bold))
         self.sequential_group.setVisible(False)
@@ -205,11 +282,11 @@ class OlfactoryTestFrame(QFrame):
         seq_info_label.setStyleSheet("color: #666; padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
         sequential_layout.addWidget(seq_info_label)
 
-        seq_button_layout = QHBoxLayout()
-        self.sequential_start_btn = QPushButton("Start Sequence")
-        self.sequential_start_btn.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.sequential_start_btn.setMinimumHeight(50)
-        self.sequential_start_btn.setStyleSheet("""
+        seq_button_layout_old = QHBoxLayout()
+        self.sequential_start_btn_old = QPushButton("Start Sequence")
+        self.sequential_start_btn_old.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.sequential_start_btn_old.setMinimumHeight(50)
+        self.sequential_start_btn_old.setStyleSheet("""
             QPushButton {
                 background-color: #FF9800;
                 color: white;
@@ -300,15 +377,9 @@ class OlfactoryTestFrame(QFrame):
         if text == "Combined (o#)":
             self.combined_group.setVisible(True)
             self.individual_group.setVisible(False)
-            self.sequential_group.setVisible(False)
-        elif text == "Individual Components":
+        else:  # Individual Components
             self.combined_group.setVisible(False)
             self.individual_group.setVisible(True)
-            self.sequential_group.setVisible(False)
-        elif text == "Sequential Components":
-            self.combined_group.setVisible(False)
-            self.individual_group.setVisible(False)
-            self.sequential_group.setVisible(True)
 
     def update_status(self, message):
         """Update status text"""
@@ -439,20 +510,22 @@ class OlfactoryTestFrame(QFrame):
             # Disable the start button
             self.sequential_start_btn.setEnabled(False)
             
-            # Get durations
+            # Get durations and delays
             humidifier_duration = int(self.component_controls['humidifier']['duration'].value() * 1000)
             pump_duration = int(self.component_controls['pump']['duration'].value() * 1000)
             solenoid_duration = int(self.component_controls['solenoid']['duration'].value() * 1000)
+            delay_after_humidifier = int(self.delay_after_humidifier.value() * 1000)
+            delay_after_pump = int(self.delay_after_pump.value() * 1000)
             
             # Start with humidifier
             self.olfactory_controller.trigger_humidifier(scent_num)
             self.update_status(f"▶ Starting sequence: Humidifier triggered ({self.component_controls['humidifier']['duration'].value()}s)")
             
-            # Schedule pump after humidifier duration
+            # Schedule pump after humidifier duration + delay
             pump_timer = QTimer()
             pump_timer.setSingleShot(True)
-            pump_timer.timeout.connect(lambda: self._sequential_trigger_pump(scent_num, pump_duration, solenoid_duration))
-            pump_timer.start(humidifier_duration)
+            pump_timer.timeout.connect(lambda: self._sequential_trigger_pump(scent_num, pump_duration, solenoid_duration, delay_after_pump))
+            pump_timer.start(humidifier_duration + delay_after_humidifier)
             self.sequential_timers['pump'] = pump_timer
             
         except Exception as e:
@@ -460,17 +533,17 @@ class OlfactoryTestFrame(QFrame):
             self.sequential_start_btn.setEnabled(True)
             logging.error(f"Error starting sequential trigger: {e}")
 
-    def _sequential_trigger_pump(self, scent_num, pump_duration, solenoid_duration):
+    def _sequential_trigger_pump(self, scent_num, pump_duration, solenoid_duration, delay_after_pump):
         """Trigger pump and schedule solenoid"""
         try:
             self.olfactory_controller.trigger_pump(scent_num)
             self.update_status(f"▶ Pump triggered ({self.component_controls['pump']['duration'].value()}s)")
             
-            # Schedule solenoid after pump duration
+            # Schedule solenoid after pump duration + delay
             solenoid_timer = QTimer()
             solenoid_timer.setSingleShot(True)
             solenoid_timer.timeout.connect(lambda: self._sequential_trigger_solenoid(scent_num, solenoid_duration))
-            solenoid_timer.start(pump_duration)
+            solenoid_timer.start(pump_duration + delay_after_pump)
             self.sequential_timers['solenoid'] = solenoid_timer
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
