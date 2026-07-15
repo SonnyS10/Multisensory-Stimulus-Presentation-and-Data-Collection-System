@@ -28,8 +28,19 @@ from logging.handlers import QueueHandler
 # scent reaches the participant at the same point relative to the image in every
 # olfactory realism block (2D and viewing booth, with or without tactile).
 SCENT_DISPENSE_DELAY_MS = 4000
-INSTRUCTION_FONT_SIZE = 18
+INSTRUCTION_FONT_SIZE = 28
 TOUCH_INSTRUCTION_FONT_SIZE = 38
+
+
+def configure_instruction_label(label):
+    """Make instruction labels wrap automatically and stay centered within a comfortable width."""
+    label.setWordWrap(True)
+    label.setAlignment(Qt.AlignCenter)
+    label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+    label.setMinimumHeight(0)
+    label.setMaximumHeight(16777215)
+    label.setContentsMargins(40, 20, 40, 20)
+    label.setStyleSheet("padding-left: 40px; padding-right: 40px; margin: 0px;")
 
 
 def get_turntable_instruction_text(test_name):
@@ -139,8 +150,8 @@ class MirroredDisplayWindow(QWidget):
             self.overlay_widget
         )
         self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
-        self.instructions_label.setAlignment(Qt.AlignCenter)
-        self.overlay_layout.addWidget(self.instructions_label)
+        configure_instruction_label(self.instructions_label)
+        self.overlay_layout.addWidget(self.instructions_label, alignment=Qt.AlignCenter)
 
         self.countdown_label = QLabel("", self.overlay_widget)
         self.countdown_label.setFont(QFont("Arial", 36, QFont.Bold))
@@ -389,11 +400,8 @@ class DisplayWindow(QMainWindow):
         #IN THE FUTURE THIS SHOULD BE DIFFERENT FOR EACH TEST
         self.instructions_label = QLabel("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.", self.overlay_widget)
         self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
-        self.instructions_label.setAlignment(Qt.AlignCenter)
-        self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.instructions_label.setMaximumHeight(120)
-        self.instructions_label.setWordWrap(True)
-        self.overlay_layout.addWidget(self.instructions_label)
+        configure_instruction_label(self.instructions_label)
+        self.overlay_layout.addWidget(self.instructions_label, alignment=Qt.AlignCenter)
 
         self.countdown_label = QLabel("", self.overlay_widget)
         self.countdown_label.setFont(QFont("Arial", 36, QFont.Bold))
@@ -911,13 +919,17 @@ class DisplayWindow(QMainWindow):
     #This method is called when the window is resized, it updates the image label and the instruction text
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Set instructions_label height to about half the window height
-        half_height = int(self.height() * 0.5)
-        self.instructions_label.setMinimumHeight(half_height)
-        self.instructions_label.setMaximumHeight(half_height)
-        self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        # Dynamically scale font size based on label height
-        font_size = max(INSTRUCTION_FONT_SIZE, min(int(half_height * 0.25), 44))
+        self.instructions_label.setMinimumHeight(0)
+        self.instructions_label.setMaximumHeight(16777215)
+        self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.instructions_label.adjustSize()
+        available_dimension = min(self.width(), self.height())
+        max_width = max(320, int(self.width() * 0.8))
+        self.instructions_label.setMaximumWidth(max_width)
+        self.instructions_label.setMinimumWidth(0)
+        self.instructions_label.setAlignment(Qt.AlignCenter)
+        self.instructions_label.setContentsMargins(40, 20, 40, 20)
+        font_size = max(INSTRUCTION_FONT_SIZE, min(int(available_dimension * 0.035), 30))
         font = QFont("Arial", font_size, QFont.Bold)
         self.instructions_label.setFont(font)
 
