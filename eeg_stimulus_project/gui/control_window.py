@@ -23,8 +23,6 @@ sys.path.insert(0, str(project_root))
 
 from eeg_stimulus_project.config import config
 
-TACTILE_LOCAL_PORT = config.get('network.tactile_local_port', 9998)
-
 # Platform-specific imports
 if platform.system() == 'Windows':
     try:
@@ -63,7 +61,6 @@ sys.excepthook = excepthook
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
-from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, resolve_realism_condition
 
 
 class ControlWindow(QMainWindow):
@@ -85,9 +82,6 @@ class ControlWindow(QMainWindow):
         self.current_test = None
         self.log_queue = log_queue
         self.host = host
-        self.session_logger = None
-        self._craving_block_index = 0
-        self._stroop_trial_number = 0
 
         # --- Window Aesthetics ---
         self.setWindowTitle("Control Window")
@@ -644,144 +638,6 @@ class ControlWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Error handling network log message: {e}")
 
-    def get_subject_id(self):
-        if self.subject_id:
-            return str(self.subject_id)
-        if self.base_dir:
-            for part in Path(self.base_dir).parts:
-                if part.startswith("subject_"):
-                    return part.replace("subject_", "", 1)
-        return "unknown"
-
-    def get_active_task_name(self):
-        return "Cross_Modal_Stroop" if str(self.test_number) == "2" else "Passive_Viewing"
-
-    def get_session_data_root(self):
-        if not self.base_dir:
-            return None
-        base_path = Path(self.base_dir)
-        if base_path.name.startswith("test_") and base_path.parent.name.startswith("subject_"):
-            return base_path.parent.parent
-        return base_path
-
-    def ensure_session_logger(self, apparatus="Display"):
-        if self.session_logger is not None:
-            return self.session_logger
-
-        task_name = self.get_active_task_name()
-        try:
-            realism_condition = resolve_realism_condition(apparatus)
-        except ValueError:
-            logging.warning("Unknown apparatus %r for session logger; using Display.", apparatus)
-            apparatus = "Display"
-            realism_condition = resolve_realism_condition(apparatus)
-
-        self.session_logger = SessionDataLogger(
-            subject_id=self.get_subject_id(),
-            test_number=self.test_number or "unknown",
-            task_name=task_name,
-            apparatus=apparatus,
-            realism_condition=realism_condition,
-            data_root=self.get_session_data_root(),
-        )
-        if task_name == "Cross_Modal_Stroop":
-            csv_path = self.session_logger.init_stroop_csv()
-        else:
-            csv_path = self.session_logger.init_craving_csv()
-        logging.info(
-            "[SessionDataLogger] Host session CSV initialized: task=%s, apparatus=%s, realism=%s, csv=%s",
-            task_name,
-            apparatus,
-            realism_condition,
-            csv_path,
-        )
-        return self.session_logger
-
-    def _sensory_condition_from_test(self):
-        test = self.current_test or ""
-        has_olfactory = "Olfactory" in test
-        has_tactile = "Tactile" in test
-        if has_tactile and has_olfactory:
-            return "Multisensory_Visuo_Tactile_Olfactory"
-        if has_olfactory:
-            return "Multisensory_Visuo_Olfactory"
-        if has_tactile:
-            return "Multisensory_Visuo_Tactile"
-        return "Unisensory_Visual"
-
-    def _cue_type_from_test(self):
-        test = self.current_test or ""
-        if "Alcohol" in test and "Neutral" not in test.split("Alcohol")[0]:
-            return "Alcohol"
-        if "Neutral" in test:
-            return "Neutral"
-        if "Alcohol" in test:
-            return "Alcohol"
-        return "Neutral"
-
-    def _save_host_craving_rating(self, message):
-        craving_score = message.get("crave", None)
-        if craving_score is None:
-            logging.warning("Host: craving message missing score: %s", message)
-            return
-
-        apparatus = message.get("apparatus") or "Display"
-        logger = self.ensure_session_logger(apparatus)
-
-        try:
-            sensory_condition = message.get("sensory_condition") or self._sensory_condition_from_test()
-            cue_type = message.get("cue_type") or self._cue_type_from_test()
-            if logger.task_name == "Cross_Modal_Stroop":
-                logger.append_stroop_craving_rating(
-                    block_index=self._craving_block_index,
-                    sensory_condition=sensory_condition,
-                    cue_type=cue_type,
-                    craving_score=craving_score,
-                    apparatus=apparatus,
-                )
-                target_path = logger.stroop_filepath
-            else:
-                logger.append_craving_rating(
-                    block_index=self._craving_block_index,
-                    sensory_condition=sensory_condition,
-                    cue_type=cue_type,
-                    craving_score=craving_score,
-                    apparatus=apparatus,
-                )
-                target_path = logger.craving_filepath
-            self._craving_block_index += 1
-            logging.info("Host: saved craving rating %s to %s", craving_score, target_path)
-        except Exception as exc:
-            logging.error("Host: failed to save craving rating: %s", exc, exc_info=True)
-
-    def _save_host_stroop_trial(self, message):
-        apparatus = message.get("apparatus") or "Display"
-        logger = self.ensure_session_logger(apparatus)
-        if logger.task_name != "Cross_Modal_Stroop":
-            logging.warning(
-                "Host: received Stroop trial during %s; not writing to craving CSV.",
-                logger.task_name,
-            )
-            return
-
-        try:
-            self._stroop_trial_number += 1
-            logger.append_stroop_trial(
-                trial_number=self._stroop_trial_number,
-                image_shown=message.get("image_shown", ""),
-                image_type=message.get("image_type") or self._cue_type_from_test(),
-                scent_number=message.get("scent_number"),
-                has_tactile_trigger=bool(message.get("has_tactile_trigger", False)),
-                key_pressed=message.get("key_pressed", ""),
-                expected_key=message.get("expected_key", ""),
-                reaction_time_ms=message.get("reaction_time_ms", ""),
-                apparatus=apparatus,
-            )
-            logging.info("Host: saved Stroop trial %s to %s", self._stroop_trial_number, logger.stroop_filepath)
-        except Exception as exc:
-            self._stroop_trial_number = max(0, self._stroop_trial_number - 1)
-            logging.error("Host: failed to save Stroop trial: %s", exc, exc_info=True)
-
     def host_command_listener(self):
         logging.info("Host: Listening for commands...")
         buffer = ''
@@ -815,8 +671,6 @@ class ControlWindow(QMainWindow):
                                 test_name = message.get("test", None)
                                 if test_name:
                                     self.current_test = test_name  # Store for use in start_test
-                                if test_name and test_name != "Baseline":
-                                    self.ensure_session_logger(message.get("apparatus") or "Display")
                                 self.start_test()
                                 logging.info("Host: Starting test...")
                                 pass
@@ -837,22 +691,14 @@ class ControlWindow(QMainWindow):
                             elif action == "touchbox_lsl_true":
                                 self.update_app_status_icon(self.lsl_touch_icon, True)
                                 self.shared_status['lsl_enabled'] = True
-                                self.shared_status['touch_detection_armed'] = True
-                                logging.info(
-                                    "[TACTILE] touch_detection_armed=True (from client touch instruction)"
-                                )
+                                #self.send_lsl_control("touchbox_lsl_true")
                             elif action == "crave":
                                 self.craving_response = message.get("crave", None)
                                 logging.info(f"Host: Received craving response: {self.craving_response}")
                                 self.label_push(f"craving_rating_{self.craving_response}")
-                                self._save_host_craving_rating(message)
+                                self._save_craving_to_csv(self.craving_response, self.current_test or "Unknown Test")
                             elif action == "crave_manual":
-                                self.craving_response = message.get("crave", None)
-                                logging.info(f"Host: Received manual craving response: {self.craving_response}")
-                                self.label_push(f"craving_rating_{self.craving_response}")
-                                self._save_host_craving_rating(message)
-                            elif action == "stroop_trial":
-                                self._save_host_stroop_trial(message)
+                                self._save_craving_to_csv(message.get("crave"), "Manual Button")
                             elif action == "client_log":
                                 # Handle log messages from client
                                 log_message = message.get("message", "")
@@ -873,41 +719,13 @@ class ControlWindow(QMainWindow):
             logging.info(f"Host: Listener crashed: {e}")
             traceback.print_exc()
 
-    def _notify_object_touched(self):
-        """Forward touch events to the client GUI or local shared_status fallback."""
-        self.shared_status['touch_detection_armed'] = False
-        self.shared_status['lsl_enabled'] = False
-
-        if self.connection:
-            try:
-                self.connection.sendall(
-                    (json.dumps({"action": "object_touched"}) + "\n").encode('utf-8')
-                )
-                logging.info("[TACTILE] object_touched sent to client over host connection.")
-            except Exception as exc:
-                logging.error("[TACTILE] Failed to send object_touched to client: %s", exc)
-                self.shared_status['pending_touch_advance'] = True
-        else:
-            self.shared_status['pending_touch_advance'] = True
-            logging.info(
-                "[TACTILE] object_touched queued via shared_status "
-                "(local/developer mode — no host TCP connection)."
-            )
-
     def start_tactile_listener(self):
         def tactile_listener():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                sock.bind(('localhost', TACTILE_LOCAL_PORT))
-            except OSError as exc:
-                logging.error(
-                    "[TACTILE] Could not bind tactile listener on port %s: %s",
-                    TACTILE_LOCAL_PORT, exc,
-                )
-                return
+            sock.bind(('localhost', 9999))
             sock.listen(5)
-            logging.info("[TACTILE] Listening for tactile events on localhost:%s", TACTILE_LOCAL_PORT)
+            #print("Label listener started on port 9999")
             while True:
                 conn, addr = sock.accept()
                 with conn:
@@ -919,25 +737,23 @@ class ControlWindow(QMainWindow):
                         data += chunk
                     try:
                         msg = json.loads(data.decode('utf-8').strip())
-                        action = msg.get("action")
-                        if action == "tactile_connected":
+                        if msg.get("action") == "tactile_connected":
                             label = "tactile_connected"
-                            logging.info("[TACTILE] Received: %s", label)
+                            logging.info(f"Received label: {label}")
                             self.label_push(label)
+                            logging.info(f"Host: Pushing label: {label}")
                             self.update_app_status_icon(self.touchbox_connected_icon, True)
                             self.shared_status['tactile_connected'] = True
-                            if self.connection:
-                                self.connection.sendall(
-                                    (json.dumps({"action": "tactile_connected"}) + "\n").encode('utf-8')
-                                )
-                        elif action == "tactile_touch":
+                            self.connection.sendall((json.dumps({"action": "tactile_connected"}) + "\n").encode('utf-8'))
+                        if msg.get("action") == "tactile_touch":
                             label = "tactile_touch"
-                            logging.info("[TACTILE] Received threshold crossing: %s", label)
+                            logging.info(f"Received label: {label}")
                             self.label_push(label)
-                            self._notify_object_touched()
+                            logging.info(f"Host: Pushing label: {label}")
+                            self.connection.sendall((json.dumps({"action": "object_touched"}) + "\n").encode('utf-8'))
                             self.update_app_status_icon(self.lsl_touch_icon, False)
-                    except Exception as exc:
-                        logging.error("[TACTILE] Error handling tactile message: %s", exc)
+                    except Exception as e:
+                        print(f"Error handling label message: {e}")
         threading.Thread(target=tactile_listener, daemon=True).start()
 
     def send_olfactory_command(scent_number):

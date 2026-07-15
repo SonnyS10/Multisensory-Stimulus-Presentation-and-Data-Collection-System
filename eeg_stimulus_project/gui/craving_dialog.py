@@ -60,8 +60,8 @@ class CravingRatingDialog(QDialog):
             
             # Button
             btn = QPushButton(str(i))
-            btn.setFont(QFont("Arial", 20, QFont.Bold))
-            btn.setMinimumSize(70, 70)
+            btn.setFont(QFont("Arial", 24, QFont.Bold))
+            btn.setMinimumSize(90, 90)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Changed from Fixed to Expanding
             btn.setMaximumSize(110, 110)
             btn.setStyleSheet("""
