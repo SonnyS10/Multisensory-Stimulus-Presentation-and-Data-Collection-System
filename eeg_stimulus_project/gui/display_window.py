@@ -30,6 +30,8 @@ from logging.handlers import QueueHandler
 SCENT_DISPENSE_DELAY_MS = 4000
 INSTRUCTION_FONT_SIZE = 28
 TOUCH_INSTRUCTION_FONT_SIZE = 38
+TEXT_SIZE_MIN = 18
+TEXT_SIZE_MAX = 54
 
 STROOP_PRACTICE_TESTS = {
     "Stroop Practice Neutral (Visual & Tactile)",
@@ -39,6 +41,14 @@ STROOP_PRACTICE_TESTS = {
 
 def is_stroop_practice_test(test_name):
     return str(test_name or "").strip() in STROOP_PRACTICE_TESTS
+
+
+def clamp_text_size(size):
+    try:
+        size = int(size)
+    except (TypeError, ValueError):
+        size = INSTRUCTION_FONT_SIZE
+    return max(TEXT_SIZE_MIN, min(TEXT_SIZE_MAX, size))
 
 
 def configure_instruction_label(label):
@@ -146,13 +156,15 @@ def get_instruction_prompt(instruction_only=False):
 #It contains the same layout and functionality as the main display window, but it is not interactive
 #It is used to show the experimenter what the subject is seeing
 class MirroredDisplayWindow(QWidget):
-    def __init__(self, parent=None, current_test=None, baseline_mode=False, instruction_only=False):
+    def __init__(self, parent=None, current_test=None, baseline_mode=False, instruction_only=False, text_size=None):
         super().__init__(parent)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  
 
         self.current_test = current_test
         self.instruction_only = instruction_only
+        self.display_text_size = clamp_text_size(text_size)
+        self.current_text_delta = 0
 
         self.stacked_layout = QStackedLayout(self)
 
@@ -166,7 +178,7 @@ class MirroredDisplayWindow(QWidget):
             "Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.",
             self.overlay_widget
         )
-        self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
+        self.instructions_label.setFont(self._instruction_font())
         configure_instruction_label(self.instructions_label)
         self.overlay_layout.addWidget(self.instructions_label, alignment=Qt.AlignCenter)
 
@@ -207,6 +219,14 @@ class MirroredDisplayWindow(QWidget):
 
         self.paused = False
 
+    def _instruction_font(self, delta=0):
+        return QFont("Arial", clamp_text_size(self.display_text_size + delta), QFont.Bold)
+
+    def set_text_size(self, size):
+        self.display_text_size = clamp_text_size(size)
+        if self.instructions_label.text().strip() != "+":
+            self.instructions_label.setFont(self._instruction_font(delta=self.current_text_delta))
+
     #Method to update the mirror image
     def set_pixmap(self, pixmap):
         if pixmap:
@@ -225,19 +245,13 @@ class MirroredDisplayWindow(QWidget):
         if text is None:
             text = "Press the Right Arrow key if stimuli match.\nPress the Left Arrow key if stimuli don't match."
         self.image_label.clear()
+        self.current_text_delta = 0
         self.instructions_label.setText(text)
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)  # <-- Hide countdown label
         if font is None:
-            # Use a more reliable font size calculation with a reasonable minimum
-            label_height = self.instructions_label.height()
-            if label_height <= 0:
-                # If height is not yet available, use a reasonable default
-                font_size = INSTRUCTION_FONT_SIZE
-            else:
-                font_size = max(INSTRUCTION_FONT_SIZE, int(label_height * 0.05))
-            font = QFont("Arial", font_size, QFont.Bold)
+            font = self._instruction_font()
         self.instructions_label.setFont(font)
         self.set_overlay_visible(True)
 
@@ -297,7 +311,8 @@ class MirroredDisplayWindow(QWidget):
         
     def end_screen(self):
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
-        self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE + 2, QFont.Bold))
+        self.current_text_delta = 2
+        self.instructions_label.setFont(self._instruction_font(delta=2))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -309,7 +324,8 @@ class MirroredDisplayWindow(QWidget):
             self.mirror_widget.end_screen()
 
     def show_crosshair_instructions(self):
-        self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
+        self.current_text_delta = 0
+        self.instructions_label.setFont(self._instruction_font())
         self.instructions_label.setText("Instructions: Please relax and focus on the crosshair when it appears.\n\nThis will last for 2 minutes.")
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -327,7 +343,8 @@ class MirroredDisplayWindow(QWidget):
         self.stacked_layout.setCurrentWidget(self.overlay_widget)
     
     def show_main_instructions(self):
-        self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
+        self.current_text_delta = 0
+        self.instructions_label.setFont(self._instruction_font())
         instruction_text = get_test_instruction_text(self.current_test, self.instruction_only)
         self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
@@ -345,7 +362,7 @@ class DisplayWindow(QMainWindow):
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
                  randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
                  baseline_mode=False, subject_id=None, apparatus="Display",
-                 session_logger=None, session_owner=None, instruction_only=False):
+                 session_logger=None, session_owner=None, instruction_only=False, text_size=None):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -365,6 +382,8 @@ class DisplayWindow(QMainWindow):
         # end of this constructor. Turntable-only runs use this flag to show
         # participant instructions without starting a Display stimulus run.
         self.instruction_only = bool(instruction_only)
+        self.display_text_size = clamp_text_size(text_size)
+        self.current_text_delta = 0
         self.subject_id = subject_id or "unknown"
         self.apparatus = apparatus
         # session_logger/session_owner are injected by GUI.open_secondary_gui().
@@ -416,7 +435,7 @@ class DisplayWindow(QMainWindow):
         #This is the overlay that shows the instructions for the experiment that the subject sees
         #IN THE FUTURE THIS SHOULD BE DIFFERENT FOR EACH TEST
         self.instructions_label = QLabel("Directions: [Your directions here]\n\nPress the SPACE BAR to begin the experiment.", self.overlay_widget)
-        self.instructions_label.setFont(QFont("Arial", INSTRUCTION_FONT_SIZE))
+        self.instructions_label.setFont(self._instruction_font())
         configure_instruction_label(self.instructions_label)
         self.overlay_layout.addWidget(self.instructions_label, alignment=Qt.AlignCenter)
 
@@ -543,6 +562,25 @@ class DisplayWindow(QMainWindow):
             self.show_crosshair_instructions()
         else:
             self.show_main_instructions()
+
+    def _instruction_font(self, delta=0):
+        return QFont("Arial", clamp_text_size(self.display_text_size + delta), QFont.Bold)
+
+    def set_text_size(self, size):
+        self.display_text_size = clamp_text_size(size)
+        current_instruction = self.instructions_label.text().strip()
+        if current_instruction and current_instruction != "+":
+            self.instructions_label.setFont(self._instruction_font(delta=self.current_text_delta))
+        if self.image_label.text().strip():
+            self.image_label.setFont(self._instruction_font())
+        if hasattr(self, 'craving_meaning_labels'):
+            for label in self.craving_meaning_labels:
+                label.setFont(QFont("Arial", max(12, self.display_text_size - 10)))
+        if hasattr(self, 'craving_buttons'):
+            for btn in self.craving_buttons:
+                btn.setFont(QFont("Arial", max(16, self.display_text_size - 6), QFont.Bold))
+        if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
+            self.mirror_widget.set_text_size(self.display_text_size)
 
     #This method is called when the user presses the space bar to start the experiment, it handles the countdown and the selection of the test to start the experiment
     def run_trial(self, event=None):
@@ -807,7 +845,8 @@ class DisplayWindow(QMainWindow):
                 instruction_text = "You may now touch the object. Once you touch the object, a brief scent will be dispensed."
         else:
             instruction_text = "Please touch the object to begin." if initial else "You may now touch the object."
-        font = QFont("Arial", TOUCH_INSTRUCTION_FONT_SIZE, QFont.Bold)
+        self.current_text_delta = TOUCH_INSTRUCTION_FONT_SIZE - INSTRUCTION_FONT_SIZE
+        font = self._instruction_font(delta=TOUCH_INSTRUCTION_FONT_SIZE - INSTRUCTION_FONT_SIZE)
 
         # Display widget
         self.instructions_label.setText(instruction_text)
@@ -821,6 +860,7 @@ class DisplayWindow(QMainWindow):
         # Mirror widget
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(instruction_text, font)
+            self.mirror_widget.current_text_delta = TOUCH_INSTRUCTION_FONT_SIZE - INSTRUCTION_FONT_SIZE
             self.mirror_widget.set_overlay_visible(True)
 
         # State flags
@@ -944,15 +984,15 @@ class DisplayWindow(QMainWindow):
         self.instructions_label.setMaximumHeight(16777215)
         self.instructions_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.instructions_label.adjustSize()
-        available_dimension = min(self.width(), self.height())
         max_width = max(320, int(self.width() * 0.8))
         self.instructions_label.setMaximumWidth(max_width)
         self.instructions_label.setMinimumWidth(0)
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setContentsMargins(40, 20, 40, 20)
-        font_size = max(INSTRUCTION_FONT_SIZE, min(int(available_dimension * 0.035), 30))
-        font = QFont("Arial", font_size, QFont.Bold)
-        self.instructions_label.setFont(font)
+        if self.instructions_label.text().strip() == "+":
+            self.instructions_label.setFont(QFont("Arial", 72, QFont.Bold))
+        else:
+            self.instructions_label.setFont(self._instruction_font())
 
     #This method is called to set the instruction text for the experiment, it sets the font size and the alignment of the text
     def set_instruction_text(self):
@@ -961,11 +1001,10 @@ class DisplayWindow(QMainWindow):
         label = f"Response Instructions Shown | image={image_name}"
         self.emit_marker(label)
         text = "Press the Right Arrow key if stimuli match.\nPress the Left Arrow key if stimuli don't match."
+        self.current_text_delta = 0
         self.image_label.setText(text)
         self.image_label.setAlignment(Qt.AlignCenter)
-        label_height = self.image_label.height()
-        font_size = max(8, int(label_height * 0.04))
-        font = QFont("Arial", font_size, QFont.Bold)
+        font = self._instruction_font()
         self.image_label.setFont(font)
         # Update the mirror
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
@@ -1155,7 +1194,8 @@ class DisplayWindow(QMainWindow):
         self.instructions_label.setText("Test has ended.\n Please wait for the experimenter to close the test.")
         logging.info("Test has ended, please press the stop button to close the test.")
         self.send_message({"action": "client_log", "message": "Test has ended, please press the stop button to close the test."})
-        #self.instructions_label.setFont(QFont("Arial", 22))
+        self.current_text_delta = 2
+        self.instructions_label.setFont(self._instruction_font(delta=2))
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
@@ -1173,6 +1213,8 @@ class DisplayWindow(QMainWindow):
         label = "Crosshair Instructions Shown"
         self.emit_marker(label)
         self.instructions_label.setText("Instructions: Please relax and focus on the \n crosshair when it appears.\n This will last for 4 minutes.")
+        self.current_text_delta = 0
+        self.instructions_label.setFont(self._instruction_font())
         self.instructions_label.setVisible(True)
         self.countdown_label.setVisible(False)
         self.overlay_widget.setVisible(True)
@@ -1215,7 +1257,8 @@ class DisplayWindow(QMainWindow):
         # Restore your original instructions and allow the experiment to proceed
         label = "Main Instructions Shown"
         self.emit_marker(label)
-        self.instructions_label.setFont(QFont("Arial", 18))
+        self.current_text_delta = 0
+        self.instructions_label.setFont(self._instruction_font())
         instruction_text = get_test_instruction_text(self.current_test, self.instruction_only)
         self.instructions_label.setText(f"{instruction_text}\n\n{get_instruction_prompt(self.instruction_only)}")
         self.instructions_label.setVisible(True)
@@ -1443,13 +1486,15 @@ class DisplayWindow(QMainWindow):
         self.clear_overlay()
 
         self.craving_buttons = []
+        self.craving_meaning_labels = []
 
         # Use the persistent instructions_label for craving instructions
         self.instructions_label.setText(
             "How strong is your urge to drink alcohol right now?\n\n"
             "Select a number from 0 to 6 below:"
         )
-        self.instructions_label.setFont(QFont("Arial", 28, QFont.Bold))
+        self.current_text_delta = 0
+        self.instructions_label.setFont(self._instruction_font())
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setWordWrap(True)
         self.instructions_label.setStyleSheet("color: #222; margin-bottom: 24px;")
@@ -1476,17 +1521,18 @@ class DisplayWindow(QMainWindow):
         for i in range(7):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
-            label.setFont(QFont("Arial", 18))
+            label.setFont(QFont("Arial", max(12, self.display_text_size - 10)))
             label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
             label.setWordWrap(True)
             label.setMinimumHeight(60)
             label.setMaximumWidth(180)
             label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            self.craving_meaning_labels.append(label)
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter | Qt.AlignBottom)
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
-            btn.setFont(QFont("Arial", 22, QFont.Bold))
+            btn.setFont(QFont("Arial", max(16, self.display_text_size - 6), QFont.Bold))
             btn.setFixedSize(70, 70)
             btn.setStyleSheet("""
                 QPushButton {

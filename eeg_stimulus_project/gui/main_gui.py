@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QPushButton, QCheckBox, QApplication, QMessageBox, QStackedWidget, QDialog, QScrollArea, QSizePolicy, QSlider
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QMetaObject, Qt
 import time
@@ -9,7 +9,13 @@ import os
 import threading
 from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
-from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
+from eeg_stimulus_project.gui.display_window import (
+    DisplayWindow,
+    MirroredDisplayWindow,
+    INSTRUCTION_FONT_SIZE,
+    TEXT_SIZE_MAX,
+    TEXT_SIZE_MIN,
+)
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
 from eeg_stimulus_project.gui.olfactory_test_frame import OlfactoryTestFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
@@ -317,6 +323,7 @@ class GUI(QMainWindow):
                     session_logger=session_logger,
                     session_owner=self,
                     instruction_only=instruction_only,
+                    text_size=getattr(current_frame, "display_text_size", INSTRUCTION_FONT_SIZE),
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(
@@ -324,6 +331,7 @@ class GUI(QMainWindow):
                     current_test=current_test,
                     baseline_mode=baseline_mode,
                     instruction_only=instruction_only,
+                    text_size=getattr(current_frame, "display_text_size", INSTRUCTION_FONT_SIZE),
                 )
                 current_frame.display_widget.set_mirror(current_frame.mirror_display_widget)
                 # Add both to the middle_frame layout
@@ -648,6 +656,7 @@ class Frame(QFrame):
         self.local_mode = local_mode
         self.is_stroop_test = is_stroop_test
         self.recording_session_active = False
+        self.display_text_size = INSTRUCTION_FONT_SIZE
 
         # --- Aesthetic Styles ---
         self.setStyleSheet("""
@@ -821,6 +830,8 @@ class Frame(QFrame):
             bottom_frame.setMaximumHeight(50)
             self.layout.addWidget(bottom_frame)
 
+        self._add_text_size_control(top_layout)
+
         for attr in ['start_button', 'stop_button', 'pause_button', 'resume_button', 'next_button', 'display_button', 'vr_button', 'turntable_button']:
             btn = getattr(self, attr, None)
             if btn is not None:
@@ -833,6 +844,75 @@ class Frame(QFrame):
             btn = getattr(self, attr, None)
             if btn is not None:
                 btn.stateChanged.connect(lambda state, checked_attr=attr: self.handle_exclusive_checkbox(checked_attr, state))
+
+    def _add_text_size_control(self, top_layout):
+        text_size_layout = QHBoxLayout()
+        text_size_layout.setContentsMargins(24, 0, 24, 0)
+        text_size_layout.setSpacing(10)
+        text_size_layout.setAlignment(Qt.AlignVCenter)
+
+        label = QLabel("Text size:", self)
+        label.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        label.setStyleSheet("color: white; background: transparent;")
+        text_size_layout.addWidget(label)
+
+        small_a = QLabel("A", self)
+        small_a.setFont(QFont("Segoe UI", 11))
+        small_a.setStyleSheet("color: white; background: transparent;")
+        text_size_layout.addWidget(small_a)
+
+        self.text_size_slider = QSlider(Qt.Horizontal, self)
+        self.text_size_slider.setMinimum(TEXT_SIZE_MIN)
+        self.text_size_slider.setMaximum(TEXT_SIZE_MAX)
+        self.text_size_slider.setValue(self.display_text_size)
+        self.text_size_slider.setTickPosition(QSlider.TicksBelow)
+        self.text_size_slider.setTickInterval(6)
+        self.text_size_slider.setMinimumWidth(180)
+        self.text_size_slider.setStyleSheet("""
+            QSlider {
+                background: transparent;
+            }
+            QSlider::groove:horizontal {
+                height: 5px;
+                background: #d8c8f6;
+                border-radius: 2px;
+            }
+            QSlider::handle:horizontal {
+                background: white;
+                border: 1px solid #b39ddb;
+                width: 18px;
+                margin: -7px 0;
+                border-radius: 9px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #ffffff;
+                border-radius: 2px;
+            }
+        """)
+        self.text_size_slider.valueChanged.connect(self.on_text_size_changed)
+        text_size_layout.addWidget(self.text_size_slider, stretch=1)
+
+        large_a = QLabel("A", self)
+        large_a.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        large_a.setStyleSheet("color: white; background: transparent;")
+        text_size_layout.addWidget(large_a)
+
+        self.text_size_value_label = QLabel(f"{self.display_text_size} pt", self)
+        self.text_size_value_label.setFont(QFont("Segoe UI", 10))
+        self.text_size_value_label.setStyleSheet("color: white; background: transparent;")
+        self.text_size_value_label.setMinimumWidth(44)
+        text_size_layout.addWidget(self.text_size_value_label)
+
+        top_layout.addLayout(text_size_layout)
+
+    def on_text_size_changed(self, value):
+        self.display_text_size = int(value)
+        if hasattr(self, 'text_size_value_label'):
+            self.text_size_value_label.setText(f"{self.display_text_size} pt")
+        for widget_attr in ('display_widget', 'mirror_display_widget'):
+            widget = getattr(self, widget_attr, None)
+            if widget is not None and hasattr(widget, 'set_text_size'):
+                widget.set_text_size(self.display_text_size)
 
     def handle_exclusive_checkbox(self, checked_attr, state):
         # Only act if a box was checked
