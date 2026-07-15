@@ -136,6 +136,24 @@ class Sidebar(QFrame):
         stimulus_order_button.clicked.connect(parent.toggle_stimulus_order)
         self.layout.addWidget(stimulus_order_button)
 
+        # Olfactory Test Button
+        olfactory_button = QPushButton("Olfactory Test", self)
+        olfactory_button.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        olfactory_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800;
+                color: white;
+                border-radius: 8px;
+                padding: 10px 0px;
+                margin-top: 18px;
+            }
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+        """)
+        olfactory_button.clicked.connect(parent.toggle_olfactory_test)
+        self.layout.addWidget(olfactory_button)
+
         # Record Baseline button
         baseline_button = QPushButton("Record Baseline", self)
         baseline_button.setFont(QFont("Segoe UI", 11, QFont.Bold))

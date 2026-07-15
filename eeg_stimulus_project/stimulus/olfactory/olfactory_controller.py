@@ -83,6 +83,69 @@ class OlfactoryController:
             print(f"Error stopping scent {scent_number}: {e}")
             return False
 
+    def trigger_humidifier(self, scent_number, duration_ms=None):
+        """Trigger humidifier for a specific scent (1-8)"""
+        if not (1 <= scent_number <= 8):
+            print(f"Invalid scent number: {scent_number}. Must be between 1 and 8.")
+            return False
+
+        try:
+            if 1 <= scent_number <= 4:
+                command = f"h{scent_number}\n"
+                self.ser1.write(command.encode())
+                _, response = self.safe_readline(self.ser1)
+            else:
+                command = f"h{scent_number-4}\n"
+                self.ser2.write(command.encode())
+                _, response = self.safe_readline(self.ser2)
+            print(f"Humidifier triggered for scent {scent_number}")
+            return True
+        except Exception as e:
+            print(f"Error triggering humidifier for scent {scent_number}: {e}")
+            return False
+
+    def trigger_pump(self, scent_number, duration_ms=None):
+        """Trigger pump for a specific scent (1-8)"""
+        if not (1 <= scent_number <= 8):
+            print(f"Invalid scent number: {scent_number}. Must be between 1 and 8.")
+            return False
+
+        try:
+            if 1 <= scent_number <= 4:
+                command = f"p{scent_number}\n"
+                self.ser1.write(command.encode())
+                _, response = self.safe_readline(self.ser1)
+            else:
+                command = f"p{scent_number-4}\n"
+                self.ser2.write(command.encode())
+                _, response = self.safe_readline(self.ser2)
+            print(f"Pump triggered for scent {scent_number}")
+            return True
+        except Exception as e:
+            print(f"Error triggering pump for scent {scent_number}: {e}")
+            return False
+
+    def trigger_solenoid(self, scent_number, duration_ms=None):
+        """Trigger solenoid for a specific scent (1-8)"""
+        if not (1 <= scent_number <= 8):
+            print(f"Invalid scent number: {scent_number}. Must be between 1 and 8.")
+            return False
+
+        try:
+            if 1 <= scent_number <= 4:
+                command = f"s{scent_number}\n"
+                self.ser1.write(command.encode())
+                _, response = self.safe_readline(self.ser1)
+            else:
+                command = f"s{scent_number-4}\n"
+                self.ser2.write(command.encode())
+                _, response = self.safe_readline(self.ser2)
+            print(f"Solenoid triggered for scent {scent_number}")
+            return True
+        except Exception as e:
+            print(f"Error triggering solenoid for scent {scent_number}: {e}")
+            return False
+
     def close(self):
         """Close both serial connections"""
         if self.ser1 and self.ser1.is_open:

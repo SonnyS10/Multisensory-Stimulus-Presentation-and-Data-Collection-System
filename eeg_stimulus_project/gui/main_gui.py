@@ -11,6 +11,7 @@ from eeg_stimulus_project.gui.sidebar import Sidebar
 from eeg_stimulus_project.gui.main_frame import MainFrame
 from eeg_stimulus_project.gui.display_window import DisplayWindow, MirroredDisplayWindow
 from eeg_stimulus_project.gui.stimulus_order_frame import StimulusOrderFrame
+from eeg_stimulus_project.gui.olfactory_test_frame import OlfactoryTestFrame
 from eeg_stimulus_project.data.data_saving import Save_Data
 from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, resolve_realism_condition
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
@@ -105,6 +106,7 @@ class GUI(QMainWindow):
             non_alcohol_folder=self.non_alcohol_folder
             
         )
+        self.olfactory_test_frame = OlfactoryTestFrame(self)
         
         # Add new frames to stacked_widget
         #IN THE FUTURE WE ADD A BEGINNING FRAME THAT HAS INTSRUCTIONS
@@ -124,6 +126,7 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.latency_checker)
         self.stacked_widget.addWidget(self.stimulus_order_frame)
         self.stacked_widget.addWidget(self.baseline_frame)
+        self.stacked_widget.addWidget(self.olfactory_test_frame)
         
         self.stacked_widget.setCurrentWidget(self.instruction_frame)
         self.last_test_frame = self.unisensory_neutral_visual  # Default to first test
@@ -229,6 +232,16 @@ class GUI(QMainWindow):
             # Select it in the stimulus order frame
             self.stimulus_order_frame.select_test(current_test)
             self.stacked_widget.setCurrentWidget(self.stimulus_order_frame)
+            self.sidebar.instructions_button.setText("Show Instructions")
+
+    def toggle_olfactory_test(self):
+        if self.stacked_widget.currentWidget() == self.olfactory_test_frame:
+            self.stacked_widget.setCurrentWidget(self.last_test_frame)
+        else:
+            # Set the olfactory controller if available
+            if self.olfactory_controller:
+                self.olfactory_test_frame.set_olfactory_controller(self.olfactory_controller)
+            self.stacked_widget.setCurrentWidget(self.olfactory_test_frame)
             self.sidebar.instructions_button.setText("Show Instructions")
 
     def start_baseline(self):
