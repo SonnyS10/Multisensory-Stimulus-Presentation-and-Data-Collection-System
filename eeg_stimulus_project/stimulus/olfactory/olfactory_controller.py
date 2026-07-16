@@ -14,6 +14,9 @@ class OlfactoryController:
 
     def connect(self):
         """Initialize connections to both Arduinos"""
+        if self.ser1 and self.ser1.is_open and self.ser2 and self.ser2.is_open:
+            return True
+
         try:
             self.ser1 = serial.Serial(self.arduino1_port, self.baud_rate, timeout=1)
             self.ser2 = serial.Serial(self.arduino2_port, self.baud_rate, timeout=1)
@@ -73,9 +76,13 @@ class OlfactoryController:
         """Stop a specific scent (1-8)"""
         try:
             if 1 <= scent_number <= 4:
+                if not self.ser1 or not self.ser1.is_open:
+                    return False
                 self.ser1.write("q\n".encode())
                 _, response = self.safe_readline(self.ser1)
             else:
+                if not self.ser2 or not self.ser2.is_open:
+                    return False
                 self.ser2.write("q\n".encode())
                 _, response = self.safe_readline(self.ser2)
             return True
@@ -156,6 +163,7 @@ class OlfactoryController:
                 print(f"Error sending stop command to ser1: {e}")
             finally:
                 self.ser1.close()
+        self.ser1 = None
         
         if self.ser2 and self.ser2.is_open:
             try:
@@ -165,3 +173,4 @@ class OlfactoryController:
                 print(f"Error sending stop command to ser2: {e}")
             finally:
                 self.ser2.close()
+        self.ser2 = None

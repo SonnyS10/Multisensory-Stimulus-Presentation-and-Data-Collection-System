@@ -306,6 +306,33 @@ class OlfactoryTestFrame(QFrame):
         back_btn.clicked.connect(self.go_back)
         self.layout.addWidget(back_btn)
 
+    def _stop_all_timers(self):
+        """Stop any active component or sequential timers."""
+        for timer in list(self.active_timers.values()):
+            timer.stop()
+        self.active_timers.clear()
+
+        for timer in list(self.sequential_timers.values()):
+            timer.stop()
+        self.sequential_timers.clear()
+
+    def _release_controller(self):
+        """Stop any active activity and close the olfactory controller connection."""
+        self._stop_all_timers()
+        self.sequential_running = False
+        if self.sequential_start_btn is not None:
+            self.sequential_start_btn.setEnabled(True)
+
+        controller = self.olfactory_controller
+        self.olfactory_controller = None
+        if controller is not None:
+            try:
+                controller.close()
+            except Exception as e:
+                logging.error(f"Error closing olfactory controller: {e}")
+
+        self.update_status("Ready")
+
     def set_olfactory_controller(self, controller):
         """Set the olfactory controller instance, or initialize one if not provided"""
         if controller:
@@ -564,7 +591,18 @@ class OlfactoryTestFrame(QFrame):
         if update_status:
             self.update_status("Sequence stopped")
 
+    def hideEvent(self, event):
+        """Ensure the olfactory controller is released when the frame is hidden."""
+        self._release_controller()
+        super().hideEvent(event)
+
+    def closeEvent(self, event):
+        """Ensure the olfactory controller is released when the frame is closed."""
+        self._release_controller()
+        super().closeEvent(event)
+
     def go_back(self):
         """Go back to the previous frame"""
+        self._release_controller()
         if hasattr(self.parent, 'toggle_olfactory_test'):
             self.parent.toggle_olfactory_test()
