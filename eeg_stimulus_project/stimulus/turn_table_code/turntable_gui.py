@@ -10,13 +10,7 @@ from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSlot
 
 from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
-
-
-# Time to wait after releasing a scent before opening the booth doors (revealing the
-# object). Kept equal to the 2D display's SCENT_DISPENSE_DELAY_MS so the scent->object
-# order and timing is identical across every olfactory realism block, with or without
-# tactile.
-SCENT_DISPENSE_DELAY_MS = 4000
+from eeg_stimulus_project.stimulus.olfactory.olfactory_timing import get_olfactory_timing_settings, ScentDispenseRunner
 
 
 def get_turntable_instruction_text(test_name):
@@ -1010,8 +1004,11 @@ class TurntableWindow(QWidget):
         if not self.ensure_olfactory_controller():
             print(f"Could not trigger scent {scent_number}: olfactory controller is not connected.")
             return
-        if self.olfactory_controller.trigger_scent(scent_number):
-            QTimer.singleShot(3000, lambda scent=scent_number: self.stop_scent_if_connected(scent))
+        # Dispense using the current (possibly overridden) timing/mode -- see
+        # olfactory_timing.py. Keeps a reference on self so the runner's timers
+        # aren't garbage collected before it finishes.
+        self._scent_runner = ScentDispenseRunner(self.olfactory_controller, scent_number, parent=self)
+        if self._scent_runner.start():
             if self.send_message:
                 bay = step.get("bay")
                 label = (
@@ -1130,7 +1127,7 @@ class TurntableWindow(QWidget):
         if self.olfactory_mode:
             self.trigger_scent_for_step(step)
             self._start_timer(
-                SCENT_DISPENSE_DELAY_MS,
+                get_olfactory_timing_settings().get_scent_dispense_delay_ms(),
                 lambda: self._move_to_bay_and_open_doors(step),
             )
             return
@@ -1153,7 +1150,7 @@ class TurntableWindow(QWidget):
             if self.olfactory_mode:
                 self.trigger_scent_for_step(step)
                 self._start_timer(
-                    SCENT_DISPENSE_DELAY_MS,
+                    get_olfactory_timing_settings().get_scent_dispense_delay_ms(),
                     lambda: self._move_to_bay_and_open_doors(step),
                 )
             else:
@@ -1212,7 +1209,7 @@ class TurntableWindow(QWidget):
         self.complete_current_step()
 
     def _open_doors_after_scent(self):
-        """Open doors after scent has had SCENT_DISPENSE_DELAY_MS to dispense."""
+        """Open doors after scent has had the configured dispense delay to take effect."""
         if self.auto_doors_enabled():
             self._auto_doors_opened_for_current_item = self.open_doors_automatically()
         self._start_timer(2000, self.close_doors_and_continue)

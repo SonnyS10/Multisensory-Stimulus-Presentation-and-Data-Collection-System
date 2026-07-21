@@ -17,6 +17,7 @@ from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
 from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
+from eeg_stimulus_project.stimulus.olfactory.olfactory_timing import get_olfactory_timing_settings, ScentDispenseRunner
 import threading
 import json
 import logging
@@ -24,10 +25,6 @@ import random
 from logging.handlers import QueueHandler
 
 
-# Time to wait after releasing a scent before presenting the paired image, so the
-# scent reaches the participant at the same point relative to the image in every
-# olfactory realism block (2D and viewing booth, with or without tactile).
-SCENT_DISPENSE_DELAY_MS = 4000
 INSTRUCTION_FONT_SIZE = 28
 TOUCH_INSTRUCTION_FONT_SIZE = 38
 TEXT_SIZE_MIN = 18
@@ -657,10 +654,11 @@ class DisplayWindow(QMainWindow):
             return  # Do not proceed if stopped or paused
         img = self.images[self.current_image_index]
         if hasattr(img, 'filename') and img.filename:
-            # Every olfactory block presents the scent first, then waits SCENT_DISPENSE_DELAY_MS
-            # before showing the image. This keeps the scent->image order and timing identical
-            # across realism blocks: Olfactory-only dispenses here; Tactile+Olfactory dispenses
-            # when the touch arms _dispense_scent_before_next_image. Both then delay equally.
+            # Every olfactory block presents the scent first, then waits the configured
+            # scent dispense delay (see olfactory_timing.py) before showing the image. This
+            # keeps the scent->image order and timing identical across realism blocks:
+            # Olfactory-only dispenses here; Tactile+Olfactory dispenses when the touch arms
+            # _dispense_scent_before_next_image. Both then delay equally.
             is_olfactory = "Olfactory" in self.current_test
             dispense_after_touch = self.should_dispense_scent_after_touch()
 
@@ -668,11 +666,11 @@ class DisplayWindow(QMainWindow):
                 # Tactile+Olfactory: touch armed the scent. Dispense, wait, then show image.
                 self.scent_function(img)
                 self._dispense_scent_before_next_image = False
-                QTimer.singleShot(SCENT_DISPENSE_DELAY_MS, lambda: self._display_image_after_scent_delay(img))
+                QTimer.singleShot(get_olfactory_timing_settings().get_scent_dispense_delay_ms(), lambda: self._display_image_after_scent_delay(img))
             elif is_olfactory and not dispense_after_touch:
                 # Olfactory-only: dispense scent, wait for it to reach the participant, then show image.
                 self.scent_function(img)
-                QTimer.singleShot(SCENT_DISPENSE_DELAY_MS, lambda: self._display_image_after_scent_delay(img))
+                QTimer.singleShot(get_olfactory_timing_settings().get_scent_dispense_delay_ms(), lambda: self._display_image_after_scent_delay(img))
             else:
                 # No scent involved (or scent already handled): display image immediately.
                 self._display_image_after_scent_delay(img)
@@ -726,8 +724,8 @@ class DisplayWindow(QMainWindow):
         if should_delay_for_scent:
             # Send scent first
             self.scent_function(img)
-            # Wait 4 seconds for scent to dispense, then display image
-            QTimer.singleShot(4000, lambda: self._display_stroop_image_after_scent_delay(img))
+            # Wait for scent to dispense (overridable), then display image
+            QTimer.singleShot(get_olfactory_timing_settings().get_scent_dispense_delay_ms(), lambda: self._display_stroop_image_after_scent_delay(img))
         else:
             # No scent delay needed, display image immediately
             self._display_stroop_image_after_scent_delay(img)
@@ -1738,11 +1736,13 @@ class DisplayWindow(QMainWindow):
             img = self.images[self.current_image_index]
         scent_number = self.scent_number_for_image(img)
         if self.olfactory_connected and scent_number:
-            # Send scent command to olfactory controller
-            if self.olfactory_controller.trigger_scent(scent_number):
+            # Dispense using the current (possibly overridden) timing/mode -- see
+            # olfactory_timing.py. Keeps a reference on self so the runner's
+            # timers aren't garbage collected before it finishes.
+            self._scent_runner = ScentDispenseRunner(self.olfactory_controller, scent_number, parent=self)
+            if self._scent_runner.start():
                 image_name = os.path.splitext(os.path.basename(img.filename))[0]
                 label = f"Scent {scent_number} Dispensed | image={image_name}"
                 self.emit_marker(label)
                 if self.eyetracker is not None:
                     self.eyetracker.send_marker(label)
-                QTimer.singleShot(3000, lambda: self.olfactory_controller.stop_scent(scent_number))  # Stop scent after 3 seconds
