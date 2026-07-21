@@ -26,6 +26,7 @@ class LabRecorder:
         "Multisensory Alcohol Visual & Olfactory": "MAVO",
         "Multisensory Neutral Visual, Tactile & Olfactory": "MNVTO",
         "Multisensory Alcohol Visual, Tactile & Olfactory": "MAVTO",
+        "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)": "PVPNVTO",
         "Stroop Practice Neutral (Visual & Tactile)": "SPNVT",
         "Stroop Practice Neutral (Visual & Olfactory)": "SPNVO",
         "Stroop Multisensory Neutral (Visual & Tactile)": "SMNVT",

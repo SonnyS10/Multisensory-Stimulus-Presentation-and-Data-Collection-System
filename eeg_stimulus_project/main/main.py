@@ -35,6 +35,7 @@ def get_test_lists():
         'Unisensory Alcohol Visual',
         'Multisensory Neutral Visual & Olfactory',
         'Multisensory Alcohol Visual & Olfactory',
+        'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)',
         'Multisensory Neutral Visual, Tactile & Olfactory',
         'Multisensory Alcohol Visual, Tactile & Olfactory'
     ])

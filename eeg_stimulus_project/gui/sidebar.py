@@ -68,6 +68,7 @@ class Sidebar(QFrame):
             ("Unisensory Alcohol Visual", parent.show_unisensory_alcohol_visual),
             ("Multisensory Neutral Visual && Olfactory", parent.show_multisensory_neutral_visual_olfactory),
             ("Multisensory Alcohol Visual && Olfactory", parent.show_multisensory_alcohol_visual_olfactory),
+            ("Practice Neutral (Visual, Tactile && Olfactory)", parent.show_passive_practice_neutral_visual_tactile_olfactory),
             ("Multisensory Neutral Visual, Tactile && Olfactory", parent.show_multisensory_neutral_visual_tactile_olfactory),
             ("Multisensory Alcohol Visual, Tactile && Olfactory", parent.show_multisensory_alcohol_visual_tactile_olfactory)
         ])
@@ -225,15 +226,15 @@ class Sidebar(QFrame):
 
     def highlight_tests(self, test_number):
         # Collect all test buttons in order of creation
-        # Passive: first 6, Stroop: remaining buttons
+        # Passive: first 7, Stroop: remaining buttons
         buttons = []
         for i in range(self.submenu_layout.count()):
             widget = self.submenu_layout.itemAt(i).widget()
             if isinstance(widget, QPushButton):
                 buttons.append(widget)
-        # Passive: buttons[0:6], Stroop: buttons[6:]
-        passive_buttons = buttons[0:6]
-        stroop_buttons = buttons[6:]
+        # Passive: buttons[0:7], Stroop: buttons[7:]
+        passive_buttons = buttons[0:7]
+        stroop_buttons = buttons[7:]
         default_style = """
             QPushButton {
                 background-color: #ede7f6;

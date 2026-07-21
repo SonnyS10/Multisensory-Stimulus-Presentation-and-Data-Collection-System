@@ -35,9 +35,17 @@ STROOP_PRACTICE_TESTS = {
     "Stroop Practice Neutral (Visual & Olfactory)",
 }
 
+PASSIVE_PRACTICE_TESTS = {
+    "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)",
+}
+
 
 def is_stroop_practice_test(test_name):
     return str(test_name or "").strip() in STROOP_PRACTICE_TESTS
+
+
+def is_passive_practice_test(test_name):
+    return str(test_name or "").strip() in PASSIVE_PRACTICE_TESTS
 
 
 def clamp_text_size(size):
@@ -74,7 +82,11 @@ def get_turntable_instruction_text(test_name):
             "Please view each object as it is presented. In between each object, you will see an empty slot. "
             "Please breathe through your nose to pick up the scent that will be released at the same time."
         )
-    if name in ("Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"):
+    if name in (
+        "Multisensory Neutral Visual, Tactile & Olfactory",
+        "Multisensory Alcohol Visual, Tactile & Olfactory",
+        "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)",
+    ):
         return (
             "Once prompted, lightly place your left hand on the object in the touchbox. "
             "This will trigger an object to be presented in the viewing booth and a scent to be released. "
@@ -107,7 +119,11 @@ def get_test_instruction_text(test_name, instruction_only=False):
             "Please try to minimize any movements including eye blinks while the images are being shown during the task. "
             "At the end of a series, you will be asked to answer a question by pressing a button on the keyboard."
         )
-    if name in ["Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"]:
+    if name in [
+        "Multisensory Neutral Visual, Tactile & Olfactory",
+        "Multisensory Alcohol Visual, Tactile & Olfactory",
+        "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)",
+    ]:
         return (
             "Once prompted on the screen, lightly place your left hand on the object in the touchbox. "
             "This will trigger the screen image to appear and a scent to be released. "
@@ -613,7 +629,7 @@ class DisplayWindow(QMainWindow):
                 self.send_message({"action": "client_log", "message": f"KeyError: {e}"})
 
         # After loading self.images:
-        if "stroop" not in self.current_test.lower():
+        if "stroop" not in self.current_test.lower() and not is_passive_practice_test(self.current_test):
             if not self.images or not isinstance(self.images[-1], CravingRatingAsset):
                 craving = CravingRatingAsset()
                 craving.is_original = True
@@ -1327,6 +1343,9 @@ class DisplayWindow(QMainWindow):
         return "Neutral"
 
     def _log_craving_rating(self, craving_score):
+        if is_passive_practice_test(self.current_test):
+            # Practice blocks are not part of the recorded dataset.
+            return
         payload = {
             "action": "crave",
             "crave": craving_score,
