@@ -1505,12 +1505,12 @@ class DisplayWindow(QMainWindow):
             "Select a number from 0 to 6 below:"
         )
         self.current_text_delta = None
-        prompt_label.setFont(QFont("Arial", 28, QFont.Bold))
+        prompt_label.setFont(QFont("Arial", 56, QFont.Bold))
         prompt_label.setAlignment(Qt.AlignCenter)
         prompt_label.setWordWrap(True)
-        prompt_label.setContentsMargins(40, 0, 40, 0)
-        prompt_label.setMinimumHeight(130)
-        prompt_label.setMaximumWidth(1200)
+        prompt_label.setContentsMargins(80, 0, 80, 0)
+        prompt_label.setMinimumHeight(260)
+        prompt_label.setMaximumWidth(2400)
         prompt_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         prompt_label.setStyleSheet("color: #222; margin: 0px;")
 
@@ -1528,31 +1528,31 @@ class DisplayWindow(QMainWindow):
         # Create a grid layout for labels and buttons
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(36)
-        grid.setVerticalSpacing(18)
+        grid.setHorizontalSpacing(72)
+        grid.setVerticalSpacing(36)
         grid.setAlignment(Qt.AlignCenter)
 
         self.craving_buttons = []
         for i in range(7):
             # Add label above button
             label = QLabel(meanings[i], self.overlay_widget)
-            label.setFont(QFont("Arial", 16))
+            label.setFont(QFont("Arial", 32))
             label.setAlignment(Qt.AlignCenter)
             label.setWordWrap(True)
-            label.setFixedWidth(180)
-            label.setMinimumHeight(108)
+            label.setFixedWidth(360)
+            label.setMinimumHeight(216)
             label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             grid.addWidget(label, 0, i, alignment=Qt.AlignHCenter)
 
             # Add button
             btn = QPushButton(str(i), self.overlay_widget)
-            btn.setFont(QFont("Arial", 22, QFont.Bold))
-            btn.setFixedSize(70, 70)
+            btn.setFont(QFont("Arial", 44, QFont.Bold))
+            btn.setFixedSize(140, 140)
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e0e0e0;
-                    border-radius: 35px;
-                    border: 2px solid #bc85fa;
+                    border-radius: 70px;
+                    border: 4px solid #bc85fa;
                     color: #333;
                 }
                 QPushButton:hover {
@@ -1572,12 +1572,12 @@ class DisplayWindow(QMainWindow):
         grid_widget = QWidget(self.overlay_widget)
         grid_widget.setLayout(grid)
         grid_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        grid_widget.setMaximumWidth(1500)
+        grid_widget.setMaximumWidth(3000)
 
         content_widget = QWidget(self.overlay_widget)
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(24)
+        content_layout.setSpacing(48)
         content_layout.addWidget(prompt_label, alignment=Qt.AlignHCenter)
         content_layout.addWidget(grid_widget, alignment=Qt.AlignHCenter)
         content_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
@@ -1597,7 +1597,7 @@ class DisplayWindow(QMainWindow):
         if hasattr(self, 'mirror_widget') and self.mirror_widget is not None:
             self.mirror_widget.set_instruction_text(
                 "Craving Rating Instructions Being Shown",
-                QFont("Arial", 28, QFont.Bold)
+                QFont("Arial", 56, QFont.Bold)
             )
             self.mirror_widget.set_overlay_visible(True)
 
@@ -1617,8 +1617,8 @@ class DisplayWindow(QMainWindow):
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e0e0e0;
-                    border-radius: 35px;
-                    border: 2px solid #bc85fa;
+                    border-radius: 70px;
+                    border: 4px solid #bc85fa;
                     color: #333;
                 }
                 QPushButton:hover {
@@ -1629,8 +1629,8 @@ class DisplayWindow(QMainWindow):
         self.craving_buttons[value].setStyleSheet("""
             QPushButton {
                 background-color: #bc85fa;
-                border-radius: 35px;
-                border: 2px solid #bc85fa;
+                border-radius: 70px;
+                border: 4px solid #bc85fa;
                 color: white;
             }
         """)
