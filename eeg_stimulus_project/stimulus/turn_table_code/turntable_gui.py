@@ -34,7 +34,11 @@ def get_turntable_instruction_text(test_name):
             "Please view each object as it is presented. In between each object, you will see an empty slot. "
             "while breathing through your nose to pick up the scent that will be released at the same time."
         )
-    if name in ("Multisensory Neutral Visual, Tactile & Olfactory", "Multisensory Alcohol Visual, Tactile & Olfactory"):
+    if name in (
+        "Multisensory Neutral Visual, Tactile & Olfactory",
+        "Multisensory Alcohol Visual, Tactile & Olfactory",
+        "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)",
+    ):
         return (
             "Once prompted, lightly place your left hand on the object in the touchbox. "
             "This will trigger an object to be presented in the viewing booth and a scent to be released. "

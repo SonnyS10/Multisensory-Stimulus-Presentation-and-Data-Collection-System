@@ -91,6 +91,7 @@ class GUI(QMainWindow):
         self.unisensory_alcohol_visual = self.create_frame("Unisensory Alcohol Visual", is_stroop_test=False)
         self.multisensory_neutral_visual_olfactory = self.create_frame("Multisensory Neutral Visual & Olfactory", is_stroop_test=False)
         self.multisensory_alcohol_visual_olfactory = self.create_frame("Multisensory Alcohol Visual & Olfactory", is_stroop_test=False)
+        self.passive_practice_neutral_visual_tactile_olfactory = self.create_frame("Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)", is_stroop_test=False)
         self.multisensory_neutral_visual_tactile_olfactory = self.create_frame("Multisensory Neutral Visual, Tactile & Olfactory", is_stroop_test=False)
         self.multisensory_alcohol_visual_tactile_olfactory = self.create_frame("Multisensory Alcohol Visual, Tactile & Olfactory", is_stroop_test=False)
         
@@ -120,6 +121,7 @@ class GUI(QMainWindow):
         self.stacked_widget.addWidget(self.unisensory_alcohol_visual)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_olfactory)
+        self.stacked_widget.addWidget(self.passive_practice_neutral_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.multisensory_neutral_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.multisensory_alcohol_visual_tactile_olfactory)
         self.stacked_widget.addWidget(self.stroop_practice_neutral_visual_tactile)
@@ -149,6 +151,7 @@ class GUI(QMainWindow):
                 'Unisensory Alcohol Visual': self.unisensory_alcohol_visual,
                 'Multisensory Neutral Visual & Olfactory': self.multisensory_neutral_visual_olfactory,
                 'Multisensory Alcohol Visual & Olfactory': self.multisensory_alcohol_visual_olfactory,
+                'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)': self.passive_practice_neutral_visual_tactile_olfactory,
                 'Multisensory Neutral Visual, Tactile & Olfactory': self.multisensory_neutral_visual_tactile_olfactory,
                 'Multisensory Alcohol Visual, Tactile & Olfactory': self.multisensory_alcohol_visual_tactile_olfactory,
                 'Stroop Practice Neutral (Visual & Tactile)': self.stroop_practice_neutral_visual_tactile,
@@ -186,7 +189,10 @@ class GUI(QMainWindow):
     
     def show_multisensory_alcohol_visual_olfactory(self):
         self.show_test_frame(self.multisensory_alcohol_visual_olfactory)
-    
+
+    def show_passive_practice_neutral_visual_tactile_olfactory(self):
+        self.show_test_frame(self.passive_practice_neutral_visual_tactile_olfactory)
+
     def show_multisensory_neutral_visual_tactile_olfactory(self):
         self.show_test_frame(self.multisensory_neutral_visual_tactile_olfactory)
     
@@ -273,6 +279,7 @@ class GUI(QMainWindow):
                 self.unisensory_alcohol_visual,
                 self.multisensory_neutral_visual_olfactory,
                 self.multisensory_alcohol_visual_olfactory,
+                self.passive_practice_neutral_visual_tactile_olfactory,
                 self.multisensory_neutral_visual_tactile_olfactory,
                 self.multisensory_alcohol_visual_tactile_olfactory,
                 self.stroop_practice_neutral_visual_tactile,
@@ -304,8 +311,10 @@ class GUI(QMainWindow):
                 apparatus = current_frame.get_selected_apparatus() if hasattr(current_frame, "get_selected_apparatus") else "Display"
 
                 # Lazily create (or reuse) the ONE session-scoped logger for
-                # this day/test_number. Baseline runs are never logged.
-                session_logger = None if baseline_mode or self.client else self.ensure_session_logger(apparatus)
+                # this day/test_number. Baseline runs and practice blocks are
+                # never logged.
+                is_practice_only = current_test == "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)"
+                session_logger = None if baseline_mode or self.client or is_practice_only else self.ensure_session_logger(apparatus)
 
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
@@ -364,6 +373,8 @@ class GUI(QMainWindow):
             return 'Multisensory Neutral Visual & Olfactory'
         elif current_widget == self.multisensory_alcohol_visual_olfactory:
             return 'Multisensory Alcohol Visual & Olfactory'
+        elif current_widget == self.passive_practice_neutral_visual_tactile_olfactory:
+            return 'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)'
         elif current_widget == self.multisensory_neutral_visual_tactile_olfactory:
             return 'Multisensory Neutral Visual, Tactile & Olfactory'
         elif current_widget == self.multisensory_alcohol_visual_tactile_olfactory:
@@ -1905,6 +1916,7 @@ class BaselineFrame(QFrame):
             self.parent.unisensory_alcohol_visual,
             self.parent.multisensory_neutral_visual_olfactory,
             self.parent.multisensory_alcohol_visual_olfactory,
+            self.parent.passive_practice_neutral_visual_tactile_olfactory,
             self.parent.multisensory_neutral_visual_tactile_olfactory,
             self.parent.multisensory_alcohol_visual_tactile_olfactory,
             self.parent.stroop_practice_neutral_visual_tactile,

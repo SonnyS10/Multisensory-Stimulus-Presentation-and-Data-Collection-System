@@ -23,6 +23,10 @@ STROOP_PRACTICE_TESTS = {
     'Stroop Practice Neutral (Visual & Tactile)',
     'Stroop Practice Neutral (Visual & Olfactory)',
 }
+PASSIVE_PRACTICE_TESTS = {
+    'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)',
+}
+PRACTICE_TESTS = STROOP_PRACTICE_TESTS | PASSIVE_PRACTICE_TESTS
 
 
 class StimulusOrderFrame(QWidget):
@@ -88,6 +92,7 @@ class StimulusOrderFrame(QWidget):
             'Unisensory Alcohol Visual',
             'Multisensory Neutral Visual & Olfactory',
             'Multisensory Alcohol Visual & Olfactory',
+            'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)',
             'Multisensory Neutral Visual, Tactile & Olfactory',
             'Multisensory Alcohol Visual, Tactile & Olfactory',
             'Stroop Practice Neutral (Visual & Tactile)',
@@ -449,7 +454,7 @@ class StimulusOrderFrame(QWidget):
             )
             # --- Ensure CravingRatingAsset is last in all passive tests ---
             for test_name, asset_list in self.original_assets.items():
-                if test_name and not test_name.lower().startswith("stroop"):
+                if test_name and not test_name.lower().startswith("stroop") and test_name not in PASSIVE_PRACTICE_TESTS:
                     asset_list = [a for a in asset_list if not isinstance(a, CravingRatingAsset)]
                     asset_list = asset_list[:passive_default_limit]
                     # Remove any existing craving rating asset
@@ -635,7 +640,7 @@ class StimulusOrderFrame(QWidget):
         
         # Add craving rating asset for full tasks only. Practice blocks are
         # fixed five-trial image blocks.
-        if self.current_test_name not in STROOP_PRACTICE_TESTS:
+        if self.current_test_name not in PRACTICE_TESTS:
             craving_item = QTreeWidgetItem(self.available_assets_tree)
             craving_item.setText(0, "📊 craving_rating")
             craving_item.setFont(0, QFont("Segoe UI", 10, QFont.Bold))
@@ -750,7 +755,7 @@ class StimulusOrderFrame(QWidget):
         if not self.validate_passive_unique_stimulus_limit():
             return
 
-        if not self.validate_stroop_practice_trial_count():
+        if not self.validate_practice_trial_count():
             return
 
         scents_valid, missing_scents = self.validate_olfactory_scent_assignments(self.current_test_name)
@@ -971,7 +976,7 @@ class StimulusOrderFrame(QWidget):
                 )
                 return
 
-            if self.is_passive_test():
+            if self.is_passive_test() and self.current_test_name not in PASSIVE_PRACTICE_TESTS:
                 imported_order = [img for img in imported_order if not isinstance(img, CravingRatingAsset)]
                 original_craving = CravingRatingAsset()
                 original_craving.is_original = True
@@ -982,7 +987,7 @@ class StimulusOrderFrame(QWidget):
             if not self.validate_passive_unique_stimulus_limit():
                 return
 
-            if not self.validate_stroop_practice_trial_count():
+            if not self.validate_practice_trial_count():
                 return
 
             self.update_image_list()
@@ -1033,9 +1038,9 @@ class StimulusOrderFrame(QWidget):
             return applied_scents == self.current_scent_assignments(self.current_test_name)
         return True
 
-    def validate_stroop_practice_trial_count(self):
-        """Practice Stroop blocks are fixed five-trial blocks."""
-        if self.current_test_name not in STROOP_PRACTICE_TESTS:
+    def validate_practice_trial_count(self):
+        """Practice blocks (Stroop or Passive Viewing) are fixed five-trial blocks."""
+        if self.current_test_name not in PRACTICE_TESTS:
             return True
 
         images = self.working_orders.get(self.current_test_name, [])
@@ -1242,7 +1247,7 @@ class StimulusOrderFrame(QWidget):
             random.seed(seed)
         random.shuffle(repeated_images)
 
-        if self.is_passive_test():
+        if self.is_passive_test() and self.current_test_name not in PASSIVE_PRACTICE_TESTS:
             # Remove any existing craving asset, then append one
             repeated_images = [img for img in repeated_images if not isinstance(img, CravingRatingAsset)]
             original_craving = CravingRatingAsset()

@@ -69,6 +69,10 @@ class Display():
         'Stroop Practice Neutral (Visual & Tactile)',
         'Stroop Practice Neutral (Visual & Olfactory)',
     }
+    PASSIVE_PRACTICE_TESTS = {
+        'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)',
+    }
+    PRACTICE_TESTS = STROOP_PRACTICE_TESTS | PASSIVE_PRACTICE_TESTS
     
     @staticmethod
     def randomize_images(images, randomize_cues=False, seed=None, repetitions=None):
@@ -174,6 +178,7 @@ class Display():
             'Multisensory Alcohol Visual, Tactile & Olfactory': (alcohol_images, personalized_images),
             'Stroop Practice Neutral (Visual & Tactile)': (non_alcohol_images, []),
             'Stroop Practice Neutral (Visual & Olfactory)': (non_alcohol_images, []),
+            'Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)': (non_alcohol_images, []),
             'Stroop Multisensory Alcohol (Visual & Tactile)': (alcohol_images, personalized_images),
             'Stroop Multisensory Alcohol (Visual & Olfactory)': (alcohol_images, personalized_images),
             'Stroop Multisensory Neutral (Visual & Tactile)': (non_alcohol_images, personalized_images),
@@ -185,7 +190,7 @@ class Display():
                 test_assets[test_name] = Display.custom_orders[test_name]
             else:
                 randomized, used_seed = Display.randomize_images(mixed, randomize_cues, seed, repetitions)
-                if test_name in Display.STROOP_PRACTICE_TESTS:
+                if test_name in Display.PRACTICE_TESTS:
                     randomized = randomized[:5]
                 test_assets[test_name] = randomized
         return test_assets
