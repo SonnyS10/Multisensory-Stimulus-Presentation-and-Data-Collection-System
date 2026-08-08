@@ -11,7 +11,8 @@ import time
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, 
     QListWidget, QListWidgetItem, QFrame, QMessageBox, QSizePolicy, QFileDialog,
-    QCheckBox, QLineEdit, QDialog, QFormLayout, QDialogButtonBox, QTreeWidget, QTreeWidgetItem
+    QCheckBox, QLineEdit, QDialog, QFormLayout, QDialogButtonBox, QTreeWidget, QTreeWidgetItem,
+    QScrollArea, QApplication
 )
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize
@@ -1348,9 +1349,16 @@ class StimulusOrderFrame(QWidget):
         images = self.working_orders.get(self.current_test_name, [])
         dialog = QDialog(self)
         dialog.setWindowTitle("Assign Scent Numbers")
-        layout = QFormLayout(dialog)
+        outer_layout = QVBoxLayout(dialog)
+
+        scroll_area = QScrollArea(dialog)
+        scroll_area.setWidgetResizable(True)
+        form_widget = QWidget()
+        layout = QFormLayout(form_widget)
+        scroll_area.setWidget(form_widget)
+        outer_layout.addWidget(scroll_area)
         scent_selectors = {}
-        
+
         # Collect unique assets by filename to avoid showing duplicates
         seen_keys = set()
         unique_images = []
@@ -1363,7 +1371,7 @@ class StimulusOrderFrame(QWidget):
             if key not in seen_keys:
                 seen_keys.add(key)
                 unique_images.append(img)
-        
+
         # Create combo boxes only for unique assets
         for img in unique_images:
             display_name = getattr(img, "display_name", os.path.splitext(os.path.basename(getattr(img, "filename", "Image")))[0])
@@ -1378,11 +1386,19 @@ class StimulusOrderFrame(QWidget):
                 combo.setCurrentText(str(scent))
             layout.addRow(display_name, combo)
             scent_selectors[key] = combo
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        layout.addWidget(buttons)
+        outer_layout.addWidget(buttons)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
+
+        # Cap the dialog to the available screen height so it never renders off-screen
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            available_height = screen.availableGeometry().height()
+            dialog.setMaximumHeight(int(available_height * 0.9))
+            dialog.resize(dialog.sizeHint().width(), min(dialog.sizeHint().height(), int(available_height * 0.9)))
+
         if dialog.exec_() == QDialog.Accepted:
             for key, combo in scent_selectors.items():
                 val = combo.currentText()
