@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QMetaObject
 from eeg_stimulus_project.assets.asset_handler import Display
 from eeg_stimulus_project.data.session_data_logger import determine_congruence_condition
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
-from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
+from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs, EyetrackerMarkerWorker
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
 from eeg_stimulus_project.stimulus.olfactory.olfactory_controller import OlfactoryController
 from eeg_stimulus_project.stimulus.olfactory.olfactory_timing import get_olfactory_timing_settings, ScentDispenseRunner
@@ -380,6 +380,9 @@ class DisplayWindow(QMainWindow):
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
         self.eyetracker = eyetracker
+        # Runs blocking Pupil Labs calls off the Qt thread so eyetracker network
+        # latency can't delay tactile arming (_arm_touch_detection) in local mode.
+        self.eyetracker_worker = EyetrackerMarkerWorker()
         self.client = client
         self.label_stream = label_stream if label_stream else (LSLLabelStream() if local_mode else None)
         self.alcohol_folder = alcohol_folder
@@ -418,7 +421,9 @@ class DisplayWindow(QMainWindow):
                 if self.eyetracker is None or self.eyetracker.device is None:
                     self.eyetracker = PupilLabs()
                 if self.eyetracker and self.eyetracker.device is not None:
-                    self.eyetracker.start_recording()
+                    self.eyetracker_worker.submit(
+                        self.eyetracker.start_recording, description="start_recording"
+                    )
                 else:
                     logging.info("Eyetracker not connected")
                     self.send_message({"action": "client_log", "message": "Eyetracker not connected"})
@@ -710,7 +715,10 @@ class DisplayWindow(QMainWindow):
             label = self.build_image_label(img)
             self.emit_marker(label)
             if self.eyetracker is not None:
-                self.eyetracker.send_marker(label)  # Send label to Pupil Labs
+                self.eyetracker_worker.submit(
+                    self.eyetracker.send_marker, label,
+                    description=f"send_marker({label})",
+                )  # Send label to Pupil Labs (non-blocking)
             self.current_label = label
         
         if "Tactile" in self.current_test:
@@ -1186,7 +1194,9 @@ class DisplayWindow(QMainWindow):
                 self.mirror_widget.deleteLater()
                 self.mirror_widget = None
             if self.eyetracker and self.eyetracker.device is not None:
-                self.eyetracker.stop_recording()
+                self.eyetracker_worker.submit(
+                    self.eyetracker.stop_recording, description="stop_recording"
+                )
             if hasattr(self, 'olfactory_controller') and self.olfactory_controller:
                 self.olfactory_controller.close()          
             super().closeEvent(event)
@@ -1641,7 +1651,10 @@ class DisplayWindow(QMainWindow):
             self.push_local_label(craving_label)
             logging.info(f"Current label: {craving_label}")
             if self.eyetracker is not None:
-                self.eyetracker.send_marker(craving_label)
+                self.eyetracker_worker.submit(
+                    self.eyetracker.send_marker, craving_label,
+                    description=f"send_marker({craving_label})",
+                )
         self.removeEventFilter(self)
         # After craving rating is saved, go to the next step
         QTimer.singleShot(500, self.show_crosshair_after_craving)
@@ -1764,4 +1777,7 @@ class DisplayWindow(QMainWindow):
                 label = f"Scent {scent_number} Dispensed | image={image_name}"
                 self.emit_marker(label)
                 if self.eyetracker is not None:
-                    self.eyetracker.send_marker(label)
+                    self.eyetracker_worker.submit(
+                        self.eyetracker.send_marker, label,
+                        description=f"send_marker({label})",
+                    )
