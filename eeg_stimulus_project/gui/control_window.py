@@ -662,8 +662,12 @@ class ControlWindow(QMainWindow):
             return base_path.parent.parent
         return base_path
 
-    def ensure_session_logger(self, apparatus="Display"):
+    def ensure_session_logger(self, apparatus="Display", block_name=None):
         if self.session_logger is not None:
+            if self.session_logger.task_name == "Cross_Modal_Stroop" and block_name:
+                self._stroop_trial_number = 0
+                csv_path = self.session_logger.init_stroop_csv(block_name)
+                logging.info("[SessionDataLogger] Stroop block CSV initialized: %s", csv_path)
             return self.session_logger
 
         task_name = self.get_active_task_name()
@@ -682,8 +686,10 @@ class ControlWindow(QMainWindow):
             realism_condition=realism_condition,
             data_root=self.get_session_data_root(),
         )
+
         if task_name == "Cross_Modal_Stroop":
-            csv_path = self.session_logger.init_stroop_csv()
+            self._stroop_trial_number = 0
+            csv_path = self.session_logger.init_stroop_csv(block_name or "Stroop")
         else:
             csv_path = self.session_logger.init_craving_csv()
         logging.info(
@@ -735,6 +741,7 @@ class ControlWindow(QMainWindow):
                     sensory_condition=sensory_condition,
                     cue_type=cue_type,
                     craving_score=craving_score,
+                    block_name=message.get("block_name", ""),
                     apparatus=apparatus,
                 )
                 target_path = logger.stroop_filepath
@@ -775,6 +782,10 @@ class ControlWindow(QMainWindow):
                 reaction_time_ms=message.get("reaction_time_ms", ""),
                 block_name=message.get("block_name", ""),
                 is_practice=bool(message.get("is_practice", False)),
+                olfactory_stimulus=message.get("olfactory_stimulus", ""),
+                tactile_stimulus=message.get("tactile_stimulus", ""),
+                congruency=message.get("congruency"),
+                response=message.get("response"),
                 apparatus=apparatus,
             )
             logging.info("Host: saved Stroop trial %s to %s", self._stroop_trial_number, logger.stroop_filepath)
@@ -816,7 +827,10 @@ class ControlWindow(QMainWindow):
                                 if test_name:
                                     self.current_test = test_name  # Store for use in start_test
                                 if test_name and test_name != "Baseline":
-                                    self.ensure_session_logger(message.get("apparatus") or "Display")
+                                    self.ensure_session_logger(
+                                        message.get("apparatus") or "Display",
+                                        block_name=test_name,
+                                    )
                                 self.start_test()
                                 logging.info("Host: Starting test...")
                                 pass

@@ -310,11 +310,14 @@ class GUI(QMainWindow):
                 scent_numbers = self.stimulus_order_frame.scent_numbers
                 apparatus = current_frame.get_selected_apparatus() if hasattr(current_frame, "get_selected_apparatus") else "Display"
 
-                # Lazily create (or reuse) the ONE session-scoped logger for
-                # this day/test_number. Baseline runs and practice blocks are
-                # never logged.
+                # Reuse the session-scoped logger; each Stroop block receives
+                # a separate file. Passive-practice and baseline runs are skipped.
                 is_practice_only = current_test == "Passive Viewing Practice Neutral (Visual, Tactile & Olfactory)"
-                session_logger = None if baseline_mode or self.client or is_practice_only else self.ensure_session_logger(apparatus)
+                session_logger = None if baseline_mode or self.client or is_practice_only else self.ensure_session_logger(
+                    apparatus,
+                    block_name=current_test,
+                )
+                stimulus_metadata = self.stimulus_order_frame.get_stroop_stimulus_metadata(current_test)
 
                 # Create both widgets
                 current_frame.display_widget = DisplayWindow(
@@ -332,6 +335,7 @@ class GUI(QMainWindow):
                     session_owner=self,
                     instruction_only=instruction_only,
                     text_size=getattr(current_frame, "display_text_size", INSTRUCTION_FONT_SIZE),
+                    **stimulus_metadata,
                 )
                 current_frame.display_widget.experiment_started.connect(current_frame.enable_pause_resume_buttons)
                 current_frame.mirror_display_widget = MirroredDisplayWindow(
@@ -408,18 +412,17 @@ class GUI(QMainWindow):
         """Test 1 == Passive_Viewing day; Test 2 == Cross_Modal_Stroop day."""
         return "Cross_Modal_Stroop" if str(self.test_number) == "2" else "Passive_Viewing"
 
-    def ensure_session_logger(self, apparatus):
+    def ensure_session_logger(self, apparatus, block_name=None):
         """
         Lazily create the ONE SessionDataLogger for this entire day/session.
 
-        Called on the first Start click of ANY condition frame within this
-        GUI process. Every later Start click (a different condition, or a
-        re-run of the same one) reuses the exact same instance/open file
-        target instead of creating a new CSV, so a full Test 1 session ends
-        up as a single craving_ratings CSV (and Test 2 as a single
-        stroop_behavioral CSV) rather than one file per condition.
+        The logger instance is session-scoped. Passive Viewing uses one
+        craving-ratings file; each Cross-Modal Stroop block gets its own file.
         """
         if self.session_logger is not None:
+            if self.session_logger.task_name == "Cross_Modal_Stroop" and block_name:
+                self._stroop_trial_number = 0
+                self.session_logger.init_stroop_csv(block_name)
             return self.session_logger
 
         task_name = self.get_active_task_name()
@@ -434,7 +437,8 @@ class GUI(QMainWindow):
         )
 
         if task_name == "Cross_Modal_Stroop":
-            csv_path = self.session_logger.init_stroop_csv()
+            self._stroop_trial_number = 0
+            csv_path = self.session_logger.init_stroop_csv(block_name or "Stroop")
         else:
             csv_path = self.session_logger.init_craving_csv()
 
@@ -1092,6 +1096,22 @@ class Frame(QFrame):
                 missing.append(display_name)
         return missing
 
+    def _missing_stroop_stimulus_associations(self, test_name, test_order):
+        metadata = self.parent.stimulus_order_frame.get_stroop_stimulus_metadata(test_name)
+        active_stimuli = (
+            metadata["olfactory_stimuli"]
+            if "Olfactory" in test_name
+            else metadata["tactile_stimuli"]
+        )
+        missing = []
+        for img in test_order:
+            filename = getattr(img, "filename", None)
+            if not filename:
+                continue
+            if not active_stimuli.get(filename) or not metadata["reference_stimuli"].get(filename):
+                missing.append(os.path.splitext(os.path.basename(filename))[0])
+        return missing
+
     def _warn_missing_scent_assignments(self, missing_scents):
         preview = "\n".join(f"- {name}" for name in missing_scents[:12])
         extra = "" if len(missing_scents) <= 12 else f"\n...and {len(missing_scents) - 12} more"
@@ -1164,6 +1184,20 @@ class Frame(QFrame):
         if not self._require_applied_custom_order(current_test):
             return
         test_order = self._current_test_order(current_test)
+        if "Stroop" in current_test:
+            missing_associations = self._missing_stroop_stimulus_associations(current_test, test_order)
+            if missing_associations:
+                preview = "\n".join(f"- {name}" for name in missing_associations[:12])
+                extra = "" if len(missing_associations) <= 12 else f"\n...and {len(missing_associations) - 12} more"
+                QMessageBox.critical(
+                    self,
+                    "Missing Stimulus Associations",
+                    "Import the Stroop stimulus list and the matching Passive Viewing stimulus list "
+                    "with the sensory item paired to each image before starting.\n\n"
+                    f"Missing associations for:\n{preview}{extra}",
+                    QMessageBox.Ok,
+                )
+                return
         missing_scents = self._missing_scent_assignments(current_test, test_order)
         if missing_scents:
             self._warn_missing_scent_assignments(missing_scents)

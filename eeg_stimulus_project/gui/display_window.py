@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QMainWindow, QWidget, Q
 from PyQt5.QtGui import QFont, QPixmap, QKeyEvent
 from PyQt5.QtCore import Qt, QTimer, QEvent, pyqtSignal, pyqtSlot, QMetaObject
 from eeg_stimulus_project.assets.asset_handler import Display
-from eeg_stimulus_project.data.session_data_logger import determine_congruence_condition
+from eeg_stimulus_project.data.session_data_logger import normalize_stimulus_label
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs, EyetrackerMarkerWorker
 from eeg_stimulus_project.gui.stimulus_order_frame import CravingRatingAsset
@@ -375,7 +375,8 @@ class DisplayWindow(QMainWindow):
                  eyetracker=None, shared_status=None, client=False, alcohol_folder=None, non_alcohol_folder=None,
                  randomize_cues=False, seed=None, repetitions=None, local_mode=None, scent_numbers=None,
                  baseline_mode=False, subject_id=None, apparatus="Display",
-                 session_logger=None, session_owner=None, instruction_only=False, text_size=None):
+                 session_logger=None, session_owner=None, instruction_only=False, text_size=None,
+                 olfactory_stimuli=None, tactile_stimuli=None, reference_stimuli=None):
         super().__init__()
         
         self.shared_status = shared_status if shared_status else {'eyetracker_connected': False}
@@ -393,6 +394,9 @@ class DisplayWindow(QMainWindow):
         self.repetitions = repetitions
         self.local_mode = local_mode
         self.scent_numbers = scent_numbers if scent_numbers is not None else {}
+        self.olfactory_stimuli = olfactory_stimuli if olfactory_stimuli is not None else {}
+        self.tactile_stimuli = tactile_stimuli if tactile_stimuli is not None else {}
+        self.reference_stimuli = reference_stimuli if reference_stimuli is not None else {}
         self.baseline_mode = baseline_mode
         # Must be initialized before show_main_instructions() is called at the
         # end of this constructor. Turntable-only runs use this flag to show
@@ -403,13 +407,9 @@ class DisplayWindow(QMainWindow):
         self.subject_id = subject_id or "unknown"
         self.apparatus = apparatus
         # session_logger/session_owner are injected by GUI.open_secondary_gui().
-        # The logger is created exactly once per day/test_number at the GUI
-        # (session) level -- see GUI.ensure_session_logger() in main_gui.py --
-        # and the SAME instance/open file is shared across every condition's
-        # DisplayWindow so a full session lands in one CSV. session_owner is
-        # the GUI instance itself, which owns the block_index/trial_number
-        # counters so they keep incrementing across condition switches
-        # instead of resetting every time a new DisplayWindow is created.
+        # The logger is created once per day/test_number at the GUI
+        # (session) level. Stroop CSV paths are selected per block; session_owner
+        # keeps trial and craving counters across DisplayWindow instances.
         self.session_logger = session_logger
         self.session_owner = session_owner
         self._tactile_fired_this_trial = False
@@ -1362,6 +1362,7 @@ class DisplayWindow(QMainWindow):
             "sensory_condition": self._current_sensory_condition(),
             "cue_type": self._current_block_cue_type(),
             "apparatus": self.apparatus,
+            "block_name": self.current_test,
         }
         if self.client:
             self.send_message(payload)
@@ -1382,6 +1383,7 @@ class DisplayWindow(QMainWindow):
                     sensory_condition=payload["sensory_condition"],
                     cue_type=payload["cue_type"],
                     craving_score=craving_score,
+                    block_name=payload["block_name"],
                     apparatus=self.apparatus,
                 )
             else:
@@ -1418,8 +1420,33 @@ class DisplayWindow(QMainWindow):
 
         image_type = self._image_cue_type(img)
         scent_number = self.scent_number_for_image(img)
-        congruence = determine_congruence_condition(image_type, scent_number)
-        expected_key = "yes" if congruence == "Congruent" else "no"
+        image_key = img.filename
+        if "Olfactory" in self.current_test:
+            olfactory_stimulus = self.olfactory_stimuli.get(image_key, "")
+            if not olfactory_stimulus and scent_number is not None:
+                olfactory_stimulus = str(scent_number)
+            tactile_stimulus = ""
+            presented_stimulus = olfactory_stimulus
+        else:
+            olfactory_stimulus = ""
+            tactile_stimulus = self.tactile_stimuli.get(image_key, "")
+            presented_stimulus = tactile_stimulus
+        reference_stimulus = self.reference_stimuli.get(image_key, "")
+        if presented_stimulus and reference_stimulus:
+            congruency = normalize_stimulus_label(presented_stimulus) == normalize_stimulus_label(
+                reference_stimulus
+            )
+        else:
+            congruency = None
+            logging.error(
+                "Cannot determine Stroop congruency for image %s in %s: "
+                "presented stimulus=%r, passive-viewing reference=%r",
+                image_key,
+                self.current_test,
+                presented_stimulus,
+                reference_stimulus,
+            )
+        expected_key = "" if congruency is None else ("yes" if congruency else "no")
         reaction_time_ms = max(0, self.elapsed_time - self._stroop_stimulus_onset_ms)
 
         payload = {
@@ -1427,6 +1454,10 @@ class DisplayWindow(QMainWindow):
             "image_shown": os.path.basename(img.filename),
             "image_type": image_type,
             "scent_number": scent_number,
+            "olfactory_stimulus": olfactory_stimulus,
+            "tactile_stimulus": tactile_stimulus,
+            "congruency": congruency,
+            "response": key_pressed == "yes",
             "has_tactile_trigger": self._tactile_fired_this_trial,
             "key_pressed": key_pressed,
             "expected_key": expected_key,
@@ -1460,6 +1491,10 @@ class DisplayWindow(QMainWindow):
                 reaction_time_ms=payload["reaction_time_ms"],
                 block_name=payload["block_name"],
                 is_practice=payload["is_practice"],
+                olfactory_stimulus=payload["olfactory_stimulus"],
+                tactile_stimulus=payload["tactile_stimulus"],
+                congruency=payload["congruency"],
+                response=payload["response"],
                 apparatus=self.apparatus,
             )
             self.session_owner.advance_stroop_trial_number()

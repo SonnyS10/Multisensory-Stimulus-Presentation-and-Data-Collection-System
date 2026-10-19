@@ -46,6 +46,8 @@ class StimulusOrderFrame(QWidget):
         self.original_assets = {}  # Store original asset order
         self.scent_numbers = {}  # {asset: scent_number}
         self.applied_scent_numbers = {}  # {test_name: {asset: scent_number}}
+        self.olfactory_stimuli = {}  # {test_name: {asset: imported scent label}}
+        self.tactile_stimuli = {}  # {test_name: {asset: imported tactile item label}}
         
         # Add randomization and repetitions settings
         self.randomize_cues = False
@@ -905,7 +907,9 @@ class StimulusOrderFrame(QWidget):
         if not file_name:
             return
 
-        imported_order_names = []
+        imported_rows = []
+        is_olfactory = "olfactory" in self.current_test_name.lower()
+        is_tactile = "tactile" in self.current_test_name.lower()
         try:
             if file_name.lower().endswith('.csv'):
                 import csv
@@ -913,7 +917,7 @@ class StimulusOrderFrame(QWidget):
                     reader = csv.reader(csvfile)
                     for row in reader:
                         if row and len(row) > 0:
-                            imported_order_names.append(row[0].strip())
+                            imported_rows.append(row)
             elif file_name.lower().endswith('.xlsx'):
                 try:
                     from openpyxl import load_workbook
@@ -927,9 +931,9 @@ class StimulusOrderFrame(QWidget):
                     return
                 wb = load_workbook(file_name, read_only=True)
                 ws = wb.active
-                for row in ws.iter_rows(min_row=1, max_col=1, values_only=True):
+                for row in ws.iter_rows(min_row=1, max_col=2, values_only=True):
                     if row and row[0]:
-                        imported_order_names.append(str(row[0]).strip())
+                        imported_rows.append(row)
             else:
                 QMessageBox.critical(
                     self,
@@ -942,7 +946,31 @@ class StimulusOrderFrame(QWidget):
             # Validate and build the order
             imported_order = []
             missing = []
-            for name in imported_order_names:
+            imported_olfactory = {}
+            imported_tactile = {}
+            imported_scent_numbers = {}
+            for row in imported_rows:
+                imported_name = str(row[0]).strip()
+                name = imported_name
+                olfactory_label = ""
+                if is_olfactory:
+                    is_asset_name = any(
+                        hasattr(img, "filename")
+                        and self.normalize_name(imported_name)
+                        in {
+                            self.normalize_name(os.path.basename(img.filename)),
+                            self.normalize_name(os.path.splitext(os.path.basename(img.filename))[0]),
+                        }
+                        for img in self.all_asset_objs
+                    )
+                    if is_asset_name:
+                        olfactory_label = ""
+                    else:
+                        name, olfactory_label = self._split_olfactory_entry(name)
+                tactile_label = ""
+                if is_tactile and len(row) > 1 and row[1] is not None:
+                    tactile_label = str(row[1]).strip()
+
                 norm_name = self.normalize_name(name)
                 img_obj = None
                 if norm_name == self.normalize_name("craving_rating"):
@@ -960,6 +988,13 @@ class StimulusOrderFrame(QWidget):
                                 break
                 if img_obj:
                     imported_order.append(img_obj)
+                    image_path = getattr(img_obj, "filename", None)
+                    if image_path and olfactory_label:
+                        imported_olfactory[image_path] = olfactory_label
+                        if olfactory_label.isdigit():
+                            imported_scent_numbers[image_path] = int(olfactory_label)
+                    if image_path and tactile_label:
+                        imported_tactile[image_path] = tactile_label
                 else:
                     missing.append(name)
 
@@ -983,6 +1018,11 @@ class StimulusOrderFrame(QWidget):
                 imported_order.append(original_craving)
             # Update the working order for the current test
             self.working_orders[self.current_test_name] = imported_order
+            if is_olfactory:
+                self.olfactory_stimuli[self.current_test_name] = imported_olfactory
+                self.scent_numbers.update(imported_scent_numbers)
+            if is_tactile:
+                self.tactile_stimuli[self.current_test_name] = imported_tactile
 
             if not self.validate_passive_unique_stimulus_limit():
                 return
@@ -1006,6 +1046,31 @@ class StimulusOrderFrame(QWidget):
                 f"Failed to import stimulus order:\n{e}",
                 QMessageBox.Ok
             )
+
+    @staticmethod
+    def _split_olfactory_entry(value):
+        """Split an imported 'image - scent' cell without changing image names."""
+        if " - " in value:
+            return tuple(part.strip() for part in value.rsplit(" - ", 1))
+        if "-" in value:
+            return tuple(part.strip() for part in value.rsplit("-", 1))
+        return value.strip(), ""
+
+    def get_stroop_stimulus_metadata(self, test_name):
+        """Return block stimulus labels and their passive-viewing reference labels."""
+        cue = "Alcohol" if "Alcohol" in test_name else "Neutral"
+        olfactory = "Olfactory" in test_name
+        passive_test = (
+            f"Multisensory {cue} Visual & Olfactory"
+            if olfactory
+            else f"Multisensory {cue} Visual, Tactile & Olfactory"
+        )
+        active_items = self.olfactory_stimuli if olfactory else self.tactile_stimuli
+        return {
+            "olfactory_stimuli": dict(active_items.get(test_name, {})) if olfactory else {},
+            "tactile_stimuli": dict(active_items.get(test_name, {})) if not olfactory else {},
+            "reference_stimuli": dict(active_items.get(passive_test, {})),
+        }
 
     def normalize_name(self, name):
         """Normalize the asset name for consistent matching."""

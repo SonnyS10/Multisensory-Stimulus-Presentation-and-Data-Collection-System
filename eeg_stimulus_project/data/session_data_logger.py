@@ -2,23 +2,22 @@
 Session data logger for multisensory alcohol cue-reactivity experiments.
 
 Participants complete Passive Viewing and Cross-Modal Stroop on separate days.
-The experiment code constructs one SessionDataLogger per run and calls exactly
-one initializer:
+The experiment code constructs one SessionDataLogger per run and initializes:
 
     logger.init_craving_csv()   # Passive_Viewing day
-    logger.init_stroop_csv()    # Cross_Modal_Stroop day
+    logger.init_stroop_csv(block_name)  # One file per Cross_Modal_Stroop block
 
 Directory layout:
     saved_data/subject_<subject_id>/test_<test_number>/<task_name>/
         subj_<subject_id>_craving_ratings_<YYYYMMDD_HHMMSS_ffffff>.csv
-        subj_<subject_id>_stroop_behavioral_<YYYYMMDD_HHMMSS_ffffff>.csv
+        subj_<subject_id>_stroop_<block_name>_<YYYYMMDD_HHMMSS_ffffff>.csv
 
 Filenames never overwrite prior recordings: microsecond timestamps plus _v2,
 _v3, ... suffixes when a collision occurs.
 
-Calling init_craving_csv() or init_stroop_csv() again on the same logger
-instance opens a fresh CSV (new timestamp / version suffix) and resets that
-stream's row counter so subsequent hardware runs never append to a prior file.
+Calling init_craving_csv() or init_stroop_csv() again opens a fresh CSV (new
+timestamp / version suffix), so subsequent hardware runs never append to a
+prior file.
 """
 
 from __future__ import annotations
@@ -78,14 +77,16 @@ STROOP_COLUMNS: List[str] = [
     "block_name",
     "is_practice",
     "trial_number",
-    "image_shown",
+    "image_stimulus",
+    "image_type",
+    "olfactory_stimulus",
+    "tactile_stimulus",
     "scent_number",
-    "scent_name",
     "has_tactile_trigger",
-    "congruence_condition",
-    "key_pressed",
+    "congruency",
+    "response",
     "reaction_time_ms",
-    "is_correct",
+    "correct",
     "event_type",
     "block_index",
     "sensory_condition",
@@ -178,7 +179,7 @@ def build_csv_filepath(
     Build a non-colliding CSV path.
 
     Args:
-        dataset_stem: 'craving_ratings' or 'stroop_behavioral'.
+        dataset_stem: 'craving_ratings' or a block-specific Stroop name.
     """
     stamp = timestamp or _microsecond_timestamp()
     basename = f"subj_{_sanitize_part(subject_id)}_{dataset_stem}_{stamp}"
@@ -215,9 +216,22 @@ def determine_congruence_condition(
     return "Incongruent"
 
 
-def _evaluate_stroop_correctness(key_pressed: str, expected_key: str) -> bool:
-    """True when key_pressed matches expected_key (case-insensitive)."""
-    return key_pressed.strip().lower() == expected_key.strip().lower()
+def normalize_stimulus_label(value: str) -> str:
+    """Normalize paired stimulus labels before comparing their identity."""
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
+def _response_as_bool(response: Optional[Union[bool, str]], key_pressed: str) -> bool:
+    """Map the right/left response (or its legacy yes/no form) to a boolean."""
+    value = response if response is not None else key_pressed
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().casefold()
+    if normalized in {"true", "right", "yes", "1"}:
+        return True
+    if normalized in {"false", "left", "no", "0"}:
+        return False
+    raise ValueError(f"Unrecognized Stroop response: {value!r}")
 
 
 def _durable_write(handle, write_fn) -> None:
@@ -253,7 +267,8 @@ def push_lsl_marker(label: str, perf_counter_time: Optional[float] = None) -> No
 
 class SessionDataLogger:
     """
-    Single-task session logger. Initialize exactly one CSV per instance:
+    Single-task session logger. Passive Viewing uses one CSV per instance;
+    Cross-Modal Stroop uses one CSV per block:
 
         logger = SessionDataLogger(
             subject_id="005",
@@ -264,6 +279,10 @@ class SessionDataLogger:
         )
         logger.init_craving_csv()
         logger.append_craving_rating(...)
+
+    Or for Stroop:
+        logger.init_stroop_csv("Stroop Multisensory Neutral (Visual & Olfactory)")
+        logger.append_stroop_trial(...)
     """
 
     def __init__(
@@ -302,6 +321,7 @@ class SessionDataLogger:
         self._lock = threading.Lock()
         self._craving_filepath: Optional[Path] = None
         self._stroop_filepath: Optional[Path] = None
+        self._stroop_filepaths: Dict[str, Path] = {}
         self._craving_rows = 0
         self._stroop_trials = 0
 
@@ -340,13 +360,16 @@ class SessionDataLogger:
 
         return filepath
 
-    def init_stroop_csv(self, timestamp: Optional[str] = None) -> Path:
+    def init_stroop_csv(
+        self,
+        block_name: str = "Stroop",
+        timestamp: Optional[str] = None,
+    ) -> Path:
         """
-        Create a Stroop behavioral CSV header for a Cross_Modal_Stroop session.
+        Create a separate Stroop behavioral CSV for one experiment block.
 
-        Safe to call multiple times on the same logger: each call resolves a
-        brand-new filepath via resolve_unique_filepath() and resets the Stroop
-        trial counter for that new file.
+        Each block file is stored in the session's Cross_Modal_Stroop directory.
+        Calling this again for the same block creates a new, non-colliding file.
 
         Raises:
             ValueError: If task_name is not Cross_Modal_Stroop.
@@ -359,13 +382,14 @@ class SessionDataLogger:
 
         filepath = build_csv_filepath(
             self.subject_id,
-            "stroop_behavioral",
+            f"stroop_{_sanitize_part(block_name)}",
             self.task_dir,
             timestamp=timestamp,
         )
         with self._lock:
             with open(filepath, "w", newline="", encoding="utf-8") as handle:
                 _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writeheader())
+            self._stroop_filepaths[block_name] = filepath
             self._stroop_filepath = filepath
             self._stroop_trials = 0
 
@@ -446,27 +470,41 @@ class SessionDataLogger:
         *,
         block_name: str = "",
         is_practice: bool = False,
+        olfactory_stimulus: str = "",
+        tactile_stimulus: str = "",
+        congruency: Optional[bool] = None,
+        response: Optional[Union[bool, str]] = None,
         apparatus: Optional[str] = None,
         push_marker: bool = True,
     ) -> Dict[str, Any]:
         """
         Append one Stroop trial (thread-safe).
 
-        Congruence is derived automatically from image_type and scent_number.
-        Accuracy is determined by comparing key_pressed to expected_key, which
-        the display layer supplies based on the active task instructions.
+        Congruence is determined from the current stimulus and its passive-viewing
+        association supplied by the display layer. ``expected_key`` is retained
+        for compatibility with existing callers; new calls should supply
+        ``congruency`` and ``response``.
 
         apparatus: Optional per-row override, mirroring append_craving_rating.
         """
-        if self._stroop_filepath is None:
-            raise RuntimeError("Call init_stroop_csv() before append_stroop_trial().")
+        block_name = block_name or "Stroop"
+        filepath = self._stroop_filepaths.get(block_name)
+        if filepath is None:
+            filepath = self.init_stroop_csv(block_name)
 
         row_apparatus = apparatus if apparatus is not None else self.apparatus
         row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition
 
         event_perf = time.perf_counter()
-        congruence_condition = determine_congruence_condition(image_type, scent_number)
-        resolved_correct = _evaluate_stroop_correctness(key_pressed, expected_key)
+        response_value = _response_as_bool(response, key_pressed)
+        if congruency is None:
+            if expected_key:
+                congruency = expected_key.strip().casefold() in {"yes", "right", "true", "1"}
+                resolved_correct = response_value == congruency
+            else:
+                resolved_correct = ""
+        else:
+            resolved_correct = response_value == congruency
 
         row = {
             "timestamp": _event_timestamp(),
@@ -477,14 +515,16 @@ class SessionDataLogger:
             "block_name": block_name,
             "is_practice": bool(is_practice),
             "trial_number": int(trial_number),
-            "image_shown": image_shown,
+            "image_stimulus": image_shown,
+            "image_type": image_type,
+            "olfactory_stimulus": olfactory_stimulus,
+            "tactile_stimulus": tactile_stimulus,
             "scent_number": scent_number if scent_number is not None else "",
-            "scent_name": lookup_scent_name(scent_number),
             "has_tactile_trigger": bool(has_tactile_trigger),
-            "congruence_condition": congruence_condition,
-            "key_pressed": key_pressed,
+            "congruency": "" if congruency is None else bool(congruency),
+            "response": response_value,
             "reaction_time_ms": reaction_time_ms,
-            "is_correct": resolved_correct,
+            "correct": resolved_correct,
             "event_type": "stroop_trial",
             "block_index": "",
             "sensory_condition": "",
@@ -493,13 +533,13 @@ class SessionDataLogger:
         }
 
         with self._lock:
-            with open(self._stroop_filepath, "a", newline="", encoding="utf-8") as handle:
+            with open(filepath, "a", newline="", encoding="utf-8") as handle:
                 _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writerow(row))
             self._stroop_trials += 1
 
         if push_marker:
             marker = (
-                f"stroop_trial{trial_number}_{congruence_condition}"
+                f"stroop_trial{trial_number}_{'Unknown' if congruency is None else ('Congruent' if congruency else 'Incongruent')}"
                 f"_img{image_shown}_key{key_pressed}"
             )
             push_lsl_marker(marker, perf_counter_time=event_perf)
@@ -513,12 +553,20 @@ class SessionDataLogger:
         cue_type: str,
         craving_score: Union[int, float],
         *,
+        block_name: str = "",
         apparatus: Optional[str] = None,
         push_marker: bool = True,
     ) -> Dict[str, Any]:
         """Append a craving-rating event row to the Stroop behavioral CSV."""
-        if self._stroop_filepath is None:
-            raise RuntimeError("Call init_stroop_csv() before append_stroop_craving_rating().")
+        block_name = block_name or next(
+            (name for name, path in self._stroop_filepaths.items() if path == self._stroop_filepath),
+            "",
+        )
+        if not block_name:
+            raise RuntimeError("Initialize the active Stroop block before logging its craving rating.")
+        filepath = self._stroop_filepaths.get(block_name)
+        if filepath is None:
+            filepath = self.init_stroop_csv(block_name)
 
         row_apparatus = apparatus if apparatus is not None else self.apparatus
         row_realism = resolve_realism_condition(row_apparatus) if apparatus is not None else self.realism_condition
@@ -530,17 +578,19 @@ class SessionDataLogger:
             "test_number": self.test_number,
             "apparatus": row_apparatus,
             "realism_condition": row_realism,
-            "block_name": "",
+            "block_name": block_name,
             "is_practice": "",
             "trial_number": "",
-            "image_shown": "",
+            "image_stimulus": "",
+            "image_type": "",
+            "olfactory_stimulus": "",
+            "tactile_stimulus": "",
             "scent_number": "",
-            "scent_name": "",
             "has_tactile_trigger": "",
-            "congruence_condition": "",
-            "key_pressed": "",
+            "congruency": "",
+            "response": "",
             "reaction_time_ms": "",
-            "is_correct": "",
+            "correct": "",
             "event_type": "craving_rating",
             "block_index": int(block_index),
             "sensory_condition": sensory_condition,
@@ -549,7 +599,7 @@ class SessionDataLogger:
         }
 
         with self._lock:
-            with open(self._stroop_filepath, "a", newline="", encoding="utf-8") as handle:
+            with open(filepath, "a", newline="", encoding="utf-8") as handle:
                 _durable_write(handle, lambda h: csv.DictWriter(h, fieldnames=STROOP_COLUMNS).writerow(row))
             self._craving_rows += 1
 
