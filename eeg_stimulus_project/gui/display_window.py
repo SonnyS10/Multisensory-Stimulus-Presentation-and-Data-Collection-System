@@ -1090,14 +1090,22 @@ class DisplayWindow(QMainWindow):
 
     #This method is called to handle the key press events, it checks if the overlay widget is visible and if the space bar is pressed, it starts the countdown    
     def keyPressEvent(self, event):
-        if self.overlay_widget.isVisible() and event.key() == Qt.Key_Space and self.ready_for_space:
-            self.ready_for_space = False
-            if self.instruction_only:
-                self.begin_instruction_only_session()
-            else:
-                self.start_countdown()
+        if event.key() == Qt.Key_Space and self.handle_space_press():
+            return
+        super().keyPressEvent(event)
+
+    # Shared by this window's own Space key and Space forwarded from the
+    # experimenter's Turntable window, so both keyboards behave identically.
+    @pyqtSlot(result=bool)
+    def handle_space_press(self):
+        if not (self.overlay_widget.isVisible() and self.ready_for_space):
+            return False
+        self.ready_for_space = False
+        if self.instruction_only:
+            self.begin_instruction_only_session()
         else:
-            super().keyPressEvent(event)
+            self.start_countdown()
+        return True
 
     #This method is called to start the countdown, it hides the instruction label and shows the countdown label, it also starts the countdown timer
     def start_countdown(self):

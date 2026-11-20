@@ -1286,6 +1286,13 @@ class Frame(QFrame):
                 tt_test_name = f"turntable_{test_name}"
                 self._stop_recording_session(tt_test_name)
 
+            def forward_space_to_display():
+                # Space pressed by the experimenter in the Turntable window acts
+                # exactly like the participant pressing Space on their display.
+                display_widget = getattr(self, 'display_widget', None)
+                if display_widget is not None:
+                    display_widget.handle_space_press()
+
             if "Tactile" in test_name:
                 self.turntable_window = TurntableWindow(
                     test_order=turntable_items,
@@ -1297,7 +1304,8 @@ class Frame(QFrame):
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording,
                     current_test=test_name,
-                    show_instruction_overlay=False
+                    show_instruction_overlay=False,
+                    on_space_pressed=forward_space_to_display,
                 )
             else:
                 self.turntable_window = TurntableWindow(
@@ -1310,7 +1318,8 @@ class Frame(QFrame):
                     on_sequence_started=start_turntable_recording,
                     on_sequence_stopped=stop_turntable_recording,
                     current_test=test_name,
-                    show_instruction_overlay=False
+                    show_instruction_overlay=False,
+                    on_space_pressed=forward_space_to_display,
                 )
             self.turntable_window.show()
 

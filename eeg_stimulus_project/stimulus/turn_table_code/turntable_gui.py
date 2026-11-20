@@ -3,10 +3,11 @@ import math
 import logging
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QDialog, QMessageBox,
-    QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem, QCheckBox, QSpinBox, QFrame
+    QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem, QCheckBox, QSpinBox, QFrame,
+    QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox
 )
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
-from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QPoint, QTimer, QEvent, pyqtSlot
 
 from eeg_stimulus_project.stimulus.turn_table_code.turntable_controller import TurntableController
 from eeg_stimulus_project.stimulus.turn_table_code.doorcode import DoorController
@@ -264,10 +265,14 @@ class TurntableWindow(QWidget):
     def __init__(self, test_order=None, object_to_bay=None, tactile_mode=False, send_message=None,
                  require_scent_assignments=False, olfactory_mode=False,
                  on_sequence_started=None, on_sequence_stopped=None, current_test=None,
-                 show_instruction_overlay=True):
+                 show_instruction_overlay=True, on_space_pressed=None):
         super().__init__()
         print(test_order)
         self.current_test = current_test
+        # Called when Space is pressed anywhere in this window, so the
+        # experimenter's Space behaves exactly like the participant's Space on
+        # the instruction display (see eventFilter below).
+        self.on_space_pressed = on_space_pressed
         self.tactile_mode = tactile_mode
         self.send_message = send_message
         self.require_scent_assignments = require_scent_assignments
@@ -554,6 +559,14 @@ class TurntableWindow(QWidget):
             self._build_instruction_overlay()
             self.show_instruction_overlay()
 
+        # Qt delivers Space to whichever button in this window has keyboard
+        # focus ("Open" on launch, "Start Test" once it has been clicked, etc.),
+        # silently clicking it. Watch key events app-wide so Space can never
+        # operate a turntable control mid-run; it is forwarded instead.
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
     def _build_instruction_overlay(self):
         self.instruction_overlay = QFrame(self)
         self.instruction_overlay.setObjectName("InstructionOverlay")
@@ -617,6 +630,30 @@ class TurntableWindow(QWidget):
             event.accept()
             return
         super().keyPressEvent(event)
+
+    def eventFilter(self, obj, event):
+        if (
+            event.type() in (QEvent.KeyPress, QEvent.KeyRelease)
+            and event.key() == Qt.Key_Space
+            and isinstance(obj, QWidget)
+            and obj.window() is self
+            # Let text fields (bay number editors, spin boxes) still type spaces.
+            and not isinstance(obj, (QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox))
+        ):
+            if event.type() == QEvent.KeyPress and not event.isAutoRepeat():
+                self.handle_space_pressed()
+            return True  # swallow both press and release so no button is clicked
+        return super().eventFilter(obj, event)
+
+    def handle_space_pressed(self):
+        if getattr(self, "instruction_overlay", None) is not None and self.instruction_overlay.isVisible():
+            self.hide_instruction_overlay()
+            return
+        if self.on_space_pressed:
+            try:
+                self.on_space_pressed()
+            except Exception as exc:
+                logging.error("Turntable: Space forwarding failed: %s", exc)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -1284,6 +1321,9 @@ class TurntableWindow(QWidget):
         self.close_olfactory_controller()
 
     def closeEvent(self, event):
+        app = QApplication.instance()
+        if app is not None:
+            app.removeEventFilter(self)
         self.close_olfactory_controller()
         super().closeEvent(event)
 
