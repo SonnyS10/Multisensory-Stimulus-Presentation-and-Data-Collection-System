@@ -61,7 +61,7 @@ sys.excepthook = excepthook
 
 # Import utility modules
 from eeg_stimulus_project.utils.labrecorder import LabRecorder
-from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs
+from eeg_stimulus_project.utils.eye_tracking_software import PupilLabs, EyetrackerMarkerWorker
 from eeg_stimulus_project.lsl.labels import LSLLabelStream
 from eeg_stimulus_project.data.session_data_logger import SessionDataLogger, resolve_realism_condition
 
@@ -84,6 +84,9 @@ class ControlWindow(QMainWindow):
         self.labrecorder = None
         self.lab_recorder_connected = False
         self.eyetracker = None
+        # Runs blocking Pupil Labs calls off the command-listener thread so
+        # eyetracker network latency can't delay tactile arming (touchbox_lsl_true).
+        self.eyetracker_worker = EyetrackerMarkerWorker()
         self.current_test = None
         self.log_queue = log_queue
         self.host = host
@@ -825,7 +828,12 @@ class ControlWindow(QMainWindow):
                                 label = message.get("label", None)
                                 self.label_push(label)
                                 if self.eyetracker and self.eyetracker.device is not None:
-                                    self.eyetracker.send_marker(label)
+                                    # Non-blocking: keep the listener free to process
+                                    # touchbox_lsl_true (tactile arming) without delay.
+                                    self.eyetracker_worker.submit(
+                                        self.eyetracker.send_marker, label,
+                                        description=f"send_marker({label})",
+                                    )
                                 #logging.info(f"Host: Pushing label: {label}")
                                 pass
                             elif action == "latency_ping":
@@ -985,14 +993,19 @@ class ControlWindow(QMainWindow):
         #if self.eyetracker is None or self.eyetracker.device is None:
         #    self.eyetracker = PupilLabs()
         if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.start_recording()
+            self.eyetracker_worker.submit(
+                self.eyetracker.start_recording, description="start_recording"
+            )
         else:
             logging.info("Eyetracker not connected")
 
         start_label = f"{test_name} Started"
         self.label_push(start_label)
         if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.send_marker(start_label)
+            self.eyetracker_worker.submit(
+                self.eyetracker.send_marker, start_label,
+                description=f"send_marker({start_label})",
+            )
         logging.info(f"Host: Test marker pushed: {start_label}")
 
     def stop_test(self):
@@ -1000,7 +1013,10 @@ class ControlWindow(QMainWindow):
         stop_label = f"{test_name} Stopped"
         self.label_push(stop_label)
         if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.send_marker(stop_label)
+            self.eyetracker_worker.submit(
+                self.eyetracker.send_marker, stop_label,
+                description=f"send_marker({stop_label})",
+            )
         logging.info(f"Host: Test marker pushed: {stop_label}")
 
         # Stop LabRecorder if connected
@@ -1012,7 +1028,9 @@ class ControlWindow(QMainWindow):
                 logging.info(result.get("error", "Unknown LabRecorder stop error"))
         # Stop the eyetracker if connected`
         if self.eyetracker and self.eyetracker.device is not None:
-            self.eyetracker.stop_recording()
+            self.eyetracker_worker.submit(
+                self.eyetracker.stop_recording, description="stop_recording"
+            )
 
     def _save_craving_to_csv(self, value, source):
         """Append a craving rating row to the subject-level craving_rating.csv."""
